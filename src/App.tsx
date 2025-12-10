@@ -1,6 +1,7 @@
 import { ConfigProvider, Spin } from "antd";
 import React from "react";
 import { Route, Routes } from "react-router-dom";
+import Login from "./pages/Login";
 
 const Home = React.lazy(() => import("./pages/Home"));
 
@@ -24,6 +25,8 @@ function App() {
       >
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/Login" element={<Login />} />
+
           {/* <Route path="/about" element={<About />} />
             <Route path="/users" element={<Users />} />
             <Route path="/dashboard" element={<Dashboard />} />
