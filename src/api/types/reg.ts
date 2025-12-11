@@ -1,16 +1,15 @@
-export interface LoginRequest {
+export interface RegRequest {
   email: string;
+  name: string;
   password: string;
 }
-
-export interface LoginResponse {
+export interface RegResponse {
   userId: string;
   tokenRefresh: string;
   tokenAccess: string;
 }
-
-export interface LoginFormData {
+export interface RegFormData {
   email: string;
+  name: string;
   password: string;
 }
-

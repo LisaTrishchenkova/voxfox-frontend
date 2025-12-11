@@ -1,13 +1,17 @@
 import { ConfigProvider, Spin } from "antd";
 import React from "react";
 import { Route, Routes } from "react-router-dom";
-import Login from "./pages/Login";
+import HomePage from "./pages/HomePage";
+import UserProfile from "./pages/UserProfile";
+import LoginPage from "./pages/LogPage";
+import RegPage from "./pages/RegPage";
+import { customTheme } from "./theme";
 
-const Home = React.lazy(() => import("./pages/Home"));
+// const Home = React.lazy(() => import("./pages/Home"));
 
 function App() {
   return (
-    <ConfigProvider>
+    <ConfigProvider theme={customTheme}>
       {/* <MainLayout> */}
       <React.Suspense
         fallback={
@@ -24,9 +28,10 @@ function App() {
         }
       >
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/Login" element={<Login />} />
-
+          <Route path="/" element={<HomePage />} />
+          <Route path="/user-profile" element={<UserProfile />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/registration" element={<RegPage />} />
           {/* <Route path="/about" element={<About />} />
             <Route path="/users" element={<Users />} />
             <Route path="/dashboard" element={<Dashboard />} />
