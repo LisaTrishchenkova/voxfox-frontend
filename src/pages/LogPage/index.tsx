@@ -34,6 +34,9 @@ const LoginPage = () => {
     console.log(values);
     const loginResponse = await authApi.login(values.email, values.password);
     console.log(loginResponse);
+    if (loginResponse == null) {
+      return;
+    }
     localStorage.setItem("tokenAccess", loginResponse.tokenAccess);
     navigate("/user-profile");
   };

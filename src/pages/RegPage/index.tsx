@@ -10,8 +10,6 @@ import {
   Typography,
   Space,
   type FormProps,
-  notification,
-  message,
 } from "antd";
 import {
   MailOutlined,
@@ -23,27 +21,34 @@ import {
   ArrowRightOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import type { RegFormData } from "../../api/types/reg";
-import { regApi } from "../../api/regApi";
+import type { RegistrationFormData } from "../../api/types/auth";
+import { authApi } from "../../api/authApi";
 
 const { Title, Text, Link } = Typography;
 
 const RegPage = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
-  const [messageApi, contextHolder] = message.useMessage();
+  // const [messageApi, contextHolder] = message.useMessage();
 
-  const onFinish: FormProps<RegFormData>["onFinish"] = async (values) => {
+  const onFinish: FormProps<RegistrationFormData>["onFinish"] = async (
+    values
+  ) => {
     console.log(values);
-    const status = await regApi.reg(values.email, values.name, values.password);
+    const status = await authApi.registration(
+      values.email,
+      values.name,
+      values.password
+    );
     console.log(status);
     if (status === 204) {
       navigate("/user-profile");
     } else {
+      console.log("неверный логин или пароль");
     }
   };
 
-  const onFinishFailed: FormProps<RegFormData>["onFinishFailed"] = (
+  const onFinishFailed: FormProps<RegistrationFormData>["onFinishFailed"] = (
     errorInfo
   ) => {
     console.log(errorInfo);
@@ -139,7 +144,7 @@ const RegPage = () => {
               autoComplete="off"
               requiredMark={false}
             >
-              <Form.Item<RegFormData>
+              <Form.Item<RegistrationFormData>
                 label={
                   <div
                     style={{
@@ -178,7 +183,7 @@ const RegPage = () => {
 
               <Divider />
 
-              <Form.Item<RegFormData>
+              <Form.Item<RegistrationFormData>
                 label={
                   <div
                     style={{
@@ -219,7 +224,7 @@ const RegPage = () => {
                 />
               </Form.Item>
 
-              <Form.Item<RegFormData>
+              <Form.Item<RegistrationFormData>
                 label={
                   <div
                     style={{
