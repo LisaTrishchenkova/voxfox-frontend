@@ -1,5 +1,4 @@
 // src/pages/RegistrationPage.tsx
-import React from "react";
 import {
   Row,
   Col,
@@ -23,6 +22,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import type { RegistrationFormData } from "../../api/types/auth";
 import { authApi } from "../../api/authApi";
+import { gradients, commonStyles, componentProps } from "../../theme";
 
 const { Title, Text, Link } = Typography;
 
@@ -65,22 +65,18 @@ const RegPage = () => {
   // });
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #f9fff4 0%, #f0f9e6 100%)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "40px 20px",
-      }}
-    >
+    <div style={{
+      minHeight: "100vh",
+      background: gradients.primaryBackground,
+      ...commonStyles.flexCenter,
+      padding: "40px 20px",
+    }}>
       <Row
         gutter={0}
         style={{
-          maxWidth: "1200px",
+          maxWidth: 1200,
           width: "100%",
-          borderRadius: "24px",
+          borderRadius: 24,
           overflow: "hidden",
           boxShadow: "0 20px 60px rgba(82, 196, 26, 0.15)",
           background: "#fff",
@@ -89,46 +85,38 @@ const RegPage = () => {
         {/* Левая часть - форма регистрации */}
         <Col xs={24} md={12} lg={10}>
           <div style={{ padding: "60px 48px" }}>
-            <div style={{ textAlign: "center", marginBottom: "40px" }}>
-              <div
-                style={{
-                  width: "64px",
-                  height: "64px",
-                  background:
-                    "linear-gradient(135deg, #52c41a 0%, #fa8c16 100%)",
-                  borderRadius: "16px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 20px",
-                }}
-              >
-                <UserOutlined style={{ fontSize: "28px", color: "#fff" }} />
+            <div style={{ textAlign: "center", marginBottom: 40 }}>
+              <div style={{
+                width: 64,
+                height: 64,
+                background: gradients.primary,
+                borderRadius: 16,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 20px",
+              }}>
+                <UserOutlined style={{ fontSize: 28, color: "#fff" }} />
               </div>
               <Title
                 level={2}
                 style={{
-                  marginBottom: "12px",
-                  background:
-                    "linear-gradient(135deg, #52c41a 0%, #fa8c16 50%)",
+                  background: gradients.primaryText,
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
+                  marginBottom: 12,
                   fontWeight: 700,
                 }}
               >
                 Регистрация
               </Title>
-              <Text type="secondary" style={{ fontSize: "16px" }}>
+              <Text type="secondary" style={{ fontSize: 16 }}>
                 Если вы уже регистрировали аккаунт
                 <br />
                 Перейдите сюда{" "}
                 <Link
                   onClick={() => navigate("/login")}
-                  style={{
-                    color: "#52c41a",
-                    fontWeight: 600,
-                    borderBottom: "1px dashed #52c41a",
-                  }}
+                  style={{ color: "#52c41a", fontWeight: 600, borderBottom: "1px dashed #52c41a" }}
                 >
                   Войти в профиль!
                 </Link>
@@ -172,97 +160,44 @@ const RegPage = () => {
                 <Input
                   size="large"
                   placeholder="Введите свою почту"
-                  prefix={<MailOutlined style={{ color: "#52c41a" }} />}
-                  style={{
-                    borderRadius: "12px",
-                    padding: "12px 16px",
-                    fontSize: "16px",
-                  }}
+                  prefix={<MailOutlined style={commonStyles.iconPrimary} />}
                 />
               </Form.Item>
 
               <Divider />
 
               <Form.Item<RegistrationFormData>
-                label={
-                  <div
-                    style={{
-                      fontSize: "16px",
-                      fontWeight: 600,
-                      color: "#262626",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    Введите ваш ник
-                  </div>
-                }
+                label={<div style={commonStyles.formLabel}>Введите ваш ник</div>}
                 name="name"
                 rules={[
-                  {
-                    required: true,
-                    message: "Пожалуйста, введите ваш ник",
-                  },
-                  {
-                    min: 3,
-                    message: "Ник должен содержать минимум 3 символа",
-                  },
-                  {
-                    max: 20,
-                    message: "Ник должен содержать максимум 20 символов",
-                  },
+                  { required: true, message: "Пожалуйста, введите ваш ник" },
+                  { min: 3, message: "Ник должен содержать минимум 3 символа" },
+                  { max: 20, message: "Ник должен содержать максимум 20 символов" },
                 ]}
               >
                 <Input
                   size="large"
                   placeholder="Придумайте уникальный ник"
-                  prefix={<UserOutlined style={{ color: "#52c41a" }} />}
-                  style={{
-                    borderRadius: "12px",
-                    padding: "12px 16px",
-                    fontSize: "16px",
-                  }}
+                  prefix={<UserOutlined style={commonStyles.iconPrimary} />}
                 />
               </Form.Item>
 
               <Form.Item<RegistrationFormData>
-                label={
-                  <div
-                    style={{
-                      fontSize: "16px",
-                      fontWeight: 600,
-                      color: "#262626",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    Пароль
-                  </div>
-                }
+                label={<div style={commonStyles.formLabel}>Пароль</div>}
                 name="password"
                 rules={[
-                  {
-                    required: true,
-                    message: "Пожалуйста, введите пароль",
-                  },
-                  {
-                    min: 8,
-                    message: "Пароль должен содержать минимум 8 символов",
-                  },
+                  { required: true, message: "Пожалуйста, введите пароль" },
+                  { min: 8, message: "Пароль должен содержать минимум 8 символов" },
                   {
                     pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-                    message:
-                      "Пароль должен содержать заглавные, строчные буквы и цифры",
+                    message: "Пароль должен содержать заглавные, строчные буквы и цифры",
                   },
                 ]}
               >
                 <Input.Password
                   size="large"
                   placeholder="Придумайте надежный пароль"
-                  prefix={<LockOutlined style={{ color: "#52c41a" }} />}
-                  style={{
-                    borderRadius: "12px",
-                    padding: "12px 16px",
-                    fontSize: "16px",
-                  }}
+                  prefix={<LockOutlined style={commonStyles.iconPrimary} />}
                 />
               </Form.Item>
 
@@ -299,7 +234,7 @@ const RegPage = () => {
                 />
               </Form.Item> */}
 
-              <Form.Item style={{ marginTop: "40px" }}>
+              <Form.Item style={commonStyles.formItemMargin}>
                 <Button type="primary" htmlType="submit">
                   Зарегистрироваться{" "}
                   <ArrowRightOutlined style={{ marginLeft: "8px" }} />
@@ -307,16 +242,12 @@ const RegPage = () => {
               </Form.Item>
             </Form>
 
-            <div style={{ textAlign: "center", marginBottom: "24px" }}>
-              <Text type="secondary">
+            <div style={commonStyles.formTextCenter}>
+              <Text {...componentProps.text.secondary}>
                 Нажимая кнопку "Зарегистрироваться", вы соглашаетесь с{" "}
-                <Link style={{ color: "#52c41a" }}>
-                  политикой конфиденциальности
-                </Link>{" "}
+                <Link style={commonStyles.linkPrimary}>политикой конфиденциальности</Link>{" "}
                 и{" "}
-                <Link style={{ color: "#52c41a" }}>
-                  условиями использования
-                </Link>
+                <Link style={commonStyles.linkPrimary}>условиями использования</Link>
               </Text>
             </div>
 
@@ -335,34 +266,19 @@ const RegPage = () => {
                   shape="circle"
                   icon={<GoogleOutlined />}
                   size="large"
-                  style={{
-                    width: "52px",
-                    height: "52px",
-                    border: "1px solid #e8e8e8",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                  }}
+                  style={commonStyles.socialButton}
                 />
                 <Button
                   shape="circle"
                   icon={<GithubOutlined />}
                   size="large"
-                  style={{
-                    width: "52px",
-                    height: "52px",
-                    border: "1px solid #e8e8e8",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                  }}
+                  style={commonStyles.socialButton}
                 />
                 <Button
                   shape="circle"
                   icon={<FacebookOutlined />}
                   size="large"
-                  style={{
-                    width: "52px",
-                    height: "52px",
-                    border: "1px solid #e8e8e8",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                  }}
+                  style={commonStyles.socialButton}
                 />
               </Space>
             </Space>
@@ -371,44 +287,10 @@ const RegPage = () => {
 
         {/* Правая часть - декоративная иллюстрация */}
         <Col xs={24} md={12} lg={14}>
-          <div
-            style={{
-              height: "100%",
-              minHeight: "600px",
-              background:
-                "linear-gradient(135deg, rgba(82, 196, 26, 0.95) 0%, rgba(250, 140, 22, 0.95) 100%)",
-              position: "relative",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              alignItems: "center",
-              padding: "60px 48px",
-              overflow: "hidden",
-            }}
-          >
+          <div style={commonStyles.authSide}>
             {/* Декоративные элементы */}
-            <div
-              style={{
-                position: "absolute",
-                top: "-100px",
-                right: "-100px",
-                width: "400px",
-                height: "400px",
-                borderRadius: "50%",
-                background: "rgba(255, 255, 255, 0.1)",
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                bottom: "-150px",
-                left: "-150px",
-                width: "500px",
-                height: "500px",
-                borderRadius: "50%",
-                background: "rgba(255, 255, 255, 0.05)",
-              }}
-            />
+            <div style={{ ...commonStyles.decorativeCircle, top: -100, right: -100, width: 400, height: 400 }} />
+            <div style={{ ...commonStyles.decorativeCircleLight, bottom: -150, left: -150, width: 500, height: 500 }} />
 
             {/* Контент правой части */}
             <div
@@ -454,82 +336,32 @@ const RegPage = () => {
                   marginBottom: "60px",
                 }}
               >
-                <div style={{ textAlign: "center" }}>
-                  <div
-                    style={{
-                      width: "80px",
-                      height: "80px",
-                      background: "rgba(255, 255, 255, 0.2)",
-                      borderRadius: "20px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      margin: "0 auto 16px",
-                      backdropFilter: "blur(10px)",
-                    }}
-                  >
-                    <span style={{ fontSize: "40px" }}>🎓</span>
+                {[
+                  { emoji: "🎓", text: "500+ курсов" },
+                  { emoji: "🏆", text: "Сертификаты" },
+                  { emoji: "🤝", text: "Менторство" },
+                ].map((item, idx) => (
+                  <div key={idx} style={commonStyles.textCenter}>
+                    <div style={commonStyles.iconBoxBlur}>
+                      <span style={{ fontSize: 40 }}>{item.emoji}</span>
+                    </div>
+                    <Text {...componentProps.text.whiteStrong}>{item.text}</Text>
                   </div>
-                  <Text strong style={{ color: "#fff", fontSize: "16px" }}>
-                    500+ курсов
-                  </Text>
-                </div>
-
-                <div style={{ textAlign: "center" }}>
-                  <div
-                    style={{
-                      width: "80px",
-                      height: "80px",
-                      background: "rgba(255, 255, 255, 0.2)",
-                      borderRadius: "20px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      margin: "0 auto 16px",
-                      backdropFilter: "blur(10px)",
-                    }}
-                  >
-                    <span style={{ fontSize: "40px" }}>🏆</span>
-                  </div>
-                  <Text strong style={{ color: "#fff", fontSize: "16px" }}>
-                    Сертификаты
-                  </Text>
-                </div>
-
-                <div style={{ textAlign: "center" }}>
-                  <div
-                    style={{
-                      width: "80px",
-                      height: "80px",
-                      background: "rgba(255, 255, 255, 0.2)",
-                      borderRadius: "20px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      margin: "0 auto 16px",
-                      backdropFilter: "blur(10px)",
-                    }}
-                  >
-                    <span style={{ fontSize: "40px" }}>🤝</span>
-                  </div>
-                  <Text strong style={{ color: "#fff", fontSize: "16px" }}>
-                    Менторство
-                  </Text>
-                </div>
+                ))}
               </div>
 
               {/* Дополнительная информация */}
               <div
-                style={{
-                  background: "rgba(255, 255, 255, 0.1)",
-                  padding: "32px",
-                  borderRadius: "20px",
-                  backdropFilter: "blur(10px)",
-                  maxWidth: "700px",
-                  margin: "0 auto",
-                  textAlign: "left",
-                }}
-              >
+                  style={{
+                    background: "rgba(255, 255, 255, 0.1)",
+                    padding: 32,
+                    borderRadius: 20,
+                    backdropFilter: "blur(10px)",
+                    maxWidth: 700,
+                    margin: "0 auto",
+                    textAlign: "left",
+                  }}
+                >
                 <Title
                   level={4}
                   style={{ color: "#fff", marginBottom: "20px" }}

@@ -12,6 +12,7 @@ import {
   Avatar,
   Calendar,
   Badge,
+  Space,
 } from "antd";
 import {
   UserOutlined,
@@ -25,6 +26,7 @@ import {
 import React from "react";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import { gradients, commonStyles, componentProps } from "../../theme";
 // Импортируем вынесенный Header
 
 const { Content, Sider } = Layout;
@@ -73,7 +75,7 @@ const UserProfile: React.FC = () => {
   // };
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
+    <Layout style={commonStyles.pageLayout}>
       <Header />
 
       <Layout>
@@ -86,23 +88,16 @@ const UserProfile: React.FC = () => {
             borderRight: "1px solid #f0f0f0",
           }}
         >
-          <Card
-            style={{
-              borderRadius: "12px",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.09)",
-            }}
-            bodyStyle={{ padding: "24px" }}
-          >
+          <Card bodyStyle={{ padding: 24 }}>
             <div style={{ textAlign: "center", marginBottom: "24px" }}>
               <Avatar
                 size={96}
                 icon={<UserOutlined />}
                 style={{
-                  background:
-                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  marginBottom: "16px",
+                  background: gradients.avatar,
                   border: "4px solid #fff",
                   boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+                  marginBottom: 16
                 }}
               />
               <Title level={3} style={{ margin: 0, marginBottom: "4px" }}>
@@ -123,7 +118,7 @@ const UserProfile: React.FC = () => {
                       }}
                     >
                       <TeamOutlined style={{ color: "#1890ff" }} />
-                      <Text type="secondary">Подписчики</Text>
+                      <Text {...componentProps.text.secondary}>Подписчики</Text>
                     </div>
                   }
                   value={0}
@@ -141,7 +136,7 @@ const UserProfile: React.FC = () => {
                       }}
                     >
                       <TrophyOutlined style={{ color: "#faad14" }} />
-                      <Text type="secondary">Знания</Text>
+                      <Text {...componentProps.text.secondary}>Знания</Text>
                     </div>
                   }
                   value={500}
@@ -175,40 +170,22 @@ const UserProfile: React.FC = () => {
               </Col>
             </Row>
 
-            <div
-              style={{
-                background: "#f9f9f9",
-                padding: "16px",
-                borderRadius: "8px",
-                marginBottom: "24px",
-              }}
-            >
-              <div style={{ marginBottom: "8px" }}>
-                <CalendarOutlined
-                  style={{ marginRight: "8px", color: "#1890ff" }}
-                />
-                <Text type="secondary">Присоединился 2 года назад</Text>
-              </div>
-              <div style={{ marginBottom: "8px" }}>
-                <Text type="secondary">Как мой профиль видят другие</Text>
-              </div>
-              <div>
-                <Text strong>User ID: 690037095</Text>
-              </div>
+            <div style={commonStyles.infoBox}>
+              <Space {...componentProps.space.vertical} size="small">
+                <Space>
+                  <CalendarOutlined style={{ color: "#1890ff" }} />
+                  <Text {...componentProps.text.secondary}>Присоединился 2 года назад</Text>
+                </Space>
+                <Text {...componentProps.text.secondary}>Как мой профиль видят другие</Text>
+                <Text {...componentProps.text.strong}>User ID: 690037095</Text>
+              </Space>
             </div>
 
             <Divider />
 
-            <div style={{ marginBottom: "24px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "12px",
-                }}
-              >
-                <Text strong>Активность за последний год</Text>
+            <div style={{ marginBottom: 24 }}>
+              <Space {...componentProps.space.flexBetween} style={{ marginBottom: 12 }}>
+                <Text {...componentProps.text.strong}>Активность за последний год</Text>
                 <Badge
                   count="сегодня"
                   style={{
@@ -217,119 +194,47 @@ const UserProfile: React.FC = () => {
                     borderColor: "#b7eb8f",
                   }}
                 />
-              </div>
-              <Progress percent={40}></Progress>
-              ;
+              </Space>
+              <Progress percent={40} />
               <Calendar
                 fullscreen={false}
                 headerRender={() => null}
-                // cellRender={getDateCellRender}
-                style={{
-                  border: "1px solid #f0f0f0",
-                  borderRadius: "8px",
-                }}
+                style={{ border: "1px solid #f0f0f0", borderRadius: 8 }}
               />
-              <div
-                style={{
-                  background: "#f6ffed",
-                  padding: "12px",
-                  borderRadius: "6px",
-                  marginTop: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Text style={{ color: "#52c41a" }}>
-                  Следующий день в 00:00 UTC
-                </Text>
-                <FireOutlined style={{ color: "#ff7a45" }} />
+              <div style={commonStyles.infoBoxSuccess}>
+                <Space {...componentProps.space.flexBetween}>
+                  <Text style={{ color: "#52c41a" }}>Следующий день в 00:00 UTC</Text>
+                  <FireOutlined style={{ color: "#ff7a45" }} />
+                </Space>
               </div>
             </div>
 
             <Divider />
 
             <Row gutter={[16, 16]}>
-              <Col span={8} style={{ textAlign: "center" }}>
-                <div
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    background: "#e6f7ff",
-                    borderRadius: "8px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0 auto 8px",
-                  }}
-                >
-                  <Title level={2} style={{ margin: 0, color: "#1890ff" }}>
-                    0
-                  </Title>
-                </div>
-                <Text type="secondary">дней без перерыва</Text>
-              </Col>
-              <Col span={8} style={{ textAlign: "center" }}>
-                <div
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    background: "#f6ffed",
-                    borderRadius: "8px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0 auto 8px",
-                  }}
-                >
-                  <Title level={2} style={{ margin: 0, color: "#52c41a" }}>
-                    5
-                  </Title>
-                </div>
-                <Text type="secondary">макс. дней</Text>
-              </Col>
-              <Col span={8} style={{ textAlign: "center" }}>
-                <div
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    background: "#f9f0ff",
-                    borderRadius: "8px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0 auto 8px",
-                  }}
-                >
-                  <Title level={2} style={{ margin: 0, color: "#722ed1" }}>
-                    500
-                  </Title>
-                </div>
-                <Text type="secondary">задач решено</Text>
-              </Col>
+              {[
+                { value: 0, label: "дней без перерыва", bg: "#e6f7ff", color: "#1890ff" },
+                { value: 5, label: "макс. дней", bg: "#f6ffed", color: "#52c41a" },
+                { value: 500, label: "задач решено", bg: "#f9f0ff", color: "#722ed1" },
+              ].map((item, idx) => (
+                <Col key={idx} span={8} style={{ textAlign: "center" }}>
+                  <div style={{ ...commonStyles.iconBoxSmall, background: item.bg }}>
+                    <Title level={2} style={{ margin: 0, color: item.color }}>{item.value}</Title>
+                  </div>
+                  <Text {...componentProps.text.secondary}>{item.label}</Text>
+                </Col>
+              ))}
             </Row>
 
-            <div style={{ marginTop: "24px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: "8px",
-                }}
-              >
-                <Text strong>Прогресс обучения</Text>
-                <Text strong style={{ color: "#1890ff" }}>
-                  65%
-                </Text>
-              </div>
+            <div style={{ marginTop: 24 }}>
+              <Space {...componentProps.space.flexBetween} style={{ marginBottom: 8 }}>
+                <Text {...componentProps.text.strong}>Прогресс обучения</Text>
+                <Text {...componentProps.text.strong} style={{ color: "#1890ff" }}>65%</Text>
+              </Space>
               <Progress
                 percent={65}
-                strokeColor={{
-                  "0%": "#1890ff",
-                  "100%": "#52c41a",
-                }}
+                strokeColor={{ "0%": "#1890ff", "100%": "#52c41a" }}
                 showInfo={false}
-                style={{ marginBottom: "0" }}
               />
             </div>
           </Card>
@@ -342,34 +247,15 @@ const UserProfile: React.FC = () => {
             minHeight: "calc(100vh - 64px)",
           }}
         >
-          <div
-            style={{
-              background: "#fff",
-              borderRadius: "12px",
-              padding: "24px",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.09)",
-              minHeight: "calc(100vh - 112px)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "24px",
-              }}
-            >
-              <Title level={2} style={{ margin: 0 }}>
-                Добро пожаловать в VoxFox! 🦊
-              </Title>
-              <Button type="primary" icon={<StarOutlined />}>
-                Новое задание
-              </Button>
-            </div>
+          <Card style={{ minHeight: "calc(100vh - 112px)" }}>
+            <Space {...componentProps.space.flexBetween} style={{ marginBottom: 24 }}>
+              <Title level={2} style={{ margin: 0 }}>Добро пожаловать в VoxFox! 🦊</Title>
+              <Button type="primary" icon={<StarOutlined />}>Новое задание</Button>
+            </Space>
 
             <Row gutter={[24, 24]}>
               <Col span={8}>
-                <Card style={{ borderRadius: "12px" }}>
+                <Card>
                   <Statistic
                     title="Активные проекты"
                     value={3}
@@ -379,7 +265,7 @@ const UserProfile: React.FC = () => {
                 </Card>
               </Col>
               <Col span={8}>
-                <Card style={{ borderRadius: "12px" }}>
+                <Card>
                   <Statistic
                     title="Выполнено заданий"
                     value={24}
@@ -389,7 +275,7 @@ const UserProfile: React.FC = () => {
                 </Card>
               </Col>
               <Col span={8}>
-                <Card style={{ borderRadius: "12px" }}>
+                <Card>
                   <Statistic
                     title="Очков опыта"
                     value={1250}
@@ -402,156 +288,60 @@ const UserProfile: React.FC = () => {
               <Col span={24}>
                 <Card
                   title="Мои проекты"
-                  style={{ borderRadius: "12px" }}
                   extra={<Button type="link">Смотреть все</Button>}
                 >
-                  <div style={{ padding: "40px 0", textAlign: "center" }}>
-                    <div style={{ fontSize: "48px", marginBottom: "16px" }}>
-                      🚀
-                    </div>
+                  <div style={{ padding: "40px 0", ...commonStyles.textCenter }}>
+                    <div style={{ fontSize: 48, marginBottom: 16 }}>🚀</div>
                     <Title level={3}>Начните новый проект</Title>
-                    <Text
-                      type="secondary"
-                      style={{ marginBottom: "24px", display: "block" }}
-                    >
-                      Создайте свой первый проект и начните развивать свои
-                      навыки
+                    <Text {...componentProps.text.secondary} style={{ marginBottom: 24, display: "block" }}>
+                      Создайте свой первый проект и начните развивать свои навыки
                     </Text>
-                    <Button
-                      type="primary"
-                      size="large"
-                      style={{ borderRadius: "8px" }}
-                    >
-                      Создать проект
-                    </Button>
+                    <Button type="primary" size="large">Создать проект</Button>
                   </div>
                 </Card>
               </Col>
 
               <Col span={12}>
-                <Card
-                  title="Последняя активность"
-                  style={{ borderRadius: "12px" }}
-                >
-                  <div style={{ padding: "16px 0" }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        marginBottom: "16px",
-                        paddingBottom: "16px",
-                        borderBottom: "1px solid #f0f0f0",
-                      }}
-                    >
-                      <Avatar
-                        icon={<UserOutlined />}
-                        style={{ marginRight: "12px" }}
-                      />
-                      <div>
-                        <Text strong>Вы начали новый курс</Text>
+                <Card title="Последняя активность">
+                  <Space {...componentProps.space.verticalWithPadding}>
+                    {[
+                      { title: "Вы начали новый курс", time: "2 часа назад" },
+                      { title: "Задание выполнено", time: "Вчера" },
+                      { title: "Новый сертификат", time: "3 дня назад" },
+                    ].map((item, idx) => (
+                      <Space key={idx} style={{ width: "100%", paddingBottom: idx < 2 ? 16 : 0, borderBottom: idx < 2 ? "1px solid #f0f0f0" : "none" }}>
+                        <Avatar icon={<UserOutlined />} />
                         <div>
-                          <Text type="secondary">2 часа назад</Text>
+                          <Text {...componentProps.text.strong}>{item.title}</Text>
+                          <div><Text {...componentProps.text.secondary}>{item.time}</Text></div>
                         </div>
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        marginBottom: "16px",
-                        paddingBottom: "16px",
-                        borderBottom: "1px solid #f0f0f0",
-                      }}
-                    >
-                      <Avatar
-                        icon={<UserOutlined />}
-                        style={{ marginRight: "12px" }}
-                      />
-                      <div>
-                        <Text strong>Задание выполнено</Text>
-                        <div>
-                          <Text type="secondary">Вчера</Text>
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                      <Avatar
-                        icon={<UserOutlined />}
-                        style={{ marginRight: "12px" }}
-                      />
-                      <div>
-                        <Text strong>Новый сертификат</Text>
-                        <div>
-                          <Text type="secondary">3 дня назад</Text>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                      </Space>
+                    ))}
+                  </Space>
                 </Card>
               </Col>
 
               <Col span={12}>
-                <Card
-                  title="Рекомендуемые курсы"
-                  style={{ borderRadius: "12px" }}
-                >
-                  <div style={{ padding: "16px 0" }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: "16px",
-                        paddingBottom: "16px",
-                        borderBottom: "1px solid #f0f0f0",
-                      }}
-                    >
-                      <div>
-                        <Text strong>React с нуля</Text>
-                        <div>
-                          <Progress percent={30} size="small" />
+                <Card title="Рекомендуемые курсы">
+                  <Space {...componentProps.space.verticalWithPadding}>
+                    {[
+                      { title: "React с нуля", progress: 30, action: "Продолжить" },
+                      { title: "TypeScript для начинающих", progress: 75, action: "Продолжить" },
+                      { title: "Ant Design и UI/UX", progress: 45, action: "Начать" },
+                    ].map((item, idx) => (
+                      <Space key={idx} {...componentProps.space.flexBetween} style={{ paddingBottom: idx < 2 ? 16 : 0, borderBottom: idx < 2 ? "1px solid #f0f0f0" : "none" }}>
+                        <div style={{ flex: 1 }}>
+                          <Text {...componentProps.text.strong}>{item.title}</Text>
+                          <div><Progress percent={item.progress} {...componentProps.progress.small} /></div>
                         </div>
-                      </div>
-                      <Button type="link">Продолжить</Button>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: "16px",
-                        paddingBottom: "16px",
-                        borderBottom: "1px solid #f0f0f0",
-                      }}
-                    >
-                      <div>
-                        <Text strong>TypeScript для начинающих</Text>
-                        <div>
-                          <Progress percent={75} size="small" />
-                        </div>
-                      </div>
-                      <Button type="link">Продолжить</Button>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <div>
-                        <Text strong>Ant Design и UI/UX</Text>
-                        <div>
-                          <Progress percent={45} size="small" />
-                        </div>
-                      </div>
-                      <Button type="link">Начать</Button>
-                    </div>
-                  </div>
+                        <Button {...componentProps.button.link}>{item.action}</Button>
+                      </Space>
+                    ))}
+                  </Space>
                 </Card>
               </Col>
             </Row>
-          </div>
+          </Card>
         </Content>
       </Layout>
       <Footer />

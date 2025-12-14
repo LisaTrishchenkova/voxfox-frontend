@@ -33,6 +33,7 @@ import {
 } from '@ant-design/icons';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import { gradients, commonStyles, componentProps } from '../../theme';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -363,80 +364,49 @@ const HomePage = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={commonStyles.pageLayout}>
       <Header />
 
-      <main style={{ flex: 1, background: '#fafafa' }}>
+      <main style={commonStyles.mainContent}>
         {/* Герой-секция с поиском */}
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(82, 196, 26, 0.1) 0%, rgba(250, 140, 22, 0.1) 100%)',
-          padding: '80px 20px',
-          textAlign: 'center'
-        }}>
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <Title level={1} style={{
-              marginBottom: '16px',
-              background: 'linear-gradient(135deg, #52c41a 0%, #fa8c16 50%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontWeight: 800
-            }}>
+        <div style={commonStyles.heroSection}>
+          <div style={{ ...commonStyles.container, padding: '0 20px' }}>
+            <Title level={1} style={{ ...commonStyles.titleGradient, marginBottom: 16 }}>
               Найдите свой идеальный курс
             </Title>
-            <Paragraph style={{
-              fontSize: '20px',
-              color: '#595959',
-              marginBottom: '48px',
-              maxWidth: '800px',
-              margin: '0 auto 48px'
-            }}>
+            <Paragraph style={commonStyles.paragraphLarge}>
               Более 1000 курсов по программированию, дизайну, data science и другим направлениям от лучших экспертов
             </Paragraph>
 
             {/* Поисковая строка */}
-            <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <div style={commonStyles.containerNarrow}>
               <Input.Search
                 size="large"
                 placeholder="Введите название курса, технологию или ключевое слово..."
                 enterButton={
-                  <Button
-                    type="primary"
-                    size="large"
-                    style={{
-                      background: 'linear-gradient(135deg, #52c41a 0%, #fa8c16 100%)',
-                      border: 'none'
-                    }}
-                  >
+                  <Button size="large" {...componentProps.button.primaryGradient}>
                     <SearchOutlined /> Найти курс
                   </Button>
                 }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  borderRadius: '12px',
-                  overflow: 'hidden'
-                }}
               />
 
               {/* Популярные теги */}
-              <div style={{ marginTop: '24px', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px' }}>
-                <Text type="secondary" style={{ marginRight: '12px' }}>Популярное:</Text>
+              <Space {...componentProps.space.wrapCenter}>
+                <Text {...componentProps.text.secondary}>Популярное:</Text>
                 {['React', 'JavaScript', 'Python', 'TypeScript', 'UI/UX', 'Node.js', 'Docker'].map(tag => (
-                  <Tag
-                    key={tag}
-                    style={{ cursor: 'pointer', borderRadius: '16px', padding: '4px 12px' }}
-                    onClick={() => setSearchQuery(tag)}
-                  >
+                  <Tag key={tag} style={{ cursor: 'pointer' }} onClick={() => setSearchQuery(tag)}>
                     {tag}
                   </Tag>
                 ))}
-              </div>
+              </Space>
             </div>
           </div>
         </div>
 
         {/* Основной контент */}
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
+        <div style={commonStyles.container}>
           <Row gutter={[32, 32]}>
             {/* Боковая панель с фильтрами */}
             <Col xs={24} md={8} lg={6}>
@@ -447,10 +417,6 @@ const HomePage = () => {
                     <Text strong>Фильтры</Text>
                   </Space>
                 }
-                style={{
-                  borderRadius: '16px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
-                }}
               >
                 {/* Категории */}
                 <div style={{ marginBottom: '32px' }}>
@@ -460,26 +426,28 @@ const HomePage = () => {
                       <Button
                         key={cat.value}
                         type={selectedCategory === cat.value ? 'primary' : 'default'}
+                        block
                         style={{
-                          width: '100%',
                           textAlign: 'left',
                           justifyContent: 'space-between',
-                          background: selectedCategory === cat.value ? 'linear-gradient(135deg, #52c41a 0%, #fa8c16 100%)' : '#fff',
-                          border: selectedCategory === cat.value ? 'none' : '1px solid #d9d9d9',
-                          borderRadius: '8px',
-                          height: '48px',
-                          padding: '0 16px'
+                          height: 48,
+                          ...(selectedCategory === cat.value && { background: gradients.primary, border: 'none' })
                         }}
                         onClick={() => setSelectedCategory(cat.value)}
                       >
-                        <Space>
-                          <span style={{ fontSize: '18px' }}>{cat.icon}</span>
-                          <span>{cat.label}</span>
+                        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                          <Space>
+                            <span style={{ fontSize: 18 }}>{cat.icon}</span>
+                            <span>{cat.label}</span>
+                          </Space>
+                          <Badge 
+                            count={cat.count} 
+                            style={{
+                              backgroundColor: selectedCategory === cat.value ? '#fff' : undefined,
+                              color: selectedCategory === cat.value ? '#52c41a' : undefined
+                            }} 
+                          />
                         </Space>
-                        <Badge count={cat.count} style={{
-                          backgroundColor: selectedCategory === cat.value ? '#fff' : '#f0f0f0',
-                          color: selectedCategory === cat.value ? '#52c41a' : '#000'
-                        }} />
                       </Button>
                     ))}
                   </Space>
@@ -517,10 +485,10 @@ const HomePage = () => {
                       max={50000}
                       step={1000}
                       value={priceRange}
-                      onChange={setPriceRange}
+                      onChange={(value) => setPriceRange(value as [number, number])}
                       tooltip={{ formatter: (value) => `${value?.toLocaleString()} ₽` }}
-                      trackStyle={{ background: 'linear-gradient(90deg, #52c41a 0%, #fa8c16 100%)' }}
-                      handleStyle={{ borderColor: '#52c41a' }}
+                      trackStyle={[{ background: gradients.primary }]}
+                      handleStyle={[{ borderColor: '#52c41a' }]}
                     />
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
                       <Text type="secondary">{priceRange[0].toLocaleString()} ₽</Text>
@@ -539,25 +507,13 @@ const HomePage = () => {
                     setPriceRange([0, 50000]);
                     setSortBy('popular');
                   }}
-                  style={{
-                    background: '#f0f0f0',
-                    border: 'none',
-                    borderRadius: '8px',
-                    height: '40px',
-                    fontWeight: 600
-                  }}
                 >
                   Сбросить фильтры
                 </Button>
               </Card>
 
               {/* Статистика */}
-              <Card style={{
-                marginTop: '24px',
-                borderRadius: '16px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                background: 'linear-gradient(135deg, rgba(82, 196, 26, 0.05) 0%, rgba(250, 140, 22, 0.05) 100%)'
-              }}>
+              <Card style={{ marginTop: 24, background: gradients.primaryLight }}>
                 <Space direction="vertical" size="large" style={{ width: '100%' }}>
                   <div>
                     <Text strong>Найдено курсов:</Text>
@@ -565,14 +521,14 @@ const HomePage = () => {
                   </div>
                   <div>
                     <Text type="secondary">Всего курсов в каталоге:</Text>
-                    <Text strong style={{ fontSize: '16px', color: '#262626' }}> {courses.length}</Text>
+                    <Text strong style={{ fontSize: 16 }}> {courses.length}</Text>
                   </div>
                   <div>
                     <Text type="secondary">Средний рейтинг:</Text>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Rate disabled defaultValue={4.7} style={{ fontSize: '16px' }} />
+                    <Space style={{ marginTop: 4 }}>
+                      <Rate disabled defaultValue={4.7} />
                       <Text strong style={{ color: '#fa8c16' }}>4.7/5</Text>
-                    </div>
+                    </Space>
                   </div>
                 </Space>
               </Card>
@@ -622,29 +578,8 @@ const HomePage = () => {
                     <Col xs={24} sm={12} lg={8} key={course.id}>
                       <Card
                         hoverable
-                        style={{
-                          borderRadius: '16px',
-                          height: '100%',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                          transition: 'all 0.3s ease',
-                          overflow: 'hidden'
-                        }}
-                        bodyStyle={{
-                          padding: '20px',
-                          flex: 1,
-                          display: 'flex',
-                          flexDirection: 'column'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-4px)';
-                          e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
-                        }}
+                        style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+                        bodyStyle={{ padding: 20, flex: 1, display: 'flex', flexDirection: 'column' }}
                       >
                         {/* Верхняя часть карточки */}
                         <div style={{ marginBottom: '16px' }}>
@@ -671,11 +606,9 @@ const HomePage = () => {
                                 <Tag
                                   color="default"
                                   style={{
-                                    borderRadius: '12px',
                                     borderColor: getLevelColor(course.level),
                                     color: getLevelColor(course.level),
                                     margin: 0,
-                                    fontSize: '11px',
                                     fontWeight: 600
                                   }}
                                 >
@@ -686,23 +619,12 @@ const HomePage = () => {
 
                             <div>
                               {course.isNew && (
-                                <Badge
-                                  count="NEW"
-                                  style={{
-                                    backgroundColor: '#52c41a',
-                                    borderRadius: '4px',
-                                    fontSize: '10px'
-                                  }}
-                                />
+                                <Badge count="NEW" style={{ backgroundColor: '#52c41a' }} />
                               )}
                               {course.isFeatured && (
-                                <Badge
-                                  count={<FireOutlined style={{ fontSize: '10px' }} />}
-                                  style={{
-                                    backgroundColor: '#fa8c16',
-                                    borderRadius: '4px',
-                                    marginLeft: '4px'
-                                  }}
+                                <Badge 
+                                  count={<FireOutlined style={{ fontSize: 10 }} />} 
+                                  style={{ backgroundColor: '#fa8c16', marginLeft: 4 }} 
                                 />
                               )}
                             </div>
@@ -716,12 +638,7 @@ const HomePage = () => {
                           }} ellipsis={{ rows: 2 }}>
                             {course.title}
                           </Title>
-                          <Paragraph type="secondary" style={{
-                            fontSize: '13px',
-                            marginBottom: '16px',
-                            lineHeight: 1.4,
-                            minHeight: '36px'
-                          }} ellipsis={{ rows: 2 }}>
+                          <Paragraph type="secondary" style={{ marginBottom: 16, minHeight: 36 }} ellipsis={{ rows: 2 }}>
                             {course.description}
                           </Paragraph>
                         </div>
@@ -732,10 +649,10 @@ const HomePage = () => {
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
-                            marginBottom: '12px',
-                            padding: '8px',
+                            marginBottom: 12,
+                            padding: 8,
                             background: '#fafafa',
-                            borderRadius: '8px'
+                            borderRadius: 8
                           }}>
                             <Avatar
                               size="small"
@@ -755,38 +672,30 @@ const HomePage = () => {
                             gap: '8px',
                             marginBottom: '16px'
                           }}>
-                            <div style={{ textAlign: 'center', padding: '8px', background: '#f9f9f9', borderRadius: '8px' }}>
-                              <ClockCircleOutlined style={{ fontSize: '14px', color: '#999', marginRight: '4px' }} />
-                              <Text style={{ fontSize: '12px', fontWeight: 500 }}>{course.duration}</Text>
+                            <div style={{ textAlign: 'center', padding: 8, background: '#f9f9f9', borderRadius: 8 }}>
+                              <ClockCircleOutlined style={{ fontSize: 14, color: '#999', marginRight: 4 }} />
+                              <Text style={{ fontSize: 12, fontWeight: 500 }}>{course.duration}</Text>
                             </div>
-                            <div style={{ textAlign: 'center', padding: '8px', background: '#f9f9f9', borderRadius: '8px' }}>
-                              <PlayCircleOutlined style={{ fontSize: '14px', color: '#999', marginRight: '4px' }} />
-                              <Text style={{ fontSize: '12px', fontWeight: 500 }}>{course.lessons} уроков</Text>
+                            <div style={{ textAlign: 'center', padding: 8, background: '#f9f9f9', borderRadius: 8 }}>
+                              <PlayCircleOutlined style={{ fontSize: 14, color: '#999', marginRight: 4 }} />
+                              <Text style={{ fontSize: 12, fontWeight: 500 }}>{course.lessons} уроков</Text>
                             </div>
-                            <div style={{ textAlign: 'center', padding: '8px', background: '#f9f9f9', borderRadius: '8px' }}>
-                              <TeamOutlined style={{ fontSize: '14px', color: '#999', marginRight: '4px' }} />
-                              <Text style={{ fontSize: '12px', fontWeight: 500 }}>
+                            <div style={{ textAlign: 'center', padding: 8, background: '#f9f9f9', borderRadius: 8 }}>
+                              <TeamOutlined style={{ fontSize: 14, color: '#999', marginRight: 4 }} />
+                              <Text style={{ fontSize: 12, fontWeight: 500 }}>
                                 {(course.students / 1000).toFixed(1)}k
                               </Text>
                             </div>
-                            <div style={{ textAlign: 'center', padding: '8px', background: '#f9f9f9', borderRadius: '8px' }}>
-                              <StarOutlined style={{ fontSize: '14px', color: '#ffc107', marginRight: '4px' }} />
-                              <Text style={{ fontSize: '12px', fontWeight: 500 }}>{course.rating}</Text>
+                            <div style={{ textAlign: 'center', padding: 8, background: '#f9f9f9', borderRadius: 8 }}>
+                              <StarOutlined style={{ fontSize: 14, color: '#ffc107', marginRight: 4 }} />
+                              <Text style={{ fontSize: 12, fontWeight: 500 }}>{course.rating}</Text>
                             </div>
                           </div>
 
                           {/* Теги */}
-                          <div style={{ marginBottom: '12px' }}>
+                          <div style={{ marginBottom: 12 }}>
                             {course.tags.slice(0, 3).map(tag => (
-                              <Tag
-                                key={tag}
-                                style={{
-                                  fontSize: '11px',
-                                  margin: '0 4px 4px 0',
-                                  borderRadius: '12px',
-                                  padding: '2px 8px'
-                                }}
-                              >
+                              <Tag key={tag} style={{ margin: '0 4px 4px 0' }}>
                                 {tag}
                               </Tag>
                             ))}
@@ -820,15 +729,15 @@ const HomePage = () => {
                             <div>
                               {course.discountedPrice ? (
                                 <>
-                                  <Text strong style={{ fontSize: '18px', color: '#52c41a' }}>
+                                  <Text strong style={{ fontSize: 18, color: '#52c41a' }}>
                                     {formatPrice(course.discountedPrice)}
                                   </Text>
-                                  <Text delete type="secondary" style={{ marginLeft: '8px', fontSize: '14px' }}>
+                                  <Text delete type="secondary" style={{ marginLeft: 8, fontSize: 14 }}>
                                     {formatPrice(course.price)}
                                   </Text>
                                 </>
                               ) : (
-                                <Text strong style={{ fontSize: '18px', color: '#262626' }}>
+                                <Text strong style={{ fontSize: 18 }}>
                                   {formatPrice(course.price)}
                                 </Text>
                               )}
@@ -842,13 +751,7 @@ const HomePage = () => {
                           <Button
                             type="primary"
                             block
-                            style={{
-                              background: 'linear-gradient(135deg, #52c41a 0%, #fa8c16 100%)',
-                              border: 'none',
-                              borderRadius: '8px',
-                              height: '40px',
-                              fontWeight: 600
-                            }}
+                            style={{ background: gradients.primary, border: 'none', height: 40 }}
                           >
                             {course.progress ? 'Продолжить' : 'Начать курс'}
                           </Button>
@@ -872,10 +775,7 @@ const HomePage = () => {
                       setSelectedLevel('all');
                       setPriceRange([0, 50000]);
                     }}
-                    style={{
-                      background: 'linear-gradient(135deg, #52c41a 0%, #fa8c16 100%)',
-                      border: 'none'
-                    }}
+                    style={{ background: gradients.primary, border: 'none' }}
                   >
                     Сбросить фильтры
                   </Button>
@@ -884,17 +784,11 @@ const HomePage = () => {
 
               {/* Пагинация */}
               {filteredCourses.length > 0 && (
-                <div style={{ textAlign: 'center', marginTop: '48px' }}>
+                <div style={{ textAlign: 'center', marginTop: 48 }}>
                   <Button
                     type="primary"
                     size="large"
-                    style={{
-                      background: 'linear-gradient(135deg, #52c41a 0%, #fa8c16 100%)',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '0 40px',
-                      height: '48px'
-                    }}
+                    style={{ background: gradients.primary, border: 'none', padding: '0 40px', height: 48 }}
                   >
                     Показать еще курсы
                   </Button>
@@ -906,87 +800,31 @@ const HomePage = () => {
 
         {/* Секция преимуществ */}
         <div style={{
-          background: 'linear-gradient(135deg, rgba(82, 196, 26, 0.05) 0%, rgba(250, 140, 22, 0.05) 100%)',
+          background: gradients.primaryLight,
           padding: '80px 20px',
-          marginTop: '64px'
+          marginTop: 64
         }}>
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <Title level={2} style={{ textAlign: 'center', marginBottom: '48px' }}>
+          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+            <Title level={2} style={{ textAlign: 'center', marginBottom: 48 }}>
               Почему выбирают VoxFox?
             </Title>
             <Row gutter={[32, 32]}>
-              <Col xs={24} sm={12} md={6}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    width: '80px',
-                    height: '80px',
-                    background: 'linear-gradient(135deg, #52c41a 0%, #73d13d 100%)',
-                    borderRadius: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 20px'
-                  }}>
-                    <TrophyOutlined style={{ fontSize: '32px', color: '#fff' }} />
+              {[
+                { icon: <TrophyOutlined />, title: "Сертификаты", desc: "Официальные сертификаты об окончании курсов", gradient: gradients.green },
+                { icon: <VideoCameraOutlined />, title: "Практика", desc: "Реальные проекты и домашние задания", gradient: gradients.orange },
+                { icon: <BookOutlined />, title: "Сообщество", desc: "Поддержка менторов и единомышленников", gradient: gradients.blue },
+                { icon: <CheckCircleOutlined />, title: "Трудоустройство", desc: "Помощь в подготовке к собеседованиям", gradient: gradients.purple },
+              ].map((item, idx) => (
+                <Col key={idx} xs={24} sm={12} md={6}>
+                  <div style={commonStyles.textCenter}>
+                    <div style={{ ...commonStyles.iconBox, background: item.gradient }}>
+                      <span style={{ fontSize: 32, color: '#fff' }}>{item.icon}</span>
+                    </div>
+                    <Title level={4}>{item.title}</Title>
+                    <Paragraph>{item.desc}</Paragraph>
                   </div>
-                  <Title level={4}>Сертификаты</Title>
-                  <Paragraph>Официальные сертификаты об окончании курсов</Paragraph>
-                </div>
-              </Col>
-              <Col xs={24} sm={12} md={6}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    width: '80px',
-                    height: '80px',
-                    background: 'linear-gradient(135deg, #fa8c16 0%, #ffa940 100%)',
-                    borderRadius: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 20px'
-                  }}>
-                    <VideoCameraOutlined style={{ fontSize: '32px', color: '#fff' }} />
-                  </div>
-                  <Title level={4}>Практика</Title>
-                  <Paragraph>Реальные проекты и домашние задания</Paragraph>
-                </div>
-              </Col>
-              <Col xs={24} sm={12} md={6}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    width: '80px',
-                    height: '80px',
-                    background: 'linear-gradient(135deg, #1890ff 0%, #69c0ff 100%)',
-                    borderRadius: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 20px'
-                  }}>
-                    <BookOutlined style={{ fontSize: '32px', color: '#fff' }} />
-                  </div>
-                  <Title level={4}>Сообщество</Title>
-                  <Paragraph>Поддержка менторов и единомышленников</Paragraph>
-                </div>
-              </Col>
-              <Col xs={24} sm={12} md={6}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    width: '80px',
-                    height: '80px',
-                    background: 'linear-gradient(135deg, #722ed1 0%, #9254de 100%)',
-                    borderRadius: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 20px'
-                  }}>
-                    <CheckCircleOutlined style={{ fontSize: '32px', color: '#fff' }} />
-                  </div>
-                  <Title level={4}>Трудоустройство</Title>
-                  <Paragraph>Помощь в подготовке к собеседованиям</Paragraph>
-                </div>
-              </Col>
+                </Col>
+              ))}
             </Row>
           </div>
         </div>

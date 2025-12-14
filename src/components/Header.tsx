@@ -13,6 +13,7 @@ import { LoginOutlined, SearchOutlined } from "@ant-design/icons";
 import type { MouseEvent } from "react";
 import logo from "../assets/logo.jpg";
 import { useNavigate } from "react-router-dom";
+import { gradients } from "../theme";
 
 const { Title } = Typography;
 
@@ -24,17 +25,15 @@ const Header = () => {
   }
 
   return (
-    <header
-      style={{
-        background: "#fff",
-        padding: "0 24px",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
-        borderBottom: "1px solid #e8e8e8",
-        position: "sticky",
-        top: 0,
-        zIndex: 1000,
-      }}
-    >
+    <header style={{
+      background: "#fff",
+      padding: "0 24px",
+      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+      borderBottom: "1px solid #e8e8e8",
+      position: "sticky",
+      top: 0,
+      zIndex: 1000,
+    }}>
       <Row justify="space-between" align="middle">
         <Col>
           <Row align="middle" gutter={24}>
@@ -56,8 +55,7 @@ const Header = () => {
                   level={3}
                   style={{
                     margin: 0,
-                    background:
-                      "linear-gradient(135deg, #52c41a 0%, #fa8c16 50%)",
+                    background: gradients.primaryText,
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     fontWeight: 700,
@@ -71,61 +69,26 @@ const Header = () => {
               <Menu mode="horizontal" style={{ border: "none" }}>
                 <Menu.Item
                   key="home"
-                  style={{
-                    fontWeight: 600,
-                    color: "#389e0d",
-                    borderBottom: "2px solid transparent",
-                  }}
-                  activeStyle={{
-                    color: "#fa8c16",
-                    borderBottom: "2px solid #fa8c16",
-                  }}
+                  style={{ fontWeight: 600, color: "#389e0d" }}
+                  activeStyle={{ color: "#fa8c16", borderBottom: "2px solid #fa8c16" }}
+                  onClick={() => navigate('/')}
                 >
                   Главная
                 </Menu.Item>
-                <Menu.Item
-                  key="projects"
-                  style={{
-                    fontWeight: 600,
-                    color: "#389e0d",
-                  }}
-                >
+                <Menu.Item key="projects" style={{ fontWeight: 600, color: "#389e0d" }}>
                   Проекты
                 </Menu.Item>
-                <Menu.Item
-                  key="learn"
-                  style={{
-                    fontWeight: 600,
-                    color: "#389e0d",
-                  }}
-                >
-                  Обучение
+                <Menu.Item key="learn" style={{ fontWeight: 600, color: "#389e0d" }}
+                  onClick={() => navigate('/cource')}>
+                  Преподавание
                 </Menu.Item>
-                <Menu.Item
-                  key="community"
-                  style={{
-                    fontWeight: 600,
-                    color: "#389e0d",
-                  }}
-                >
+                <Menu.Item key="community" style={{ fontWeight: 600, color: "#389e0d" }}>
                   Сообщество
                 </Menu.Item>
-                <Menu.Item
-                  key="about"
-                  style={{
-                    fontWeight: 600,
-                    color: "#389e0d",
-                  }}
-                >
+                <Menu.Item key="about" style={{ fontWeight: 600, color: "#389e0d" }}>
                   О нас
                 </Menu.Item>
-                <Menu.Item
-                  key="pricing"
-                  style={{
-                    fontWeight: 600,
-                    color: "#389e0d",
-                  }}
-                >
+                <Menu.Item key="pricing" style={{ fontWeight: 600, color: "#389e0d" }}>
                   Цены
                 </Menu.Item>
               </Menu>
@@ -138,10 +101,7 @@ const Header = () => {
               placeholder="Поиск курсов..."
               allowClear
               prefix={<SearchOutlined style={{ color: "#52c41a" }} />}
-              style={{
-                width: "240px",
-                borderRadius: "20px",
-              }}
+              style={{ width: 240, borderRadius: 20 }}
             />
 
             <Button icon={<LoginOutlined />} onClick={redirectToLogin}>

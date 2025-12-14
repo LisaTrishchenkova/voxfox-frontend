@@ -23,6 +23,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import type { LoginFormData } from "../../api/types/auth";
 import { authApi } from "../../api/authApi";
+import { gradients, commonStyles, componentProps } from "../../theme";
 
 const { Title, Text, Link } = Typography;
 
@@ -48,22 +49,18 @@ const LoginPage = () => {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #f9fff4 0%, #f0f9e6 100%)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "40px 20px",
-      }}
-    >
+    <div style={{
+      minHeight: "100vh",
+      background: gradients.primaryBackground,
+      ...commonStyles.flexCenter,
+      padding: "40px 20px",
+    }}>
       <Row
         gutter={0}
         style={{
-          maxWidth: "1200px",
+          maxWidth: 1200,
           width: "100%",
-          borderRadius: "24px",
+          borderRadius: 24,
           overflow: "hidden",
           boxShadow: "0 20px 60px rgba(82, 196, 26, 0.15)",
           background: "#fff",
@@ -72,46 +69,38 @@ const LoginPage = () => {
         {/* Левая часть - форма входа */}
         <Col xs={24} md={12} lg={10}>
           <div style={{ padding: "60px 48px" }}>
-            <div style={{ textAlign: "center", marginBottom: "40px" }}>
-              <div
-                style={{
-                  width: "64px",
-                  height: "64px",
-                  background:
-                    "linear-gradient(135deg, #52c41a 0%, #fa8c16 100%)",
-                  borderRadius: "16px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 20px",
-                }}
-              >
-                <LockOutlined style={{ fontSize: "28px", color: "#fff" }} />
+            <div style={{ textAlign: "center", marginBottom: 40 }}>
+              <div style={{
+                width: 64,
+                height: 64,
+                background: gradients.primary,
+                borderRadius: 16,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 20px",
+              }}>
+                <LockOutlined style={commonStyles.iconWhite} />
               </div>
               <Title
                 level={2}
                 style={{
-                  marginBottom: "12px",
-                  background:
-                    "linear-gradient(135deg, #52c41a 0%, #fa8c16 50%)",
+                  background: gradients.primaryText,
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
+                  marginBottom: 12,
                   fontWeight: 700,
                 }}
               >
                 Вход в аккаунт
               </Title>
-              <Text type="secondary" style={{ fontSize: "16px" }}>
+              <Text type="secondary" style={{ fontSize: 16 }}>
                 Если вы вдруг не зарегистрировались
                 <br />
                 Можете сделать это здесь{" "}
                 <Link
                   onClick={() => navigate("/registration")}
-                  style={{
-                    color: "#52c41a",
-                    fontWeight: 600,
-                    borderBottom: "1px dashed #52c41a",
-                  }}
+                  style={{ color: "#52c41a", fontWeight: 600, borderBottom: "1px dashed #52c41a" }}
                 >
                   Зарегистрироваться!
                 </Link>
@@ -155,12 +144,7 @@ const LoginPage = () => {
                 <Input
                   size="large"
                   placeholder="Введите вашу почту"
-                  prefix={<MailOutlined style={{ color: "#52c41a" }} />}
-                  style={{
-                    borderRadius: "12px",
-                    padding: "12px 16px",
-                    fontSize: "16px",
-                  }}
+                  prefix={<MailOutlined style={commonStyles.iconPrimary} />}
                 />
               </Form.Item>
 
@@ -192,12 +176,7 @@ const LoginPage = () => {
                 <Input.Password
                   size="large"
                   placeholder="Введите ваш пароль"
-                  prefix={<LockOutlined style={{ color: "#52c41a" }} />}
-                  style={{
-                    borderRadius: "12px",
-                    padding: "12px 16px",
-                    fontSize: "16px",
-                  }}
+                  prefix={<LockOutlined style={commonStyles.iconPrimary} />}
                 />
               </Form.Item>
 
@@ -214,10 +193,7 @@ const LoginPage = () => {
                     Запомнить меня
                   </Checkbox>
                 </Form.Item>
-                <Link
-                  onClick={() => navigate("/forgot-password")}
-                  style={{ color: "#52c41a", fontWeight: 500 }}
-                >
+                <Link onClick={() => navigate("/forgot-password")} style={{ color: "#52c41a", fontWeight: 500 }}>
                   Забыли пароль?
                 </Link>
               </div>
@@ -267,47 +243,28 @@ const LoginPage = () => {
                   shape="circle"
                   icon={<GoogleOutlined />}
                   size="large"
-                  style={{
-                    width: "52px",
-                    height: "52px",
-                    border: "1px solid #e8e8e8",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                  }}
+                  style={{ width: 52, height: 52, border: "1px solid #e8e8e8", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
                 />
                 <Button
                   shape="circle"
                   icon={<GithubOutlined />}
                   size="large"
-                  style={{
-                    width: "52px",
-                    height: "52px",
-                    border: "1px solid #e8e8e8",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                  }}
+                  style={{ width: 52, height: 52, border: "1px solid #e8e8e8", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
                 />
                 <Button
                   shape="circle"
                   icon={<FacebookOutlined />}
                   size="large"
-                  style={{
-                    width: "52px",
-                    height: "52px",
-                    border: "1px solid #e8e8e8",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                  }}
+                  style={{ width: 52, height: 52, border: "1px solid #e8e8e8", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
                 />
               </Space>
 
               <div style={{ textAlign: "center" }}>
                 <Text type="secondary">
                   Нажимая кнопку "Войти", вы соглашаетесь с{" "}
-                  <Link style={{ color: "#52c41a" }}>
-                    политикой конфиденциальности
-                  </Link>{" "}
+                  <Link style={{ color: "#52c41a" }}>политикой конфиденциальности</Link>{" "}
                   и{" "}
-                  <Link style={{ color: "#52c41a" }}>
-                    условиями использования
-                  </Link>
+                  <Link style={{ color: "#52c41a" }}>условиями использования</Link>
                 </Text>
               </div>
             </Space>
@@ -316,44 +273,10 @@ const LoginPage = () => {
 
         {/* Правая часть - декоративная иллюстрация */}
         <Col xs={24} md={12} lg={14}>
-          <div
-            style={{
-              height: "100%",
-              minHeight: "600px",
-              background:
-                "linear-gradient(135deg, rgba(82, 196, 26, 0.95) 0%, rgba(250, 140, 22, 0.95) 100%)",
-              position: "relative",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              alignItems: "center",
-              padding: "60px 48px",
-              overflow: "hidden",
-            }}
-          >
+          <div style={commonStyles.authSide}>
             {/* Декоративные элементы */}
-            <div
-              style={{
-                position: "absolute",
-                top: "-100px",
-                right: "-100px",
-                width: "400px",
-                height: "400px",
-                borderRadius: "50%",
-                background: "rgba(255, 255, 255, 0.1)",
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                bottom: "-150px",
-                left: "-150px",
-                width: "500px",
-                height: "500px",
-                borderRadius: "50%",
-                background: "rgba(255, 255, 255, 0.05)",
-              }}
-            />
+            <div style={{ ...commonStyles.decorativeCircle, top: -100, right: -100, width: 400, height: 400 }} />
+            <div style={{ ...commonStyles.decorativeCircle, bottom: -150, left: -150, width: 500, height: 500, background: "rgba(255, 255, 255, 0.05)" }} />
 
             {/* Контент правой части */}
             <div
@@ -399,81 +322,29 @@ const LoginPage = () => {
                   marginBottom: "60px",
                 }}
               >
-                <div style={{ textAlign: "center" }}>
-                  <div
-                    style={{
-                      width: "80px",
-                      height: "80px",
-                      background: "rgba(255, 255, 255, 0.2)",
-                      borderRadius: "20px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      margin: "0 auto 16px",
-                      backdropFilter: "blur(10px)",
-                    }}
-                  >
-                    <span style={{ fontSize: "40px" }}>🚀</span>
+                {[
+                  { emoji: "🚀", text: "Быстрый старт" },
+                  { emoji: "💡", text: "Практика" },
+                  { emoji: "👥", text: "Сообщество" },
+                ].map((item, idx) => (
+                  <div key={idx} style={commonStyles.textCenter}>
+                    <div style={{ ...commonStyles.iconBox, background: "rgba(255, 255, 255, 0.2)", backdropFilter: "blur(10px)", marginBottom: 16 }}>
+                      <span style={{ fontSize: 40 }}>{item.emoji}</span>
+                    </div>
+                    <Text {...componentProps.text.whiteStrong}>{item.text}</Text>
                   </div>
-                  <Text strong style={{ color: "#fff", fontSize: "16px" }}>
-                    Быстрый старт
-                  </Text>
-                </div>
-
-                <div style={{ textAlign: "center" }}>
-                  <div
-                    style={{
-                      width: "80px",
-                      height: "80px",
-                      background: "rgba(255, 255, 255, 0.2)",
-                      borderRadius: "20px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      margin: "0 auto 16px",
-                      backdropFilter: "blur(10px)",
-                    }}
-                  >
-                    <span style={{ fontSize: "40px" }}>💡</span>
-                  </div>
-                  <Text strong style={{ color: "#fff", fontSize: "16px" }}>
-                    Практика
-                  </Text>
-                </div>
-
-                <div style={{ textAlign: "center" }}>
-                  <div
-                    style={{
-                      width: "80px",
-                      height: "80px",
-                      background: "rgba(255, 255, 255, 0.2)",
-                      borderRadius: "20px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      margin: "0 auto 16px",
-                      backdropFilter: "blur(10px)",
-                    }}
-                  >
-                    <span style={{ fontSize: "40px" }}>👥</span>
-                  </div>
-                  <Text strong style={{ color: "#fff", fontSize: "16px" }}>
-                    Сообщество
-                  </Text>
-                </div>
+                ))}
               </div>
 
               {/* Дополнительная информация */}
-              <div
-                style={{
-                  background: "rgba(255, 255, 255, 0.1)",
-                  padding: "24px",
-                  borderRadius: "16px",
-                  backdropFilter: "blur(10px)",
-                  maxWidth: "600px",
-                  margin: "0 auto",
-                }}
-              >
+              <div style={{
+                background: "rgba(255, 255, 255, 0.1)",
+                padding: 24,
+                borderRadius: 16,
+                backdropFilter: "blur(10px)",
+                maxWidth: 600,
+                margin: "0 auto",
+              }}>
                 <Text
                   style={{
                     color: "#fff",

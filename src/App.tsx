@@ -7,6 +7,8 @@ import LoginPage from "./pages/LogPage";
 import RegPage from "./pages/RegPage";
 import { customTheme } from "./theme";
 import CourseCreationPage from "./pages/CourseCreationPage";
+import Course from "./pages/Cource";
+import CourseLessonsPage from "./pages/CourseLessonsPage";
 
 // const Home = React.lazy(() => import("./pages/Home"));
 
@@ -33,7 +35,9 @@ function App() {
           <Route path="/user-profile" element={<UserProfile />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/registration" element={<RegPage />} />
-          <Route path="/cource" element={<CourseCreationPage />} />
+          <Route path="/cource-creating" element={<CourseCreationPage />} />
+          <Route path="/cource" element={<Course />} />
+          <Route path="/cource-lesson" element={<CourseLessonsPage />} />
           {/* <Route path="/about" element={<About />} />
             <Route path="/users" element={<Users />} />
             <Route path="/dashboard" element={<Dashboard />} />
