@@ -20,7 +20,8 @@ import {
   Radio,
   message,
   Badge,
-  Collapse
+  Collapse,
+  type FormProps
 } from 'antd';
 import { 
   PlusOutlined,
@@ -40,6 +41,9 @@ import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { gradients } from '../../theme';
 import Sidebar from '../../components/Sidebar';
+import type { LoginFormData } from '../../api/types/auth';
+import type { CourseFormData, CourseRequest } from '../../api/types/course';
+import { courseApi } from '../../api/CourseApi';
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -107,6 +111,44 @@ const CourseCreationPage = () => {
     message.success('Курс успешно сохранен!');
   };
 
+
+  const onFinish: FormProps<CourseFormData>["onFinish"] = async (values) =>
+  {
+    console.log(values);
+    const courseRequest: CourseRequest = {
+    title: values.title,
+    description: values.description,
+    shortDescription: values.shortDescription || 
+    values.description.substring(0, 100) + (values.description.length > 100 ? '...' : ''),
+    category: values.category,
+    level: values.level,
+    imageUrl: courseImage || 'https://via.placeholder.com/300x200',
+    lessonsCount: values.lessonsCount || 0,
+    duration: values.duration || '',
+    format: values.format || 'mixed',
+    hasCertificate: values.hasCertificate || false, // Из формы
+    hasHomework: values.hasHomework || false,       // Из формы
+    isPaid: values.isPaid || false,                 // Из формы
+    price: values.isPaid ? (values.price || 0) : 0,
+    discountedPrice: values.isPaid ? (values.discountedPrice || 0) : 0,
+    tags: values.tags || [],
+  };
+  const courseResponse = await courseApi.createCourse(courseRequest);
+  console.log(courseResponse);
+  
+  if (courseResponse) {
+    message.success('Курс успешно создан!');
+  } else {
+    message.error('Не удалось создать курс');
+  }
+}
+
+  const onFinishFailed: FormProps<LoginFormData>["onFinishFailed"] = (
+  errorInfo
+  ) => {
+    console.log(errorInfo);
+  };
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Header />
@@ -160,7 +202,8 @@ const CourseCreationPage = () => {
               <Form
                 form={form}
                 layout="vertical"
-                onFinish={handleSubmit}
+                onFinish={onFinish}
+                onFinishFailed={onFinishFailed}
                 size="large"
               >
                 {/* Основная информация */}
@@ -171,7 +214,7 @@ const CourseCreationPage = () => {
                   
                   <Row gutter={24}>
                     <Col span={16}>
-                      <Form.Item
+                      <Form.Item<CourseFormData>
                         label="Название курса"
                         name="title"
                         rules={[{ required: true, message: 'Введите название курса' }]}
@@ -182,7 +225,7 @@ const CourseCreationPage = () => {
                         />
                       </Form.Item>
 
-                      <Form.Item
+                      <Form.Item<CourseFormData>
                         label="Описание курса"
                         name="description"
                         rules={[{ required: true, message: 'Введите описание курса' }]}
@@ -197,9 +240,9 @@ const CourseCreationPage = () => {
                     </Col>
                     
                     <Col span={8}>
-                      <Form.Item
+                      <Form.Item<CourseFormData>
                         label="Обложка курса"
-                        name="image"
+                        name="imageFile"
                       >
                         <Upload
                           accept="image/*"
@@ -246,9 +289,9 @@ const CourseCreationPage = () => {
                   
                   <Row gutter={24}>
                     <Col span={12}>
-                      <Form.Item
+                      <Form.Item<CourseFormData>
                         label="Категория"
-                        name="category"
+                        name = "category"
                         rules={[{ required: true, message: 'Выберите категорию' }]}
                       >
                         <Select placeholder="Выберите категорию">
@@ -260,7 +303,7 @@ const CourseCreationPage = () => {
                     </Col>
                     
                     <Col span={12}>
-                      <Form.Item
+                      <Form.Item<CourseFormData>
                         label="Уровень сложности"
                         name="level"
                         rules={[{ required: true, message: 'Выберите уровень' }]}
@@ -276,7 +319,7 @@ const CourseCreationPage = () => {
                     </Col>
                   </Row>
 
-                  <Form.Item
+                  <Form.Item<CourseFormData>
                     label="Теги (до 5)"
                     name="tags"
                   >
@@ -298,7 +341,7 @@ const CourseCreationPage = () => {
                   
                   <Row gutter={24}>
                     <Col span={12}>
-                      <Form.Item
+                      <Form.Item<CourseFormData>
                         label="Количество уроков"
                         name="lessonsCount"
                       >
@@ -310,7 +353,7 @@ const CourseCreationPage = () => {
                       </Form.Item>
                     </Col>
                     <Col span={12}>
-                      <Form.Item
+                      <Form.Item<CourseFormData>
                         label="Общая длительность"
                         name="duration"
                       >
@@ -322,7 +365,7 @@ const CourseCreationPage = () => {
                     </Col>
                   </Row>
 
-                  <Form.Item
+                  <Form.Item<CourseFormData>
                     label="Формат обучения"
                     name="format"
                   >
@@ -344,9 +387,9 @@ const CourseCreationPage = () => {
                   
                   <Row gutter={24}>
                     <Col span={12}>
-                      <Form.Item
+                      <Form.Item<CourseFormData>
                         label="Сертификат об окончании"
-                        name="certificate"
+                        name="hasCertificate"
                         valuePropName="checked"
                         initialValue={true}
                       >
@@ -354,9 +397,9 @@ const CourseCreationPage = () => {
                       </Form.Item>
                     </Col>
                     <Col span={12}>
-                      <Form.Item
+                      <Form.Item<CourseFormData>
                         label="Домашние задания"
-                        name="homework"
+                        name="hasHomework"
                         valuePropName="checked"
                         initialValue={true}
                       >
@@ -384,23 +427,28 @@ const CourseCreationPage = () => {
                     <Title level={4} style={{ margin: 0 }}>
                       Настройки цены {showPriceSection ? <UpOutlined /> : <DownOutlined />}
                     </Title>
-                    <Switch
-                      checked={isPaidCourse}
-                      onChange={(checked) => {
-                        setIsPaidCourse(checked);
-                        if (checked) {
-                          setShowPriceSection(true);
-                        }
-                      }}
-                      checkedChildren="Платный"
-                      unCheckedChildren="Бесплатный"
-                    />
+                     <Form.Item<CourseFormData>
+                      name="isPaid"
+                      valuePropName="checked"
+                      initialValue={false}
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Switch
+                        onChange={(checked) => {
+                          if (checked) {
+                            setShowPriceSection(true);
+                          }
+                        }}
+                        checkedChildren="Платный"
+                        unCheckedChildren="Бесплатный"
+                      />
+                    </Form.Item>
                   </div>
 
                   {showPriceSection && isPaidCourse && (
                     <Row gutter={24}>
                       <Col span={12}>
-                        <Form.Item
+                        <Form.Item<CourseFormData>
                           label="Цена курса"
                           name="price"
                           rules={[{ required: true, message: 'Укажите цену' }]}
@@ -415,7 +463,7 @@ const CourseCreationPage = () => {
                         </Form.Item>
                       </Col>
                       <Col span={12}>
-                        <Form.Item
+                        <Form.Item<CourseFormData>
                           label="Цена со скидкой"
                           name="discountedPrice"
                         >
@@ -455,7 +503,8 @@ const CourseCreationPage = () => {
                   
                   <Space>
                     <Button 
-                      type="default"
+                      type="primary"
+                      htmlType='submit'
                       icon={<SaveOutlined />}
                       size="large"
                       onClick={handleSaveDraft}
