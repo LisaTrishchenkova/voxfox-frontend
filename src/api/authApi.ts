@@ -4,6 +4,7 @@ import type {
   LoginResponse,
   RegistrationRequest,
 } from "./types/auth";
+import { authStorage } from "../services/auth-storage.service";
 
 const BASE_URL = "http://localhost:5000/api";
 
@@ -15,8 +16,25 @@ export const authApi = {
     const requestData: LoginRequest = { email, password };
 
     try {
-      const response = await axios.post(`${BASE_URL}/Auth/login`, requestData);
-      return response.data;
+      const response = await axios.post<LoginResponse>(
+        `${BASE_URL}/Auth/login`,
+        requestData
+      );
+
+      const responseData = response.data;
+      // Сохраняем токен после успешного входа
+      if (responseData.tokenAccess) {
+        authStorage.setAccessToken(responseData.tokenAccess);
+        authStorage.setUserData(responseData.userId);
+        // Если в ответе есть refresh token, сохраняем его
+        if (responseData.tokenRefresh) {
+          authStorage.setRefreshToken(responseData.tokenRefresh);
+        }
+
+        console.log("Токен успешно сохранен в localStorage");
+      }
+
+      return responseData;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 404) {

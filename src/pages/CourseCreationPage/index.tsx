@@ -1,86 +1,72 @@
-// src/pages/CourseCreationPage.tsx
-import { useState } from 'react';
-import { 
-  Layout, 
-  Menu, 
-  Button, 
-  Form, 
-  Input, 
-  Select, 
-  Typography, 
-  Row, 
-  Col, 
-  Card, 
+import { useState } from "react";
+import {
+  Layout,
+  Button,
+  Form,
+  Input,
+  Select,
+  Typography,
+  Row,
+  Col,
+  Card,
   Divider,
   Space,
-  Tag,
   InputNumber,
   Switch,
   Upload,
   Radio,
   message,
-  Badge,
-  Collapse,
-  type FormProps
-} from 'antd';
-import { 
-  PlusOutlined,
-  BookOutlined,
-  VideoCameraOutlined,
-  FileTextOutlined,
-  SettingOutlined,
+  type FormProps,
+} from "antd";
+import {
   UploadOutlined,
-  DollarOutlined,
-  TeamOutlined,
   SaveOutlined,
   DeleteOutlined,
   DownOutlined,
-  UpOutlined
-} from '@ant-design/icons';
-import Header from '../../components/Header';
-import Footer from '../../components/Footer';
-import { gradients } from '../../theme';
-import Sidebar from '../../components/Sidebar';
-import type { LoginFormData } from '../../api/types/auth';
-import type { CourseFormData, CourseRequest } from '../../api/types/course';
-import { courseApi } from '../../api/CourseApi';
+  UpOutlined,
+} from "@ant-design/icons";
+import Header from "../../components/Header";
+import Footer from "../../components/Footer";
+import { gradients } from "../../theme";
+import Sidebar from "../../components/Sidebar";
+import type { CourseFormData, CourseRequest } from "../../api/types/course";
+import { courseApi } from "../../api/courseApi";
 
-const { Sider, Content } = Layout;
+const { Content } = Layout;
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
-const { Panel } = Collapse;
 
 const CourseCreationPage = () => {
-  const [form] = Form.useForm();
-  const [menuSelected, setMenuSelected] = useState('courses');
+  const [form] = Form.useForm<CourseFormData>();
+  // const [menuSelected, setMenuSelected] = useState('courses');
   const [courseImage, setCourseImage] = useState<string | null>(null);
-  const [isPaidCourse, setIsPaidCourse] = useState(false);
   const [showPriceSection, setShowPriceSection] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Моковые данные существующих курсов
-  const existingCourses = [
-    { id: 1, title: 'React Advanced', status: 'published', students: 245, updated: '2 дня назад' },
-    { id: 2, title: 'TypeScript Basics', status: 'draft', students: 0, updated: '1 час назад' },
-    { id: 3, title: 'Node.js API', status: 'published', students: 189, updated: 'неделю назад' },
-  ];
+  // // Моковые данные существующих курсов
+  // const existingCourses = [
+  //   { id: 1, title: 'React Advanced', status: 'published', students: 245, updated: '2 дня назад' },
+  //   { id: 2, title: 'TypeScript Basics', status: 'draft', students: 0, updated: '1 час назад' },
+  //   { id: 3, title: 'Node.js API', status: 'published', students: 189, updated: 'неделю назад' },
+  // ];
 
   const categories = [
-    'Программирование',
-    'Дизайн',
-    'Data Science',
-    'Маркетинг',
-    'Бизнес'
+    "Программирование",
+    "Дизайн",
+    "Data Science",
+    "Маркетинг",
+    "Бизнес",
   ];
 
   const levels = [
-    { value: 'beginner', label: 'Начинающий' },
-    { value: 'intermediate', label: 'Средний' },
-    { value: 'advanced', label: 'Продвинутый' }
+    { value: "beginner", label: "Начинающий" },
+    { value: "intermediate", label: "Средний" },
+    { value: "advanced", label: "Продвинутый" },
   ];
 
   const handleImageUpload = (info: any) => {
-    if (info.file.status === 'done') {
+    if (info.file.status === "done") {
       message.success(`${info.file.name} успешно загружено`);
       if (info.file.originFileObj) {
         setCourseImage(URL.createObjectURL(info.file.originFileObj));
@@ -88,118 +74,133 @@ const CourseCreationPage = () => {
     }
   };
 
-  const handleMenuClick = (key: string) => {
-    setMenuSelected(key);
+  // const handleMenuClick = (key: string) => {
+  //   setMenuSelected(key);
+  // };
+
+  const handleSaveDraft = async () => {
+    try {
+      const values = await form.validateFields();
+      console.log("Сохранен черновик:", values);
+      message.success("Черновик сохранен");
+    } catch (error) {
+      console.error("Ошибка валидации:", error);
+      message.error("Заполните обязательные поля");
+    }
   };
 
-  const handleSaveDraft = () => {
-    form.validateFields().then(values => {
-      console.log('Сохранен черновик:', values);
-      message.success('Черновик сохранен');
-    });
-  };
-
-  const handlePublish = () => {
-    form.validateFields().then(values => {
-      console.log('Курс опубликован:', values);
-      message.success('Курс опубликован!');
-    });
-  };
-
-  const handleSubmit = (values: any) => {
-    console.log('Данные курса:', values);
-    message.success('Курс успешно сохранен!');
-  };
-
-
-  const onFinish: FormProps<CourseFormData>["onFinish"] = async (values) =>
-  {
-    console.log(values);
-    const courseRequest: CourseRequest = {
-    title: values.title,
-    description: values.description,
-    shortDescription: values.shortDescription || 
-    values.description.substring(0, 100) + (values.description.length > 100 ? '...' : ''),
-    category: values.category,
-    level: values.level,
-    imageUrl: courseImage || 'https://via.placeholder.com/300x200',
-    lessonsCount: values.lessonsCount || 0,
-    duration: values.duration || '',
-    format: values.format || 'mixed',
-    hasCertificate: values.hasCertificate || false, // Из формы
-    hasHomework: values.hasHomework || false,       // Из формы
-    isPaid: values.isPaid || false,                 // Из формы
-    price: values.isPaid ? (values.price || 0) : 0,
-    discountedPrice: values.isPaid ? (values.discountedPrice || 0) : 0,
-    tags: values.tags || [],
-  };
-  const courseResponse = await courseApi.createCourse(courseRequest);
-  console.log(courseResponse);
-  
-  if (courseResponse) {
-    message.success('Курс успешно создан!');
-  } else {
-    message.error('Не удалось создать курс');
-  }
-}
-
-  const onFinishFailed: FormProps<LoginFormData>["onFinishFailed"] = (
-  errorInfo
+  const onFinish: FormProps<CourseFormData>["onFinish"] = async (
+    values: CourseFormData
   ) => {
-    console.log(errorInfo);
+    setIsSubmitting(true);
+    try {
+      console.log("Данные курса:", values);
+
+      const courseRequest: CourseRequest = {
+        title: values.title,
+        description: values.description,
+        shortDescription:
+          values.shortDescription ||
+          values.description.substring(0, 100) +
+            (values.description.length > 100 ? "..." : ""),
+        category: values.category,
+        level: values.level,
+        imageUrl: courseImage || "https://via.placeholder.com/300x200",
+        lessonsCount: values.lessonsCount || 0,
+        duration: values.duration || "",
+        format: values.format || "mixed",
+        hasCertificate: values.hasCertificate || false,
+        hasHomework: values.hasHomework || false,
+        isPaid: values.isPaid || false,
+        price: values.isPaid ? values.price || 0 : 0,
+        discountedPrice: values.isPaid ? values.discountedPrice || 0 : 0,
+        tags: values.tags || [],
+      };
+
+      const courseResponse = await courseApi.createCourse(courseRequest);
+      console.log(courseResponse);
+
+      if (courseResponse) {
+        message.success("Курс успешно создан!");
+      } else {
+        message.error("Не удалось создать курс");
+      }
+    } catch (error) {
+      console.error("Ошибка создания курса:", error);
+      message.error("Ошибка при создании курса");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const onFinishFailed: FormProps<CourseFormData>["onFinishFailed"] = (
+    errorInfo
+  ) => {
+    console.log("Ошибка валидации:", errorInfo);
+    message.error("Проверьте правильность заполнения формы");
+  };
+
+  const handleClearForm = () => {
+    form.resetFields();
+    setCourseImage(null);
+    setShowPriceSection(false);
+    message.info("Форма очищена");
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div
+      style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
+    >
       <Header />
-      
-    <Layout style={{ flex: 1, background: '#fafafa' }}>
-          <Sidebar/>
+
+      <Layout style={{ flex: 1, background: "#fafafa" }}>
+        <Sidebar />
 
         {/* Основной контент */}
-        <Content style={{ padding: '32px 40px', overflow: 'auto' }}>
-          <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        <Content style={{ padding: "32px 40px", overflow: "auto" }}>
+          <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
             {/* Заголовок */}
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '32px'
-            }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "32px",
+              }}
+            >
               <div>
                 <Title level={2} style={{ margin: 0 }}>
                   Создание нового курса
-                  {/* {menuSelected === 'new-course' ? 'Создание нового курса' : 'Редактирование курса'} */}
                 </Title>
-                <Text type="secondary">
-                  Заполните информацию о курсе
-                </Text>
+                <Text type="secondary">Заполните информацию о курсе</Text>
               </div>
-              
+
               <Space>
-                <Button 
+                <Button
                   type="default"
                   icon={<SaveOutlined />}
                   onClick={handleSaveDraft}
                   size="large"
+                  disabled={isSubmitting}
                 >
                   Сохранить черновик
                 </Button>
-                <Button 
+                <Button
                   type="primary"
-                  icon={<UploadOutlined />}
-                  onClick={handlePublish}
+                  htmlType="submit"
+                  form="course-form"
                   size="large"
-                  style={{ background: gradients.primary, border: 'none' }}
+                  style={{ background: gradients.primary, border: "none" }}
+                  loading={isSubmitting}
                 >
                   Опубликовать курс
                 </Button>
               </Space>
             </div>
 
-            {/* Форма создания курса */}
-            <Card style={{ marginBottom: 32, borderRadius: '12px' }}>
+            <Card style={{ marginBottom: 32, borderRadius: "12px" }}>
               <Form
+                id="course-form"
                 form={form}
                 layout="vertical"
                 onFinish={onFinish}
@@ -207,20 +208,22 @@ const CourseCreationPage = () => {
                 size="large"
               >
                 {/* Основная информация */}
-                <div style={{ marginBottom: '32px' }}>
-                  <Title level={4} style={{ marginBottom: '24px' }}>
+                <div style={{ marginBottom: "32px" }}>
+                  <Title level={4} style={{ marginBottom: "24px" }}>
                     Основная информация
                   </Title>
-                  
+
                   <Row gutter={24}>
                     <Col span={16}>
                       <Form.Item<CourseFormData>
                         label="Название курса"
                         name="title"
-                        rules={[{ required: true, message: 'Введите название курса' }]}
+                        rules={[
+                          { required: true, message: "Введите название курса" },
+                        ]}
                       >
-                        <Input 
-                          placeholder="Например: 'React с нуля до PRO'" 
+                        <Input
+                          placeholder="Например: 'React с нуля до PRO'"
                           size="large"
                         />
                       </Form.Item>
@@ -228,9 +231,11 @@ const CourseCreationPage = () => {
                       <Form.Item<CourseFormData>
                         label="Описание курса"
                         name="description"
-                        rules={[{ required: true, message: 'Введите описание курса' }]}
+                        rules={[
+                          { required: true, message: "Введите описание курса" },
+                        ]}
                       >
-                        <TextArea 
+                        <TextArea
                           placeholder="Опишите, чему научатся студенты"
                           rows={4}
                           maxLength={500}
@@ -238,12 +243,9 @@ const CourseCreationPage = () => {
                         />
                       </Form.Item>
                     </Col>
-                    
+
                     <Col span={8}>
-                      <Form.Item<CourseFormData>
-                        label="Обложка курса"
-                        name="imageFile"
-                      >
+                      <Form.Item<CourseFormData> label="Обложка курса">
                         <Upload
                           accept="image/*"
                           showUploadList={false}
@@ -254,21 +256,31 @@ const CourseCreationPage = () => {
                           }}
                           onChange={handleImageUpload}
                         >
-                          <div style={{
-                            width: '100%',
-                            height: '180px',
-                            border: '2px dashed #d9d9d9',
-                            borderRadius: '8px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: courseImage ? `url(${courseImage}) center/cover` : '#fafafa',
-                            cursor: 'pointer'
-                          }}>
+                          <div
+                            style={{
+                              width: "100%",
+                              height: "180px",
+                              border: "2px dashed #d9d9d9",
+                              borderRadius: "8px",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              background: courseImage
+                                ? `url(${courseImage}) center/cover`
+                                : "#fafafa",
+                              cursor: "pointer",
+                            }}
+                          >
                             {!courseImage && (
                               <>
-                                <UploadOutlined style={{ fontSize: '24px', color: '#999', marginBottom: '8px' }} />
+                                <UploadOutlined
+                                  style={{
+                                    fontSize: "24px",
+                                    color: "#999",
+                                    marginBottom: "8px",
+                                  }}
+                                />
                                 <Text type="secondary">Загрузить обложку</Text>
                               </>
                             )}
@@ -282,34 +294,40 @@ const CourseCreationPage = () => {
                 <Divider />
 
                 {/* Категории и уровень */}
-                <div style={{ marginBottom: '32px' }}>
-                  <Title level={4} style={{ marginBottom: '24px' }}>
+                <div style={{ marginBottom: "32px" }}>
+                  <Title level={4} style={{ marginBottom: "24px" }}>
                     Категории и настройки
                   </Title>
-                  
+
                   <Row gutter={24}>
                     <Col span={12}>
                       <Form.Item<CourseFormData>
                         label="Категория"
-                        name = "category"
-                        rules={[{ required: true, message: 'Выберите категорию' }]}
+                        name="category"
+                        rules={[
+                          { required: true, message: "Выберите категорию" },
+                        ]}
                       >
                         <Select placeholder="Выберите категорию">
-                          {categories.map(cat => (
-                            <Option key={cat} value={cat}>{cat}</Option>
+                          {categories.map((cat) => (
+                            <Option key={cat} value={cat}>
+                              {cat}
+                            </Option>
                           ))}
                         </Select>
                       </Form.Item>
                     </Col>
-                    
+
                     <Col span={12}>
                       <Form.Item<CourseFormData>
                         label="Уровень сложности"
                         name="level"
-                        rules={[{ required: true, message: 'Выберите уровень' }]}
+                        rules={[
+                          { required: true, message: "Выберите уровень" },
+                        ]}
                       >
                         <Select placeholder="Выберите уровень сложности">
-                          {levels.map(level => (
+                          {levels.map((level) => (
                             <Option key={level.value} value={level.value}>
                               {level.label}
                             </Option>
@@ -319,10 +337,7 @@ const CourseCreationPage = () => {
                     </Col>
                   </Row>
 
-                  <Form.Item<CourseFormData>
-                    label="Теги (до 5)"
-                    name="tags"
-                  >
+                  <Form.Item<CourseFormData> label="Теги (до 5)" name="tags">
                     <Select
                       mode="tags"
                       placeholder="Добавьте теги, например: React, JavaScript"
@@ -334,21 +349,21 @@ const CourseCreationPage = () => {
                 <Divider />
 
                 {/* Содержание курса */}
-                <div style={{ marginBottom: '32px' }}>
-                  <Title level={4} style={{ marginBottom: '24px' }}>
+                <div style={{ marginBottom: "32px" }}>
+                  <Title level={4} style={{ marginBottom: "24px" }}>
                     Содержание курса
                   </Title>
-                  
+
                   <Row gutter={24}>
                     <Col span={12}>
                       <Form.Item<CourseFormData>
                         label="Количество уроков"
                         name="lessonsCount"
                       >
-                        <InputNumber 
-                          min={1} 
-                          placeholder="Например: 24" 
-                          style={{ width: '100%' }}
+                        <InputNumber
+                          min={1}
+                          placeholder="Например: 24"
+                          style={{ width: "100%" }}
                         />
                       </Form.Item>
                     </Col>
@@ -357,9 +372,9 @@ const CourseCreationPage = () => {
                         label="Общая длительность"
                         name="duration"
                       >
-                        <Input 
-                          placeholder="Например: 36 часов" 
-                          style={{ width: '100%' }}
+                        <Input
+                          placeholder="Например: 36 часов"
+                          style={{ width: "100%" }}
                         />
                       </Form.Item>
                     </Col>
@@ -380,11 +395,11 @@ const CourseCreationPage = () => {
                 <Divider />
 
                 {/* Настройки курса */}
-                <div style={{ marginBottom: '32px' }}>
-                  <Title level={4} style={{ marginBottom: '24px' }}>
+                <div style={{ marginBottom: "32px" }}>
+                  <Title level={4} style={{ marginBottom: "24px" }}>
                     Настройки курса
                   </Title>
-                  
+
                   <Row gutter={24}>
                     <Col span={12}>
                       <Form.Item<CourseFormData>
@@ -407,27 +422,27 @@ const CourseCreationPage = () => {
                       </Form.Item>
                     </Col>
                   </Row>
-
-                 
                 </div>
 
                 <Divider />
 
                 {/* Цена курса (опционально) */}
-                <div style={{ marginBottom: '32px' }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    marginBottom: '24px',
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => setShowPriceSection(!showPriceSection)}
+                <div style={{ marginBottom: "32px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "24px",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => setShowPriceSection(!showPriceSection)}
                   >
                     <Title level={4} style={{ margin: 0 }}>
-                      Настройки цены {showPriceSection ? <UpOutlined /> : <DownOutlined />}
+                      Настройки цены{" "}
+                      {showPriceSection ? <UpOutlined /> : <DownOutlined />}
                     </Title>
-                     <Form.Item<CourseFormData>
+                    <Form.Item<CourseFormData>
                       name="isPaid"
                       valuePropName="checked"
                       initialValue={false}
@@ -437,6 +452,8 @@ const CourseCreationPage = () => {
                         onChange={(checked) => {
                           if (checked) {
                             setShowPriceSection(true);
+                          } else {
+                            setShowPriceSection(false);
                           }
                         }}
                         checkedChildren="Платный"
@@ -445,20 +462,22 @@ const CourseCreationPage = () => {
                     </Form.Item>
                   </div>
 
-                  {showPriceSection && isPaidCourse && (
+                  {showPriceSection && form.getFieldValue("isPaid") && (
                     <Row gutter={24}>
                       <Col span={12}>
                         <Form.Item<CourseFormData>
                           label="Цена курса"
                           name="price"
-                          rules={[{ required: true, message: 'Укажите цену' }]}
+                          rules={[{ required: true, message: "Укажите цену" }]}
                         >
-                          <InputNumber 
-                            min={0} 
-                            style={{ width: '100%' }}
+                          <InputNumber
+                            min={0}
+                            style={{ width: "100%" }}
                             placeholder="0"
-                            addonBefore={<DollarOutlined />}
-                            formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
+                            formatter={(value) =>
+                              `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, " ")
+                            }
+                            prefix="₽"
                           />
                         </Form.Item>
                       </Col>
@@ -467,11 +486,11 @@ const CourseCreationPage = () => {
                           label="Цена со скидкой"
                           name="discountedPrice"
                         >
-                          <InputNumber 
-                            min={0} 
-                            style={{ width: '100%' }}
+                          <InputNumber
+                            min={0}
+                            style={{ width: "100%" }}
                             placeholder="Укажите, если есть скидка"
-                            addonBefore={<DollarOutlined />}
+                            prefix="₽"
                           />
                         </Form.Item>
                       </Col>
@@ -480,44 +499,41 @@ const CourseCreationPage = () => {
                 </div>
 
                 {/* Кнопки формы */}
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  marginTop: '40px',
-                  paddingTop: '24px',
-                  borderTop: '1px solid #f0f0f0'
-                }}>
-                  <Button 
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginTop: "40px",
+                    paddingTop: "24px",
+                    borderTop: "1px solid #f0f0f0",
+                  }}
+                >
+                  <Button
                     icon={<DeleteOutlined />}
                     danger
-                    onClick={() => {
-                      form.resetFields();
-                      setCourseImage(null);
-                      setIsPaidCourse(false);
-                      setShowPriceSection(false);
-                      message.info('Форма очищена');
-                    }}
+                    onClick={handleClearForm}
+                    disabled={isSubmitting}
                   >
                     Очистить форму
                   </Button>
-                  
+
                   <Space>
-                    <Button 
-                      type="primary"
-                      htmlType='submit'
+                    <Button
+                      type="default"
                       icon={<SaveOutlined />}
                       size="large"
                       onClick={handleSaveDraft}
+                      disabled={isSubmitting}
                     >
                       Сохранить черновик
                     </Button>
-                    <Button 
+                    <Button
                       type="primary"
                       htmlType="submit"
-                      icon={<UploadOutlined />}
+                      form="course-form"
                       size="large"
-                      style={{ background: gradients.primary, border: 'none' }}
-                      onClick={handlePublish}
+                      style={{ background: gradients.primary, border: "none" }}
+                      loading={isSubmitting}
                     >
                       Опубликовать курс
                     </Button>
@@ -527,15 +543,23 @@ const CourseCreationPage = () => {
             </Card>
 
             {/* Подсказки */}
-            <Card style={{ borderRadius: '12px' }}>
-              <Title level={5} style={{ marginBottom: '16px' }}>
+            <Card style={{ borderRadius: "12px" }}>
+              <Title level={5} style={{ marginBottom: "16px" }}>
                 💡 Советы по созданию курса
               </Title>
-              <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                <li><Text>Добавьте качественную обложку</Text></li>
-                <li><Text>Четко опишите, чему научатся студенты</Text></li>
-                <li><Text>Выберите правильный уровень сложности</Text></li>
-                <li><Text>Добавьте теги для лучшего поиска</Text></li>
+              <ul style={{ margin: 0, paddingLeft: "20px" }}>
+                <li>
+                  <Text>Добавьте качественную обложку</Text>
+                </li>
+                <li>
+                  <Text>Четко опишите, чему научатся студенты</Text>
+                </li>
+                <li>
+                  <Text>Выберите правильный уровень сложности</Text>
+                </li>
+                <li>
+                  <Text>Добавьте теги для лучшего поиска</Text>
+                </li>
               </ul>
             </Card>
           </div>

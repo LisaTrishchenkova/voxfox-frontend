@@ -10,30 +10,49 @@ import {
   Avatar,
 } from "antd";
 import { LoginOutlined, SearchOutlined } from "@ant-design/icons";
-import type { MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import logo from "../assets/logo.jpg";
 import { useNavigate } from "react-router-dom";
 import { gradients } from "../theme";
+import { authStorage } from "../services/auth-storage.service";
+import type { UserResponse } from "../api/types/user";
+import { userApi } from "../api/userApi";
 
 const { Title } = Typography;
 
 const Header = () => {
   const navigate = useNavigate();
+  const isAuth = authStorage.isAuthenticated();
+  const [userData, setUserData] = useState<UserResponse | null>(null);
   function redirectToLogin(event: MouseEvent<HTMLElement, MouseEvent>): void {
     event.preventDefault();
     navigate("/login");
   }
 
+  useEffect(() => {
+    const fetchUser = async () => {
+      const userId = authStorage.getUserData<string>();
+      if (!userId) {
+        return;
+      }
+      const userResponse = await userApi.getUserById(userId);
+      setUserData(userResponse);
+    };
+    fetchUser();
+  }, []);
+
   return (
-    <header style={{
-      background: "#fff",
-      padding: "0 24px",
-      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
-      borderBottom: "1px solid #e8e8e8",
-      position: "sticky",
-      top: 0,
-      zIndex: 1000,
-    }}>
+    <header
+      style={{
+        background: "#fff",
+        padding: "0 24px",
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+        borderBottom: "1px solid #e8e8e8",
+        position: "sticky",
+        top: 0,
+        zIndex: 1000,
+      }}
+    >
       <Row justify="space-between" align="middle">
         <Col>
           <Row align="middle" gutter={24}>
@@ -70,25 +89,47 @@ const Header = () => {
                 <Menu.Item
                   key="home"
                   style={{ fontWeight: 600, color: "#389e0d" }}
-                  activeStyle={{ color: "#fa8c16", borderBottom: "2px solid #fa8c16" }}
-                  onClick={() => navigate('/')}
+                  activeStyle={{
+                    color: "#fa8c16",
+                    borderBottom: "2px solid #fa8c16",
+                  }}
+                  onClick={() => navigate("/")}
                 >
                   Главная
                 </Menu.Item>
-                <Menu.Item key="projects" style={{ fontWeight: 600, color: "#389e0d" }}>
+                <Menu.Item
+                  key="projects"
+                  style={{ fontWeight: 600, color: "#389e0d" }}
+                >
                   Проекты
                 </Menu.Item>
-                <Menu.Item key="learn" style={{ fontWeight: 600, color: "#389e0d" }}
-                  onClick={() => navigate('/cource')}>
-                  Преподавание
-                </Menu.Item>
-                <Menu.Item key="community" style={{ fontWeight: 600, color: "#389e0d" }}>
+
+                {isAuth && (
+                  <Menu.Item
+                    key="learn"
+                    style={{ fontWeight: 600, color: "#389e0d" }}
+                    onClick={() => navigate("/cource")}
+                  >
+                    Преподавание
+                  </Menu.Item>
+                )}
+
+                <Menu.Item
+                  key="community"
+                  style={{ fontWeight: 600, color: "#389e0d" }}
+                >
                   Сообщество
                 </Menu.Item>
-                <Menu.Item key="about" style={{ fontWeight: 600, color: "#389e0d" }}>
+                <Menu.Item
+                  key="about"
+                  style={{ fontWeight: 600, color: "#389e0d" }}
+                >
                   О нас
                 </Menu.Item>
-                <Menu.Item key="pricing" style={{ fontWeight: 600, color: "#389e0d" }}>
+                <Menu.Item
+                  key="pricing"
+                  style={{ fontWeight: 600, color: "#389e0d" }}
+                >
                   Цены
                 </Menu.Item>
               </Menu>
@@ -100,14 +141,28 @@ const Header = () => {
             <Input.Search
               placeholder="Поиск курсов..."
               allowClear
+              // onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              //   if (!userData) return;
+
+              //   setUserData({
+              //     ...userData,
+              //     name: e.target.value,
+              //   });
+              // }}
               prefix={<SearchOutlined style={{ color: "#52c41a" }} />}
               style={{ width: 240, borderRadius: 20 }}
             />
-
-            <Button icon={<LoginOutlined />} onClick={redirectToLogin}>
-              Войти
-            </Button>
-            <Avatar></Avatar>
+            {!isAuth && (
+              <Button icon={<LoginOutlined />} onClick={redirectToLogin}>
+                Войти
+              </Button>
+            )}
+            {userData && (
+              <>
+                <Title>{userData.name}</Title>
+                <Avatar></Avatar>
+              </>
+            )}
           </Space>
         </Col>
       </Row>
