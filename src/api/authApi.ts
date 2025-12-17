@@ -5,8 +5,7 @@ import type {
   RegistrationRequest,
 } from "./types/auth";
 import { authStorage } from "../services/auth-storage.service";
-
-const BASE_URL = "http://localhost:5000/api";
+import { API_BASE_URL } from "./config";
 
 export const authApi = {
   login: async (
@@ -16,8 +15,9 @@ export const authApi = {
     const requestData: LoginRequest = { email, password };
 
     try {
+      console.log(API_BASE_URL);
       const response = await axios.post<LoginResponse>(
-        `${BASE_URL}/Auth/login`,
+        `${API_BASE_URL}/Auth/login`,
         requestData
       );
 
@@ -55,7 +55,7 @@ export const authApi = {
     const requestData: RegistrationRequest = { email, name, password };
 
     const response = await axios.post(
-      `${BASE_URL}/Auth/registration`,
+      `${API_BASE_URL}/Auth/registration`,
       requestData
     );
     return response.status;

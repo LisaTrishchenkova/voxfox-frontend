@@ -1,8 +1,7 @@
 import axios from "axios";
 import type { CourseRequest, CourseResponse } from "./types/course";
 import { authStorage } from "../services/auth-storage.service";
-
-const BASE_URL = "http://localhost:5000/api";
+import { API_BASE_URL } from "./config";
 
 export const courseApi = {
   createCourse: async (
@@ -10,7 +9,7 @@ export const courseApi = {
   ): Promise<CourseResponse | null> => {
     try {
       const response = await axios.post<CourseResponse>(
-        `${BASE_URL}/Courses`,
+        `${API_BASE_URL}/Courses`,
         courseData,
         {
           headers: authStorage.getAuthHeaders(),
@@ -42,7 +41,7 @@ export const courseApi = {
   getMyCourses: async (): Promise<CourseResponse[] | null> => {
     try {
       const response = await axios.get<CourseResponse[]>(
-        `${BASE_URL}/Cource/my`,
+        `${API_BASE_URL}/Cource/my`,
         {
           headers: authStorage.getAuthHeaders(),
         }

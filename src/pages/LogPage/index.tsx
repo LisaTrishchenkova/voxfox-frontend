@@ -1,5 +1,3 @@
-// src/pages/LoginPage.tsx
-import React from "react";
 import {
   Row,
   Col,
@@ -49,12 +47,14 @@ const LoginPage = () => {
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: gradients.primaryBackground,
-      ...commonStyles.flexCenter,
-      padding: "40px 20px",
-    }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: gradients.primaryBackground,
+        ...commonStyles.flexCenter,
+        padding: "40px 20px",
+      }}
+    >
       <Row
         gutter={0}
         style={{
@@ -70,16 +70,18 @@ const LoginPage = () => {
         <Col xs={24} md={12} lg={10}>
           <div style={{ padding: "60px 48px" }}>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <div style={{
-                width: 64,
-                height: 64,
-                background: gradients.primary,
-                borderRadius: 16,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 20px",
-              }}>
+              <div
+                style={{
+                  width: 64,
+                  height: 64,
+                  background: gradients.primary,
+                  borderRadius: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 20px",
+                }}
+              >
                 <LockOutlined style={commonStyles.iconWhite} />
               </div>
               <Title
@@ -100,7 +102,11 @@ const LoginPage = () => {
                 Можете сделать это здесь{" "}
                 <Link
                   onClick={() => navigate("/registration")}
-                  style={{ color: "#52c41a", fontWeight: 600, borderBottom: "1px dashed #52c41a" }}
+                  style={{
+                    color: "#52c41a",
+                    fontWeight: 600,
+                    borderBottom: "1px dashed #52c41a",
+                  }}
                 >
                   Зарегистрироваться!
                 </Link>
@@ -193,7 +199,10 @@ const LoginPage = () => {
                     Запомнить меня
                   </Checkbox>
                 </Form.Item>
-                <Link onClick={() => navigate("/forgot-password")} style={{ color: "#52c41a", fontWeight: 500 }}>
+                <Link
+                  onClick={() => navigate("/forgot-password")}
+                  style={{ color: "#52c41a", fontWeight: 500 }}
+                >
                   Забыли пароль?
                 </Link>
               </div>
@@ -243,28 +252,47 @@ const LoginPage = () => {
                   shape="circle"
                   icon={<GoogleOutlined />}
                   size="large"
-                  style={{ width: 52, height: 52, border: "1px solid #e8e8e8", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
+                  style={{
+                    width: 52,
+                    height: 52,
+                    border: "1px solid #e8e8e8",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+                  }}
                 />
                 <Button
                   shape="circle"
                   icon={<GithubOutlined />}
                   size="large"
-                  style={{ width: 52, height: 52, border: "1px solid #e8e8e8", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
+                  style={{
+                    width: 52,
+                    height: 52,
+                    border: "1px solid #e8e8e8",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+                  }}
                 />
                 <Button
                   shape="circle"
                   icon={<FacebookOutlined />}
                   size="large"
-                  style={{ width: 52, height: 52, border: "1px solid #e8e8e8", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
+                  style={{
+                    width: 52,
+                    height: 52,
+                    border: "1px solid #e8e8e8",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+                  }}
                 />
               </Space>
 
               <div style={{ textAlign: "center" }}>
                 <Text type="secondary">
                   Нажимая кнопку "Войти", вы соглашаетесь с{" "}
-                  <Link style={{ color: "#52c41a" }}>политикой конфиденциальности</Link>{" "}
+                  <Link style={{ color: "#52c41a" }}>
+                    политикой конфиденциальности
+                  </Link>{" "}
                   и{" "}
-                  <Link style={{ color: "#52c41a" }}>условиями использования</Link>
+                  <Link style={{ color: "#52c41a" }}>
+                    условиями использования
+                  </Link>
                 </Text>
               </div>
             </Space>
@@ -275,8 +303,25 @@ const LoginPage = () => {
         <Col xs={24} md={12} lg={14}>
           <div style={commonStyles.authSide}>
             {/* Декоративные элементы */}
-            <div style={{ ...commonStyles.decorativeCircle, top: -100, right: -100, width: 400, height: 400 }} />
-            <div style={{ ...commonStyles.decorativeCircle, bottom: -150, left: -150, width: 500, height: 500, background: "rgba(255, 255, 255, 0.05)" }} />
+            <div
+              style={{
+                ...commonStyles.decorativeCircle,
+                top: -100,
+                right: -100,
+                width: 400,
+                height: 400,
+              }}
+            />
+            <div
+              style={{
+                ...commonStyles.decorativeCircle,
+                bottom: -150,
+                left: -150,
+                width: 500,
+                height: 500,
+                background: "rgba(255, 255, 255, 0.05)",
+              }}
+            />
 
             {/* Контент правой части */}
             <div
@@ -328,23 +373,34 @@ const LoginPage = () => {
                   { emoji: "👥", text: "Сообщество" },
                 ].map((item, idx) => (
                   <div key={idx} style={commonStyles.textCenter}>
-                    <div style={{ ...commonStyles.iconBox, background: "rgba(255, 255, 255, 0.2)", backdropFilter: "blur(10px)", marginBottom: 16 }}>
+                    <div
+                      style={{
+                        ...commonStyles.iconBox,
+                        background: "rgba(255, 255, 255, 0.2)",
+                        backdropFilter: "blur(10px)",
+                        marginBottom: 16,
+                      }}
+                    >
                       <span style={{ fontSize: 40 }}>{item.emoji}</span>
                     </div>
-                    <Text {...componentProps.text.whiteStrong}>{item.text}</Text>
+                    <Text {...componentProps.text.whiteStrong}>
+                      {item.text}
+                    </Text>
                   </div>
                 ))}
               </div>
 
               {/* Дополнительная информация */}
-              <div style={{
-                background: "rgba(255, 255, 255, 0.1)",
-                padding: 24,
-                borderRadius: 16,
-                backdropFilter: "blur(10px)",
-                maxWidth: 600,
-                margin: "0 auto",
-              }}>
+              <div
+                style={{
+                  background: "rgba(255, 255, 255, 0.1)",
+                  padding: 24,
+                  borderRadius: 16,
+                  backdropFilter: "blur(10px)",
+                  maxWidth: 600,
+                  margin: "0 auto",
+                }}
+              >
                 <Text
                   style={{
                     color: "#fff",

@@ -10,10 +10,9 @@ import {
   Avatar,
 } from "antd";
 import { LoginOutlined, SearchOutlined } from "@ant-design/icons";
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useState, type MouseEventHandler } from "react";
 import logo from "../assets/logo.jpg";
 import { useNavigate } from "react-router-dom";
-import { gradients } from "../theme";
 import { authStorage } from "../services/auth-storage.service";
 import type { UserResponse } from "../api/types/user";
 import { userApi } from "../api/userApi";
@@ -24,10 +23,10 @@ const Header = () => {
   const navigate = useNavigate();
   const isAuth = authStorage.isAuthenticated();
   const [userData, setUserData] = useState<UserResponse | null>(null);
-  function redirectToLogin(event: MouseEvent<HTMLElement, MouseEvent>): void {
+  const redirectToLogin: MouseEventHandler<HTMLElement> = (event) => {
     event.preventDefault();
     navigate("/login");
-  }
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -89,10 +88,10 @@ const Header = () => {
                 <Menu.Item
                   key="home"
                   style={{ fontWeight: 600, color: "#389e0d" }}
-                  activeStyle={{
-                    color: "#fa8c16",
-                    borderBottom: "2px solid #fa8c16",
-                  }}
+                  // activeStyle={{
+                  //   color: "#fa8c16",
+                  //   borderBottom: "2px solid #fa8c16",
+                  // }}
                   onClick={() => navigate("/")}
                 >
                   Главная

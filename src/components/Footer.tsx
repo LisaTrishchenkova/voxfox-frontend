@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Layout,
   Row,
@@ -30,13 +29,15 @@ const { Title, Text, Link } = Typography;
 
 const Footer = () => {
   return (
-    <AntFooter style={{
-      background: "#f9fff4",
-      borderTop: "1px solid #e8f5e9",
-      padding: "64px 0 24px",
-      marginTop: "auto",
-      boxShadow: "0 -2px 10px rgba(82, 196, 26, 0.05)",
-    }}>
+    <AntFooter
+      style={{
+        background: "#f9fff4",
+        borderTop: "1px solid #e8f5e9",
+        padding: "64px 0 24px",
+        marginTop: "auto",
+        boxShadow: "0 -2px 10px rgba(82, 196, 26, 0.05)",
+      }}
+    >
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 20px" }}>
         <Card
           style={{
@@ -70,7 +71,12 @@ const Footer = () => {
               <Button
                 type="primary"
                 size="large"
-                style={{ background: gradients.primary, border: "none", padding: "0 32px", height: 48 }}
+                style={{
+                  background: gradients.primary,
+                  border: "none",
+                  padding: "0 32px",
+                  height: 48,
+                }}
               >
                 Начать бесплатно <ArrowRightOutlined />
               </Button>
@@ -151,7 +157,10 @@ const Footer = () => {
           </Col>
 
           <Col xs={24} md={6}>
-            <Title level={5} style={{ marginBottom: 20, color: "#389e0d", fontWeight: 600 }}>
+            <Title
+              level={5}
+              style={{ marginBottom: 20, color: "#389e0d", fontWeight: 600 }}
+            >
               Платформа
             </Title>
             <Space direction="vertical" size="small">
@@ -164,11 +173,22 @@ const Footer = () => {
                 <Link
                   key={idx}
                   href="#"
-                  style={{ color: "#595959", display: "block", padding: "6px 0", transition: "color 0.3s" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#fa8c16")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "#595959")}
+                  style={{
+                    color: "#595959",
+                    display: "block",
+                    padding: "6px 0",
+                    transition: "color 0.3s",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = "#fa8c16")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = "#595959")
+                  }
                 >
-                  <span style={{ marginRight: 8, color: "#52c41a" }}>{item.icon}</span>
+                  <span style={{ marginRight: 8, color: "#52c41a" }}>
+                    {item.icon}
+                  </span>
                   {item.text}
                 </Link>
               ))}
@@ -176,39 +196,70 @@ const Footer = () => {
           </Col>
 
           <Col xs={24} md={6}>
-            <Title level={5} style={{ marginBottom: 20, color: "#389e0d", fontWeight: 600 }}>
+            <Title
+              level={5}
+              style={{ marginBottom: 20, color: "#389e0d", fontWeight: 600 }}
+            >
               Ресурсы
             </Title>
             <Space direction="vertical" size="small">
-              {['Блог', 'Документация', 'FAQ', 'Карьера', 'Для компаний'].map(item => (
-                <Link
-                  key={item}
-                  href="#"
-                  style={{ color: "#595959", display: "block", padding: "6px 0", transition: "color 0.3s" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#fa8c16")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "#595959")}
-                >
-                  {item}
-                </Link>
-              ))}
+              {["Блог", "Документация", "FAQ", "Карьера", "Для компаний"].map(
+                (item) => (
+                  <Link
+                    key={item}
+                    href="#"
+                    style={{
+                      color: "#595959",
+                      display: "block",
+                      padding: "6px 0",
+                      transition: "color 0.3s",
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.color = "#fa8c16")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.color = "#595959")
+                    }
+                  >
+                    {item}
+                  </Link>
+                )
+              )}
             </Space>
           </Col>
 
           <Col xs={24} md={6}>
-            <Title level={5} style={{ marginBottom: 20, color: "#389e0d", fontWeight: 600 }}>
+            <Title
+              level={5}
+              style={{ marginBottom: 20, color: "#389e0d", fontWeight: 600 }}
+            >
               Контакты
             </Title>
             <Space direction="vertical" size="middle">
               {[
-                { icon: <MailOutlined />, label: "Email", value: "support@voxfox.com" },
-                { icon: <PhoneOutlined />, label: "Телефон", value: "+7 (999) 123-45-67" },
-                { icon: <EnvironmentOutlined />, label: "Адрес", value: "Москва, ул. Примерная, 123" },
+                {
+                  icon: <MailOutlined />,
+                  label: "Email",
+                  value: "support@voxfox.com",
+                },
+                {
+                  icon: <PhoneOutlined />,
+                  label: "Телефон",
+                  value: "+7 (999) 123-45-67",
+                },
+                {
+                  icon: <EnvironmentOutlined />,
+                  label: "Адрес",
+                  value: "Москва, ул. Примерная, 123",
+                },
               ].map((item, idx) => (
                 <Space key={idx}>
                   <span style={{ color: "#52c41a" }}>{item.icon}</span>
                   <div>
                     <Text strong>{item.label}</Text>
-                    <div><Text type="secondary">{item.value}</Text></div>
+                    <div>
+                      <Text type="secondary">{item.value}</Text>
+                    </div>
                   </div>
                 </Space>
               ))}
@@ -226,13 +277,21 @@ const Footer = () => {
           </Col>
           <Col xs={24} md={12} style={{ textAlign: "right" }}>
             <Space size="large">
-              {['Политика конфиденциальности', 'Условия использования', 'Правила сообщества'].map(item => (
+              {[
+                "Политика конфиденциальности",
+                "Условия использования",
+                "Правила сообщества",
+              ].map((item) => (
                 <Link
                   key={item}
                   href="#"
                   style={{ color: "#52c41a", transition: "color 0.3s" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#fa8c16")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "#52c41a")}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = "#fa8c16")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = "#52c41a")
+                  }
                 >
                   {item}
                 </Link>
