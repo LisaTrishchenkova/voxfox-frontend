@@ -70,7 +70,7 @@ const Header = () => {
                     objectFit: "contain",
                   }}
                 />
-                <Title
+                {/* <Title
                   level={3}
                   style={{
                     margin: 0,
@@ -81,7 +81,7 @@ const Header = () => {
                   }}
                 >
                   VoxFox
-                </Title>
+                </Title> */}
               </div>
             </Col>
             <Col>
