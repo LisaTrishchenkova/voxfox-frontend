@@ -264,60 +264,60 @@ const HomePage = () => {
 
   // Категории курсов
   const categories = [
-    { value: "all", label: "Все курсы", count: courses.length, icon: "📚" },
+    { value: "all", label: "Все курсы", count: courses.length, icon: "" },
     {
       value: "frontend",
       label: "Frontend",
       count: courses.filter((c) => c.category === "frontend").length,
-      icon: "⚛️",
+      icon: "",
     },
     {
       value: "backend",
       label: "Backend",
       count: courses.filter((c) => c.category === "backend").length,
-      icon: "⚙️",
+      icon: "",
     },
     {
       value: "mobile",
       label: "Mobile",
       count: courses.filter((c) => c.category === "mobile").length,
-      icon: "📱",
+      icon: "",
     },
     {
       value: "data",
       label: "Data Science",
       count: courses.filter((c) => c.category === "data").length,
-      icon: "📊",
+      icon: "",
     },
     {
       value: "devops",
       label: "DevOps",
       count: courses.filter((c) => c.category === "devops").length,
-      icon: "🐳",
+      icon: "",
     },
     {
       value: "design",
       label: "Дизайн",
       count: courses.filter((c) => c.category === "design").length,
-      icon: "🎨",
+      icon: "",
     },
     {
       value: "algorithms",
       label: "Алгоритмы",
       count: courses.filter((c) => c.category === "algorithms").length,
-      icon: "🧠",
+      icon: "",
     },
     {
       value: "testing",
       label: "Тестирование",
       count: courses.filter((c) => c.category === "testing").length,
-      icon: "🧪",
+      icon: "",
     },
     {
       value: "architecture",
       label: "Архитектура",
       count: courses.filter((c) => c.category === "architecture").length,
-      icon: "🏛️",
+      icon: "",
     },
   ];
 

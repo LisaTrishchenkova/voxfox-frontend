@@ -23,11 +23,13 @@ import {
   ArrowRightOutlined,
 } from "@ant-design/icons";
 import { gradients } from "../theme";
+import { useNavigate } from "react-router-dom";
 
 const { Footer: AntFooter } = Layout;
 const { Title, Text, Link } = Typography;
 
 const Footer = () => {
+  const navigate = useNavigate();
   return (
     <AntFooter
       style={{
@@ -77,6 +79,7 @@ const Footer = () => {
                   padding: "0 32px",
                   height: 48,
                 }}
+                 onClick={() => navigate("/")}
               >
                 Начать бесплатно <ArrowRightOutlined />
               </Button>
