@@ -9,7 +9,7 @@ import {
   Image,
   Avatar,
 } from "antd";
-import { LoginOutlined, SearchOutlined } from "@ant-design/icons";
+import { LoginOutlined, SearchOutlined, UserOutlined } from "@ant-design/icons";
 import { useEffect, useState, type MouseEventHandler } from "react";
 import logo from "../assets/logo.jpg";
 import { useNavigate } from "react-router-dom";
@@ -96,13 +96,14 @@ const Header = () => {
                 >
                   Главная
                 </Menu.Item>
-                <Menu.Item
-                  key="projects"
-                  style={{ fontWeight: 600, color: "#389e0d" }}
-                >
-                  Проекты
-                </Menu.Item>
-
+                {isAuth && (
+                  <Menu.Item
+                    key="projects"
+                    style={{ fontWeight: 600, color: "#389e0d" }}
+                  >
+                    Проекты
+                  </Menu.Item>
+                )}
                 {isAuth && (
                   <Menu.Item
                     key="learn"
@@ -158,8 +159,17 @@ const Header = () => {
             )}
             {userData && (
               <>
-                <Title>{userData.name}</Title>
-                <Avatar></Avatar>
+                <Title
+                  level={4}
+                  style={{
+                    margin: 0,
+                    fontSize: "14px",
+                    fontWeight: 500,
+                  }}
+                >
+                  {userData.name}
+                </Title>
+                <Avatar size={"default"} icon={<UserOutlined />} />{" "}
               </>
             )}
           </Space>

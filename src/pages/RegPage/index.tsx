@@ -42,7 +42,7 @@ const RegPage = () => {
     );
     console.log(status);
     if (status === 204) {
-      navigate("/user-profile");
+      navigate("/login");
     } else {
       console.log("неверный логин или пароль");
     }
@@ -65,12 +65,14 @@ const RegPage = () => {
   // });
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: gradients.primaryBackground,
-      ...commonStyles.flexCenter,
-      padding: "40px 20px",
-    }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: gradients.primaryBackground,
+        ...commonStyles.flexCenter,
+        padding: "40px 20px",
+      }}
+    >
       <Row
         gutter={0}
         style={{
@@ -86,16 +88,18 @@ const RegPage = () => {
         <Col xs={24} md={12} lg={10}>
           <div style={{ padding: "60px 48px" }}>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <div style={{
-                width: 64,
-                height: 64,
-                background: gradients.primary,
-                borderRadius: 16,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 20px",
-              }}>
+              <div
+                style={{
+                  width: 64,
+                  height: 64,
+                  background: gradients.primary,
+                  borderRadius: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 20px",
+                }}
+              >
                 <UserOutlined style={{ fontSize: 28, color: "#fff" }} />
               </div>
               <Title
@@ -116,7 +120,11 @@ const RegPage = () => {
                 Перейдите сюда{" "}
                 <Link
                   onClick={() => navigate("/login")}
-                  style={{ color: "#52c41a", fontWeight: 600, borderBottom: "1px dashed #52c41a" }}
+                  style={{
+                    color: "#52c41a",
+                    fontWeight: 600,
+                    borderBottom: "1px dashed #52c41a",
+                  }}
                 >
                   Войти в профиль!
                 </Link>
@@ -167,12 +175,17 @@ const RegPage = () => {
               <Divider />
 
               <Form.Item<RegistrationFormData>
-                label={<div style={commonStyles.formLabel}>Введите ваш ник</div>}
+                label={
+                  <div style={commonStyles.formLabel}>Введите ваш ник</div>
+                }
                 name="name"
                 rules={[
                   { required: true, message: "Пожалуйста, введите ваш ник" },
                   { min: 3, message: "Ник должен содержать минимум 3 символа" },
-                  { max: 20, message: "Ник должен содержать максимум 20 символов" },
+                  {
+                    max: 20,
+                    message: "Ник должен содержать максимум 20 символов",
+                  },
                 ]}
               >
                 <Input
@@ -187,10 +200,14 @@ const RegPage = () => {
                 name="password"
                 rules={[
                   { required: true, message: "Пожалуйста, введите пароль" },
-                  { min: 8, message: "Пароль должен содержать минимум 8 символов" },
+                  {
+                    min: 8,
+                    message: "Пароль должен содержать минимум 8 символов",
+                  },
                   {
                     pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-                    message: "Пароль должен содержать заглавные, строчные буквы и цифры",
+                    message:
+                      "Пароль должен содержать заглавные, строчные буквы и цифры",
                   },
                 ]}
               >
@@ -245,9 +262,13 @@ const RegPage = () => {
             <div style={commonStyles.formTextCenter}>
               <Text {...componentProps.text.secondary}>
                 Нажимая кнопку "Зарегистрироваться", вы соглашаетесь с{" "}
-                <Link style={commonStyles.linkPrimary}>политикой конфиденциальности</Link>{" "}
+                <Link style={commonStyles.linkPrimary}>
+                  политикой конфиденциальности
+                </Link>{" "}
                 и{" "}
-                <Link style={commonStyles.linkPrimary}>условиями использования</Link>
+                <Link style={commonStyles.linkPrimary}>
+                  условиями использования
+                </Link>
               </Text>
             </div>
 
@@ -289,8 +310,24 @@ const RegPage = () => {
         <Col xs={24} md={12} lg={14}>
           <div style={commonStyles.authSide}>
             {/* Декоративные элементы */}
-            <div style={{ ...commonStyles.decorativeCircle, top: -100, right: -100, width: 400, height: 400 }} />
-            <div style={{ ...commonStyles.decorativeCircleLight, bottom: -150, left: -150, width: 500, height: 500 }} />
+            <div
+              style={{
+                ...commonStyles.decorativeCircle,
+                top: -100,
+                right: -100,
+                width: 400,
+                height: 400,
+              }}
+            />
+            <div
+              style={{
+                ...commonStyles.decorativeCircleLight,
+                bottom: -150,
+                left: -150,
+                width: 500,
+                height: 500,
+              }}
+            />
 
             {/* Контент правой части */}
             <div
@@ -345,23 +382,25 @@ const RegPage = () => {
                     <div style={commonStyles.iconBoxBlur}>
                       <span style={{ fontSize: 40 }}>{item.emoji}</span>
                     </div>
-                    <Text {...componentProps.text.whiteStrong}>{item.text}</Text>
+                    <Text {...componentProps.text.whiteStrong}>
+                      {item.text}
+                    </Text>
                   </div>
                 ))}
               </div>
 
               {/* Дополнительная информация */}
               <div
-                  style={{
-                    background: "rgba(255, 255, 255, 0.1)",
-                    padding: 32,
-                    borderRadius: 20,
-                    backdropFilter: "blur(10px)",
-                    maxWidth: 700,
-                    margin: "0 auto",
-                    textAlign: "left",
-                  }}
-                >
+                style={{
+                  background: "rgba(255, 255, 255, 0.1)",
+                  padding: 32,
+                  borderRadius: 20,
+                  backdropFilter: "blur(10px)",
+                  maxWidth: 700,
+                  margin: "0 auto",
+                  textAlign: "left",
+                }}
+              >
                 <Title
                   level={4}
                   style={{ color: "#fff", marginBottom: "20px" }}
