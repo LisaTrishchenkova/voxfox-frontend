@@ -26,7 +26,7 @@ import {
 import React, { useEffect, useState } from "react";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
-import { gradients, commonStyles, componentProps } from "../../theme";
+import { commonStyles, componentProps } from "../../theme";
 import { authStorage } from "../../services/auth-storage.service";
 import { userApi } from "../../api/userApi";
 import type { UserResponse } from "../../api/types/user";
@@ -115,10 +115,11 @@ const UserProfile: React.FC = () => {
                   size={96}
                   icon={<UserOutlined />}
                   style={{
-                      background: "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
-                      border: "4px solid #fff",
-                      boxShadow: "0 4px 12px rgba(76, 175, 80, 0.3)",
-                      marginBottom: 16,
+                    background:
+                      "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
+                    border: "4px solid #fff",
+                    boxShadow: "0 4px 12px rgba(76, 175, 80, 0.3)",
+                    marginBottom: 16,
                   }}
                 />
                 <Title level={3} style={{ margin: 0, marginBottom: "4px" }}>
