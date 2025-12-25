@@ -160,6 +160,7 @@ const Header = () => {
             {userData && (
               <>
                 <Title
+                  onClick={() => navigate("/user-profile")}
                   level={4}
                   style={{
                     margin: 0,
@@ -169,7 +170,15 @@ const Header = () => {
                 >
                   {userData.name}
                 </Title>
-                <Avatar size={"default"} icon={<UserOutlined />} />{" "}
+                <Avatar 
+                style={{
+                      background: "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
+                      border: "4px solid #fff",
+                      boxShadow: "0 4px 12px rgba(76, 175, 80, 0.3)",
+                      // marginBottom: 16,
+                  }}
+                onClick={() => navigate("/user-profile")}
+                size={"default"} icon={<UserOutlined />} />{" "}
               </>
             )}
           </Space>

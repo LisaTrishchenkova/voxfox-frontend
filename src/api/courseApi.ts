@@ -15,11 +15,9 @@ export const courseApi = {
           headers: authStorage.getAuthHeaders(),
         }
       );
-
       if (response.status === 201) {
         return response.data;
       }
-
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -41,7 +39,7 @@ export const courseApi = {
   getMyCourses: async (): Promise<CourseResponse[] | null> => {
     try {
       const response = await axios.get<CourseResponse[]>(
-        `${API_BASE_URL}/Cource/my`,
+        `${API_BASE_URL}/Courses/my`,
         {
           headers: authStorage.getAuthHeaders(),
         }
@@ -63,4 +61,20 @@ export const courseApi = {
       return null;
     }
   },
+  getCourseById: async (id: string): Promise<CourseResponse | null> => {
+    try{
+      const response = await axios.get(`${API_BASE_URL}/Courses/${id}`);
+      return response.data;
+    }
+    catch(error){
+      if (axios.isAxiosError(error)) {
+      if (error.response?.status === 404) {
+        console.error("Курс не найден");
+      } else {
+        console.error("Ошибка при получении курса:", error.response?.data);
+      }
+    }
+    return null;
+    }
+  }
 };

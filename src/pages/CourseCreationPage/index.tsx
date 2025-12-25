@@ -31,6 +31,7 @@ import { gradients } from "../../theme";
 import Sidebar from "../../components/Sidebar";
 import type { CourseFormData, CourseRequest } from "../../api/types/course";
 import { courseApi } from "../../api/courseApi";
+import { useNavigate } from "react-router-dom";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -38,6 +39,7 @@ const { Option } = Select;
 const { TextArea } = Input;
 
 const CourseCreationPage = () => {
+  const navigate = useNavigate();
   const [form] = Form.useForm<CourseFormData>();
   // const [menuSelected, setMenuSelected] = useState('courses');
   const [courseImage, setCourseImage] = useState<string | null>(null);
@@ -83,6 +85,7 @@ const CourseCreationPage = () => {
       const values = await form.validateFields();
       console.log("Сохранен черновик:", values);
       message.success("Черновик сохранен");
+      navigate("/cource");
     } catch (error) {
       console.error("Ошибка валидации:", error);
       message.error("Заполните обязательные поля");
@@ -121,10 +124,12 @@ const CourseCreationPage = () => {
       console.log(courseResponse);
 
       if (courseResponse) {
-        message.success("Курс успешно создан!");
-      } else {
-        message.error("Не удалось создать курс");
-      }
+        message.success("Черновик успешно создан!");
+      } 
+      
+      // else {
+      //   message.success("Каие-то неполадки!");
+      // }
     } catch (error) {
       console.error("Ошибка создания курса:", error);
       message.error("Ошибка при создании курса");
@@ -174,28 +179,6 @@ const CourseCreationPage = () => {
                 </Title>
                 <Text type="secondary">Заполните информацию о курсе</Text>
               </div>
-
-              <Space>
-                <Button
-                  type="default"
-                  icon={<SaveOutlined />}
-                  onClick={handleSaveDraft}
-                  size="large"
-                  disabled={isSubmitting}
-                >
-                  Сохранить черновик
-                </Button>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  form="course-form"
-                  size="large"
-                  style={{ background: gradients.primary, border: "none" }}
-                  loading={isSubmitting}
-                >
-                  Опубликовать курс
-                </Button>
-              </Space>
             </div>
 
             <Card style={{ marginBottom: 32, borderRadius: "12px" }}>
@@ -519,7 +502,8 @@ const CourseCreationPage = () => {
 
                   <Space>
                     <Button
-                      type="default"
+                      type="primary"
+                      htmlType="submit"
                       icon={<SaveOutlined />}
                       size="large"
                       onClick={handleSaveDraft}

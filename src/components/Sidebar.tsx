@@ -115,7 +115,8 @@ const Sidebar = ({
                 alignItems: 'center'
               }}
             >
-              <div style={commonStyles.flexBetween}>
+              <div style={commonStyles.flexBetween}
+              onClick={() => navigate("/cource")}>
                 <span>Мои курсы</span>
                 <Badge 
                   count={coursesCount} 
