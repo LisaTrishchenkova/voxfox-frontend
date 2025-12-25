@@ -9,6 +9,7 @@ import { customTheme } from "./theme";
 import CourseCreationPage from "./pages/CourseCreationPage";
 import Course from "./pages/Cource";
 import CourseLessonsPage from "./pages/CourseLessonsPage";
+import Test from "./pages/Test";
 
 // const Home = React.lazy(() => import("./pages/Home"));
 
@@ -38,6 +39,7 @@ function App() {
           <Route path="/cource-creating" element={<CourseCreationPage />} />
           <Route path="/cource" element={<Course />} />
           <Route path="/cource-lesson" element={<CourseLessonsPage />} />
+          <Route path="/test" element={<Test />} />
           {/* <Route path="/about" element={<About />} />
             <Route path="/users" element={<Users />} />
             <Route path="/dashboard" element={<Dashboard />} />
