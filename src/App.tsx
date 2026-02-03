@@ -1,16 +1,15 @@
 import { ConfigProvider, Spin } from "antd";
 import React from "react";
 import { Route, Routes } from "react-router-dom";
-import HomePage from "./pages/HomePage";
-import UserProfile from "./pages/UserProfile";
-import LoginPage from "./pages/OldLogPage";
-import RegPage from "./pages/RegPage";
-import { customTheme } from "./theme";
-import CourseCreationPage from "./pages/CourseCreationPage";
 import Course from "./pages/Cource";
+import CourseCreationPage from "./pages/CourseCreationPage";
 import CourseLessonsPage from "./pages/CourseLessonsPage";
-import Test from "./pages/Test";
+import HomePage from "./pages/HomePage";
 import LogPage from "./pages/LogPage";
+import RegPage from "./pages/RegPage";
+import Test from "./pages/Test";
+import UserProfile from "./pages/UserProfile";
+import { customTheme } from "./theme";
 
 // const Home = React.lazy(() => import("./pages/Home"));
 
