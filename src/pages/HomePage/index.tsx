@@ -432,7 +432,7 @@ const HomePage = () => {
               level={1}
               style={{ ...commonStyles.titleGradient, marginBottom: 16 }}
             >
-              Найдите свой идеальный курс
+              Найдите свой идеальный курс!!!!!!
             </Title>
             <Paragraph style={commonStyles.paragraphLarge}>
               Более 1000 курсов по программированию, дизайну, data science и
