@@ -212,7 +212,7 @@ const HomePagePrototype = () => {
         >
           <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
             <Title level={1} style={{ marginBottom: "16px", color: "#333" }}>
-              Найдите свой идеальный курс!!!!!!!!!!!!!!!!!!!
+              Найдите свой идеальный курс!!!!!!!!!!!!!!!!!!!123
             </Title>
             <Paragraph
               style={{ fontSize: "20px", color: "#666", marginBottom: "48px" }}
