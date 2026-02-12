@@ -1,13 +1,11 @@
-name: Deploy to Staging (Voxfox)
+name: Deploy to Dev (Voxfox)
 
 on:
   push:
-    branches: ["staging"]
+    branches: ["develop", "feature/*"]
     paths:
       - "src/**"
       - "public/**"
-      - "package.json"
-      - "vite.config.ts"
   workflow_dispatch:
 
 permissions:
@@ -17,7 +15,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: staging
+    environment: dev
 
     steps:
       - name: Checkout code
@@ -32,23 +30,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # - name: Lint check
-      #   run: npm run lint || true
-
-      # - name: Type check
-      #   run: npm run type-check || true
-
       - name: Build project
-        run: npm run build:staging
+        run: npm run build:dev
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
-          VITE_ENVIRONMENT: staging
+          VITE_API_URL: ${{ secrets.DEV_API_URL }}
+          VITE_ENVIRONMENT: dev
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-central-1
 
       - name: Deploy to S3
@@ -64,5 +56,5 @@ jobs:
       - name: Invalidate CloudFront
         run: |
           aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --distribution-id ${{ secrets.DEV_CLOUDFRONT_DISTRIBUTION_ID }} \
             --paths "/index.html" "/assets/*"
