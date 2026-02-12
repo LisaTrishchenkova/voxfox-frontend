@@ -1,4 +1,4 @@
-import { Row, Col, Typography } from "antd";
+import { Col, Row, Typography } from "antd";
 import FooterPrototype from "../../components/FooterPrototype";
 import HeaderPrototype from "../../components/HeaderPrototype";
 
@@ -212,7 +212,7 @@ const HomePagePrototype = () => {
         >
           <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
             <Title level={1} style={{ marginBottom: "16px", color: "#333" }}>
-              Найдите свой идеальный курс
+              Найдите свой идеальный курс!!!!!!!!!!!!!!!!!!!
             </Title>
             <Paragraph
               style={{ fontSize: "20px", color: "#666", marginBottom: "48px" }}
@@ -416,7 +416,7 @@ const HomePagePrototype = () => {
                         >
                           {level}
                         </div>
-                      )
+                      ),
                     )}
                   </div>
                 </div>
@@ -635,8 +635,8 @@ const HomePagePrototype = () => {
                                 {course.level === "beginner"
                                   ? "Начинающий"
                                   : course.level === "intermediate"
-                                  ? "Средний"
-                                  : "Продвинутый"}
+                                    ? "Средний"
+                                    : "Продвинутый"}
                               </div>
                             </div>
 

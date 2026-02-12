@@ -1,37 +1,37 @@
-import { useState } from "react";
 import {
-  Row,
-  Col,
-  Card,
-  Input,
-  Button,
-  Typography,
-  Space,
-  Tag,
-  Slider,
-  Select,
-  Rate,
-  Badge,
-  Avatar,
-  Progress,
-} from "antd";
-import {
-  SearchOutlined,
+  BookOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
   FilterOutlined,
   FireOutlined,
-  StarOutlined,
-  UserOutlined,
-  ClockCircleOutlined,
-  BookOutlined,
-  VideoCameraOutlined,
-  TrophyOutlined,
-  CheckCircleOutlined,
   PlayCircleOutlined,
+  SearchOutlined,
+  StarOutlined,
   TeamOutlined,
+  TrophyOutlined,
+  UserOutlined,
+  VideoCameraOutlined,
 } from "@ant-design/icons";
-import Header from "../../components/Header";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  Col,
+  Input,
+  Progress,
+  Rate,
+  Row,
+  Select,
+  Slider,
+  Space,
+  Tag,
+  Typography,
+} from "antd";
+import { useState } from "react";
 import Footer from "../../components/Footer";
-import { gradients, commonStyles, componentProps } from "../../theme";
+import Header from "../../components/Header";
+import { commonStyles, componentProps, gradients } from "../../theme";
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -432,7 +432,7 @@ const HomePage = () => {
               level={1}
               style={{ ...commonStyles.titleGradient, marginBottom: 16 }}
             >
-              Найдите свой идеальный курс
+              Найдите свой идеальный курс!!!!!!!!!!!!!!!!!!!
             </Title>
             <Paragraph style={commonStyles.paragraphLarge}>
               Более 1000 курсов по программированию, дизайну, data science и
