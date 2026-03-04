@@ -7,7 +7,7 @@ export interface CreateCourseDto {
   title: string;
   description: string;
   categoryId?: string | null;
-  tags?: { name: string }[];
+  tags?: TagDto[] | null;
 }
 export interface CourseDto {
   id: string;
@@ -15,14 +15,22 @@ export interface CourseDto {
   description: string;
   isPublished: boolean;
   categoryId?: string | null;
-  tags?: TagDto[];
+  tags?: TagDto[] | null;
 }
 
 export interface TagDto {
   name: string;
 }
 
-export interface CourseDtoPaginatedResponse {
+export interface PaginatedResponse {
+  items: CourseDto[];
+  totalCount: number;
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+}
+
+export interface PaginatedResponse {
   items: CourseDto[];
   totalCount: number;
   currentPage: number;

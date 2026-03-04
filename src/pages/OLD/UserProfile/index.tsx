@@ -24,12 +24,12 @@ import {
   FireOutlined,
 } from "@ant-design/icons";
 import React, { useEffect, useState } from "react";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
-import { commonStyles, componentProps } from "../../theme";
-import { authStorage } from "../../services/auth-storage.service";
-import { userApi } from "../../api/userApi";
-import type { UserResponse } from "../../api/types/user";
+import Header from "../../../components/Header";
+import Footer from "../../../components/Footer";
+import { commonStyles, componentProps } from "../../../theme";
+import { authStorage } from "../../../services/auth-storage.service";
+import { userApi } from "../../../api/userApi";
+import type { UserResponse } from "../../../api/types/user";
 
 // eslint-disable-next-line react-hooks/rules-of-hooks
 

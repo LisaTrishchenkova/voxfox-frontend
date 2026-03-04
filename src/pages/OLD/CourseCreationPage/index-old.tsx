@@ -1,186 +1,237 @@
-import { useEffect, useState } from "react";
 import {
-  Layout,
   Button,
+  Card,
   Form,
   Input,
-  Select,
-  Typography,
-  Row,
-  Col,
-  Card,
-  Divider,
-  Space,
-  InputNumber,
-  Switch,
-  Upload,
-  Radio,
+  Layout,
   message,
-  type FormProps,
+  Select,
+  Space,
+  Spin,
+  Typography,
 } from "antd";
-import {
-  UploadOutlined,
-  SaveOutlined,
-  DeleteOutlined,
-  DownOutlined,
-  UpOutlined,
-} from "@ant-design/icons";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
-import { gradients } from "../../theme";
-import Sidebar from "../../components/Sidebar";
-import type {
-  Category,
-  CourseFormData,
-  CourseRequest,
-  CreateCourseDto,
-} from "../../api/types/course";
-import { courseApi } from "../../api/courseApi";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { courseApi } from "../../../api/courseApi";
+import { SaveOutlined } from "@ant-design/icons";
 
 const { Content } = Layout;
 const { Title } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
-const CourseCreationPage = () => {
-  const navigate = useNavigate();
-  const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
+interface CourseFormValues {
+  title: string;
+  description: string;
+  categoryId?: string;
+  tags?: string[];
+}
 
+const CourseCreationPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [form] = Form.useForm<CourseFormValues>();
+  const [loading, setLoading] = useState<boolean>(false);
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState<boolean>(true);
+
+  // Загрузка категорий при монтировании
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get("/api/Category");
-        setCategories(response.data);
+        setLoadingCategories(true);
+        const data = await courseApi.getCategories();
+        setCategories(data);
       } catch (error) {
         message.error("Не удалось загрузить категории");
+        console.error(error);
+      } finally {
+        setLoadingCategories(false);
       }
     };
+
     fetchCategories();
   }, []);
 
-  const onFinish = async (values: any) => {
+  // Обработка отправки формы
+  const onFinish = async (values: CourseFormValues) => {
     setLoading(true);
 
-    const courseData: CreateCourseDto = {
-      title: values.title,
-      description: values.description,
-      categoryId: values.categoryId || null,
-      tags: values.tags?.map((tag: string) => ({ name: tag })) || [],
-    };
-
     try {
-      const response = await axios.post("/api/Courses", courseData, {
-        headers: {
-          // Если нужен токен - добавь
-          // 'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-      });
-      console.log("Курс создан:", response.data);
+      // Преобразуем теги из строк в формат TagDto для API
+      const tags = values.tags?.map((tag) => ({ name: tag })) || null;
+
+      // Собираем данные строго по спецификации API
+      const courseData = {
+        title: values.title.trim(),
+        description: values.description.trim(),
+        categoryId: values.categoryId || null,
+        tags: tags, // API ожидает TagDto[] | null
+      };
+
+      await courseApi.createCourse(courseData);
+
       message.success("Курс успешно создан!");
+      form.resetFields();
       navigate("/courses");
     } catch (error) {
-      console.error("Ошибка:", error);
-      if (axios.isAxiosError(error) && error.response) {
-        message.error(
-          error.response.data.message || "Ошибка при создании курса",
-        );
+      if (error instanceof Error) {
+        message.error(error.message);
       } else {
-        message.error("Ошибка сервера");
+        message.error("Ошибка при создании курса");
       }
+      console.error("Ошибка создания курса:", error);
     } finally {
       setLoading(false);
     }
-    return (
-    <Layout style={{ minHeight: "100vh", background: "#f0f2f5" }}>
-      <Content style={{ padding: "24px", maxWidth: "800px", margin: "0 auto" }}>
-        <Card>
-          <Title level={2} style={{ marginBottom: "24px" }}>Создание курса</Title>
+  };
 
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={onFinish}
+  // Обработка ошибок валидации
+  const onFinishFailed = () => {
+    message.warning("Пожалуйста, заполните все обязательные поля");
+  };
+
+  return (
+    <Layout style={{ minHeight: "100vh", background: "#f0f2f5" }}>
+      <Content
+        style={{
+          padding: "24px",
+          maxWidth: "800px",
+          margin: "0 auto",
+          width: "100%",
+        }}
+      >
+        <Card>
+          <Title
+            level={2}
+            style={{ marginBottom: "24px", textAlign: "center" }}
           >
-            <Form.Item
-              label="Название курса"
-              name="title"
-              rules={[
-                { required: true, message: "Введите название" },
-                { min: 2, message: "Минимум 2 символа" }
-              ]}
+            Создание нового курса
+          </Title>
+
+          <Spin spinning={loadingCategories} tip="Загрузка категорий...">
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={onFinish}
+              onFinishFailed={onFinishFailed}
+              requiredMark="optional"
             >
-              <Input placeholder="Например: Основы программирования" />
-            </Form.Item>
-            <Form.Item
-              label="Описание"
-              name="description"
-              rules={[
-                { required: true, message: "Введите описание" },
-                { min: 10, message: "Минимум 10 символов" }
-              ]}
-            >
-              <TextArea
-                rows={4}
-                placeholder="Опишите содержание курса"
-                showCount
-                maxLength={1000}
-              />
-            </Form.Item>
-            <Form.Item
-              label="Категория"
-              name="categoryId"
-            >
-              <Select
-                placeholder="Выберите категорию"
-                allowClear
+              {/* Название курса - required, minLength 2 */}
+              <Form.Item
+                label="Название курса"
+                name="title"
+                rules={[
+                  { required: true, message: "Введите название курса" },
+                  { min: 2, message: "Минимум 2 символа" },
+                  { max: 100, message: "Максимум 100 символов" },
+                  {
+                    whitespace: true,
+                    message: "Название не может состоять из пробелов",
+                  },
+                ]}
+                hasFeedback
               >
-                {categories.map(cat => (
-                  <Option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-            <Form.Item
-              label="Теги"
-              name="tags"
-            >
-              <Select
-                mode="tags" // Режим ввода тегов
-                placeholder="Введите теги и нажмите Enter"
-                style={{ width: "100%" }}
-              />
-            </Form.Item>
-            <Form.Item>
-              <Space>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  icon={<SaveOutlined />}
-                  loading={loading}
+                <Input
+                  placeholder="Например: Основы программирования"
+                  size="large"
+                  disabled={loading}
+                />
+              </Form.Item>
+
+              {/* Описание - required, minLength 10 */}
+              <Form.Item
+                label="Описание курса"
+                name="description"
+                rules={[
+                  { required: true, message: "Введите описание курса" },
+                  { min: 10, message: "Минимум 10 символов" },
+                  { max: 2000, message: "Максимум 2000 символов" },
+                ]}
+                hasFeedback
+              >
+                <TextArea
+                  rows={5}
+                  placeholder="Подробно опишите содержание курса (минимум 10 символов)"
+                  showCount
+                  maxLength={2000}
+                  disabled={loading}
+                />
+              </Form.Item>
+
+              {/* Категория - optional */}
+              <Form.Item label="Категория" name="categoryId">
+                <Select
+                  placeholder="Выберите категорию (необязательно)"
+                  allowClear
+                  loading={loadingCategories}
+                  disabled={loading}
+                  size="large"
                 >
-                  {loading ? "Создание..." : "Создать курс"}
-                </Button>
-                <Button onClick={() => form.resetFields()}>
-                  Очистить
-                </Button>
-              </Space>
-            </Form.Item>
-          </Form>
+                  {categories.map((cat) => (
+                    <Option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+
+              {/* Теги - преобразуются в TagDto[] на бэке */}
+              <Form.Item
+                label="Теги"
+                name="tags"
+                tooltip="Введите теги и нажмите Enter для добавления"
+              >
+                <Select
+                  mode="tags"
+                  placeholder="Введите теги и нажмите Enter"
+                  style={{ width: "100%" }}
+                  disabled={loading}
+                  size="large"
+                  tokenSeparators={[","]}
+                  maxTagCount={10}
+                />
+              </Form.Item>
+
+              {/* Кнопки */}
+              <Form.Item>
+                <Space
+                  size="middle"
+                  style={{ display: "flex", justifyContent: "flex-end" }}
+                >
+                  <Button
+                    size="large"
+                    onClick={() => navigate(-1)}
+                    disabled={loading}
+                  >
+                    Отмена
+                  </Button>
+                  <Button
+                    size="large"
+                    onClick={() => form.resetFields()}
+                    disabled={loading}
+                  >
+                    Очистить
+                  </Button>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    icon={<SaveOutlined />}
+                    loading={loading}
+                    size="large"
+                  >
+                    {loading ? "Создание..." : "Создать курс"}
+                  </Button>
+                </Space>
+              </Form.Item>
+            </Form>
+          </Spin>
         </Card>
       </Content>
     </Layout>
   );
-  };
 };
 
-
-
-
+export default CourseCreationPage;
 
 // const { Content } = Layout;
 // const { Title, Text } = Typography;
@@ -704,4 +755,4 @@ const CourseCreationPage = () => {
 //   );
 // };
 
-export default CourseCreationPage;
+// export default CourseCreationPage;

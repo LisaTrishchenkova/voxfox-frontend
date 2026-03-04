@@ -20,9 +20,9 @@ import {
   ArrowRightOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import type { RegistrationFormData } from "../../api/types/auth";
-import { authApi } from "../../api/authApi";
-import { gradients, commonStyles, componentProps } from "../../theme";
+import type { RegistrationFormData } from "../../../api/types/auth";
+import { authApi } from "../../../api/authApi";
+import { gradients, commonStyles, componentProps } from "../../../theme";
 
 const { Title, Text, Link } = Typography;
 
@@ -32,13 +32,13 @@ const RegPage = () => {
   // const [messageApi, contextHolder] = message.useMessage();
 
   const onFinish: FormProps<RegistrationFormData>["onFinish"] = async (
-    values
+    values,
   ) => {
     console.log(values);
     const status = await authApi.registration(
       values.email,
       values.name,
-      values.password
+      values.password,
     );
     console.log(status);
     if (status === 204) {
@@ -49,7 +49,7 @@ const RegPage = () => {
   };
 
   const onFinishFailed: FormProps<RegistrationFormData>["onFinishFailed"] = (
-    errorInfo
+    errorInfo,
   ) => {
     console.log(errorInfo);
   };

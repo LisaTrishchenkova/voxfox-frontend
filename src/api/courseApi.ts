@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { CourseRequest, CourseResponse } from "./types/course";
+import type { CourseDto, CreateCourseDto } from "./types/course";
 import { authStorage } from "../services/auth-storage.service";
 import { API_BASE_URL } from "./config";
 
