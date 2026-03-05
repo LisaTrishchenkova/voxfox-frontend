@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, staging, main]
+  push:
+    branches: [dev, staging, main]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: ${{github.workflow}}-${{github.ref}}
+  cancel-in-progress: true
+jobs:
+  test:
+    timeout-minutes: 10
+    runs-on: [self-hosted, Linux, X64]
+    strategy:
+      max-parallel: 1
+      matrix:
+        node-version: [20, 22, 24]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{matrix.node-version}}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Run tests
+        run: npm run test:ci
+
+      - name: Test with coverage
+        if: matrix.node-version == '22'
+        run: npm run test:coverage
+
+      - name: Cache coverage
+        if: matrix.node-version == '22' && always()
+        uses: actions/cache@v4
+        with:
+          path: ./coverage
+          key: coverage-${{ github.sha }}-${{matrix.node-version}}
+          restore-keys: |
+            coverage-${{github.sha}}-
+            coverage-
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-${{github.sha}}-node${{matrix.node-version}}
+          path: dist
+          retention-days: 30
+
+      - name: Check bundle size
+        run: npx bundlesize || echo "⚠️ Bundle size warning"
+
+      - name: Comment PR
+        uses: actions/github-script@v8
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && matrix.node-version == '22'
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `✅ CI passed on Node ${{ matrix.node-version }}!\nArtifact: build-${{ github.sha }}`
+            })
+
+      - name: Notify on failure
+        if: failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions-cool/maintain-one-comment@v3
+        with:
+          body: |
+            ❌ CI failed on ${{ github.ref_name }}
+            Node: ${{ matrix.node-version }}
+            See: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
