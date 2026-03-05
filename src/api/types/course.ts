@@ -1,4 +1,7 @@
 export interface Category {
+  items: CategoryDto[];
+}
+export interface CategoryDto {
   id: string;
   name: string;
 }

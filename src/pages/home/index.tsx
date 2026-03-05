@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import type { PaginatedResponse } from "../../api/types/course";
+import type {
+  Category,
+  CategoryDto,
+  PaginatedResponse,
+} from "../../api/types/course";
 import {
   Button,
   Card,
@@ -7,6 +11,7 @@ import {
   Input,
   Pagination,
   Select,
+  Spin,
   Typography,
 } from "antd";
 import ReactMarkdown from "react-markdown";
@@ -20,25 +25,94 @@ const HomePage = () => {
   const [totalCourse, setTotalCourse] = useState<number>();
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [currentPageSize, setCurrentPageSize] = useState<number>(10);
+  const [currentSortBy, setCurrentSortBy] = useState<SortBy>("Relevance");
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [categoryId, setCategoryId] = useState<string>();
+  const [isLoadingCourses, setIsLoadingCourses] = useState<boolean>(false);
 
   type SortBy = "Title" | "Relevance";
+  type SortDirection = "asc" | "desc";
 
-  const Search = () => {
-    const url = `http://localhost:8081/api/Courses/search?searchTerm=${search}&page=${currentPage}&pageSize=${currentPageSize}`;
+  interface SortOption {
+    label: string;
+    value: SortBy;
+  }
+
+  const sortOptions: SortOption[] = [
+    {
+      label: "по пулярности",
+      value: "Relevance",
+    },
+    {
+      label: "по заголовку",
+      value: "Title",
+    },
+  ];
+
+  // const Search = () => {
+  //   const url = `http://localhost:8081/api/Courses/search?searchTerm=${search}&page=${currentPage}&pageSize=${currentPageSize}&sortBy=${currentSortBy}&categoryId=${categoryId}`;
+
+  //   fetch(url)
+  //     .then((res) => res.json())
+  //     .then((data: PaginatedResponse) => {
+  //       setPaginatedCources(data);
+  //       setTotalCourse(data.totalCount);
+  //       setIsLoadingCourses(false);
+  //     })
+  //     .catch((error) => {
+  //       console.error("Ошибка при загрузке", error);
+  //       setIsLoadingCourses(false);
+  //     });
+  // };
+
+  const featchCourses = async () => {
+    try {
+      setIsLoadingCourses(true);
+
+      const params = new URLSearchParams();
+
+      if (search) params.append("searchTerm", search);
+      if (currentPage) params.append("page", currentPage.toString());
+      if (currentPageSize)
+        params.append("pageSize", currentPageSize.toString());
+      if (currentSortBy) params.append("sortBy", currentSortBy);
+      if (categoryId) params.append("categoryId", categoryId);
+
+      const url = `http://localhost:8081/api/Courses/search?${params.toString()}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+      setPaginatedCources(data);
+    } catch (error) {
+      console.error("Ошибка загрузки", error);
+    } finally {
+      setIsLoadingCourses(false);
+    }
+  };
+
+  const fetchCategories = () => {
+    const url = `http://localhost:8081/api/Category`;
+
     console.log(url);
+
     fetch(url)
       .then((res) => res.json())
-      .then((data: PaginatedResponse) => {
-        setPaginatedCources(data);
-        setTotalCourse(data.totalCount);
-      })
+      .then(setCategories)
       .catch(console.error);
-    console.log("кнопка нажата");
   };
 
   useEffect(() => {
-    Search();
-  }, [currentPage, currentPageSize]);
+    const fetchData = async () => {
+      try {
+        await Promise.all([featchCourses(), fetchCategories()]);
+        // await new Promise((resolve) => setTimeout(resolve, 5000));
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchData();
+  }, [currentPage, currentPageSize, categoryId]);
 
   const OnChangePagination = (page: number, pageSize: number) => {
     setCurrentPage(page);
@@ -48,12 +122,16 @@ const HomePage = () => {
   return (
     <div>
       <Input onChange={(e) => setSearch(e.target.value)} />
-      <Button onClick={() => Search()}>Поиск</Button>
+      <Button onClick={() => featchCourses()}>Поиск</Button>
       <Select
         style={{ width: "200px" }}
-        // options={}
-        showSearch={{ optionFilterProp: "label" }}
-        onChange={(value) => {}}
+        options={sortOptions}
+        // showSearch={{ optionFilterProp: "label" }}
+        onChange={(value) => {
+          setCurrentSortBy(value);
+          console.log(currentSortBy);
+        }}
+        value={currentSortBy}
       />
       <Pagination
         showSizeChanger
@@ -61,14 +139,37 @@ const HomePage = () => {
         total={totalCourse}
         onChange={OnChangePagination}
       />
-      <Title>Курсы:</Title>
-      {paginatedCourses?.items.map((cource) => (
-        <Card>
-          <Image src="https://static.aviasales.com/psgr-v2/ru/putevoditel-po-islandii/shutterstock_aa704c95ce.jpg?" />
-          <Title level={2}>{cource.title}</Title>
-          <ReactMarkdown>{cource.description}</ReactMarkdown>
-        </Card>
-      ))}
+      <div style={{ display: "flex", gap: "30px" }}>
+        <div style={{ width: "250px" }}>
+          <Title>Категории:</Title>
+          {categories.map((cat) => (
+            <Button
+              onClick={(e) => {
+                setCategoryId(cat.id);
+              }}
+              style={{ width: "200px" }}
+              key={cat.id}
+            >
+              {cat.name}
+            </Button>
+          ))}
+        </div>
+        {isLoadingCourses ? (
+          <Spin />
+        ) : (
+          <div style={{ flex: 1 }}>
+            <Title>Курсы:</Title>
+            {paginatedCourses?.items.map((cource) => (
+              <Card>
+                <Image src="https://static.aviasales.com/psgr-v2/ru/putevoditel-po-islandii/shutterstock_aa704c95ce.jpg?" />
+                <Title level={2}>{cource.title}</Title>
+                <p>{cource.categoryId}</p>
+                <ReactMarkdown>{cource.description}</ReactMarkdown>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
