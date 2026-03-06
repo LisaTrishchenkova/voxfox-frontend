@@ -1,0 +1,17 @@
+import { render } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import Home from ".";
+
+describe("Home component", () => {
+  it("renders VerticalLeftOutlined icon", () => {
+    render(<Home />);
+    // Ищем иконку по классу antd
+    const icon = document.querySelector(".anticon-vertical-left");
+    expect(icon).toBeTruthy();
+  });
+
+  it("matches snapshot", () => {
+    const { container } = render(<Home />);
+    expect(container).toMatchSnapshot();
+  });
+});
