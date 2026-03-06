@@ -1,24 +1,23 @@
-import { Layout, Card, Typography, Row, Col, Tag } from "antd";
 import {
   BookOutlined,
-  EditOutlined,
   DeleteOutlined,
+  EditOutlined,
   PlayCircleOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
-import Header from "../../../components/Header";
-import Footer from "../../../components/Footer";
-import { gradients } from "../../../theme";
-import Sidebar from "../../../components/Sidebar";
-import type { CourseResponse } from "../../../api/types/course";
+import { Card, Col, Layout, Row, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { courseApi } from "../../../api/courseApi";
+import type { CourseResponse } from "../../../api/types/course";
+import Footer from "../../../components/Footer";
+import Header from "../../../components/Header";
+import Sidebar from "../../../components/Sidebar";
+import { gradients } from "../../../theme";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
-// Тип курса
 interface Course {
   id: string;
   title: string;
