@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  S3_BUCKET: voxfox-frontend-dev-703671934401
-  CLOUDFRONT_DIST: E2EYRUS010PWJ
+  S3_BUCKET: voxfox-dev-frontend-dev-703671934401
+  CLOUDFRONT_DIST: E1M4R9OTCO57U9
 
 jobs:
   deploy:
