@@ -29,9 +29,9 @@ import {
   Typography,
 } from "antd";
 import { useState } from "react";
-import Footer from "../../components/Footer";
-import Header from "../../components/Header";
-import { commonStyles, componentProps, gradients } from "../../theme";
+import Footer from "../../../components/Footer";
+import Header from "../../../components/Header";
+import { commonStyles, componentProps, gradients } from "../../../theme";
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;

@@ -22,8 +22,8 @@ import {
   EyeOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
+import Header from "../../../components/Header";
+import Footer from "../../../components/Footer";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -90,8 +90,8 @@ const CourseLessonsPage = () => {
       // Редактируем существующий урок
       setLessons(
         lessons.map((l) =>
-          l.id === editingLesson.id ? { ...l, ...values } : l
-        )
+          l.id === editingLesson.id ? { ...l, ...values } : l,
+        ),
       );
       message.success("Урок обновлен");
     } else {
