@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  S3_BUCKET: test-react-frontend-dev-703671934401
-  CLOUDFRONT_DIST: E5AYUTZ9AFUGN
+  S3_BUCKET: voxfox-frontend-dev-703671934401
+  CLOUDFRONT_DIST: E1GEL1V6SDJMVX
 
 jobs:
   deploy:
