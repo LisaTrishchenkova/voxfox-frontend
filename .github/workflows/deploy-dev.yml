@@ -1,60 +1,52 @@
-name: Deploy to Dev (Voxfox)
+name: Deploy Dev
 
 on:
-  push:
-    branches: ["dev", "feature/*", "bugfix/*", "chore/*"]
-    paths:
-      - "src/**"
-      - "public/**"
-  workflow_dispatch:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
 
 permissions:
-  id-token: write
   contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
+env:
+  S3_BUCKET: voxfox-frontend-dev-703671934401
+  CLOUDFRONT_DIST: E1GEL1V6SDJMVX
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-    environment: dev
-
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev' }}
+    runs-on: [self-hosted, Linux, X64]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Checkout exact commit
+        uses: actions/checkout@v6
         with:
-          node-version: "20"
-          cache: "npm"
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build project
-        run: npm run build:dev
-        env:
-          VITE_API_URL: ${{ secrets.DEV_API_URL }}
-          VITE_ENVIRONMENT: dev
+      - name: Build app
+        run: npm run build
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
-          aws-access-key-id: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-central-1
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy to S3
-        run: |
-          aws s3 sync ./dist/ s3://voxfox-frontend-dev-703671934401/ \
-            --delete \
-            --cache-control "max-age=31536000,public" \
-            --exclude "index.html"
-
-          aws s3 cp ./dist/index.html s3://voxfox-frontend-dev-703671934401/index.html \
-            --cache-control "no-cache, no-store, must-revalidate"
+      - name: Upload to S3
+        run: aws s3 sync dist/ s3://${{ env.S3_BUCKET }} --delete
 
       - name: Invalidate CloudFront
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.DEV_CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/index.html" "/assets/*"
+        run: aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DIST }} --paths "/*"
