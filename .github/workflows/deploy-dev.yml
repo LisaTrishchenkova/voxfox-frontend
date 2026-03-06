@@ -20,7 +20,7 @@ env:
 jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev' }}
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: [ubuntu-22.04]
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v6
