@@ -15,7 +15,7 @@ concurrency:
 
 env:
   S3_BUCKET: voxfox-frontend-dev-703671934401
-  CLOUDFRONT_DIST: E1GEL1V6SDJMVX
+  CLOUDFRONT_DIST: E2EYRUS010PWJ
 
 jobs:
   deploy:
