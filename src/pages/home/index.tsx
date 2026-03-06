@@ -16,6 +16,7 @@ import {
 } from "antd";
 import ReactMarkdown from "react-markdown";
 import { data } from "react-router-dom";
+import CardCourse from "../../components/CardCourse";
 
 const HomePage = () => {
   const { Title } = Typography;
@@ -49,22 +50,6 @@ const HomePage = () => {
     },
   ];
 
-  // const Search = () => {
-  //   const url = `http://localhost:8081/api/Courses/search?searchTerm=${search}&page=${currentPage}&pageSize=${currentPageSize}&sortBy=${currentSortBy}&categoryId=${categoryId}`;
-
-  //   fetch(url)
-  //     .then((res) => res.json())
-  //     .then((data: PaginatedResponse) => {
-  //       setPaginatedCources(data);
-  //       setTotalCourse(data.totalCount);
-  //       setIsLoadingCourses(false);
-  //     })
-  //     .catch((error) => {
-  //       console.error("Ошибка при загрузке", error);
-  //       setIsLoadingCourses(false);
-  //     });
-  // };
-
   const featchCourses = async () => {
     try {
       setIsLoadingCourses(true);
@@ -83,6 +68,7 @@ const HomePage = () => {
       const response = await fetch(url);
       const data = await response.json();
       setPaginatedCources(data);
+      setTotalCourse(data.totalCount);
     } catch (error) {
       console.error("Ошибка загрузки", error);
     } finally {
@@ -157,16 +143,13 @@ const HomePage = () => {
         {isLoadingCourses ? (
           <Spin />
         ) : (
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, gap: "30px" }}>
             <Title>Курсы:</Title>
-            {paginatedCourses?.items.map((cource) => (
-              <Card>
-                <Image src="https://static.aviasales.com/psgr-v2/ru/putevoditel-po-islandii/shutterstock_aa704c95ce.jpg?" />
-                <Title level={2}>{cource.title}</Title>
-                <p>{cource.categoryId}</p>
-                <ReactMarkdown>{cource.description}</ReactMarkdown>
-              </Card>
-            ))}
+            <div style={{ display: "flex", gap: "20px" }}>
+              {paginatedCourses?.items.map((cource) => (
+                <CardCourse course={cource} />
+              ))}
+            </div>
           </div>
         )}
       </div>

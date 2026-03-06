@@ -6,11 +6,19 @@ export interface CategoryDto {
   name: string;
 }
 
+export interface Tags {
+  items: TagsDto[];
+}
+export interface TagsDto {
+  id: string;
+  name: string;
+}
+
 export interface CreateCourseDto {
   title: string;
   description: string;
   categoryId?: string | null;
-  tags?: TagDto[] | null;
+  tags?: TagsDto[] | null;
 }
 export interface CourseDto {
   id: string;
@@ -18,11 +26,7 @@ export interface CourseDto {
   description: string;
   isPublished: boolean;
   categoryId?: string | null;
-  tags?: TagDto[] | null;
-}
-
-export interface TagDto {
-  name: string;
+  tags?: TagsDto[] | null;
 }
 
 export interface PaginatedResponse {
