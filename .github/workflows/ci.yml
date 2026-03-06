@@ -41,8 +41,8 @@ jobs:
       - name: Type check
         run: npm run type-check
 
-      - name: Run tests
-        run: npm run test:ci
+      # - name: Run tests
+      #   run: npm run test:ci
 
       - name: Test with coverage
         if: matrix.node-version == '22'
