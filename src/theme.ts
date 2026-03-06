@@ -10,46 +10,46 @@ export const customTheme: ThemeConfig = {
     colorError: "#ff4d4f",
     colorInfo: "#1890ff",
     colorLink: "#52c41a",
-    
+
     // Текст
     colorTextBase: "#262626",
     colorTextSecondary: "#595959",
     colorTextTertiary: "#999",
-    
+
     // Фоны
     colorBgContainer: "#fff",
     colorBgElevated: "#fafafa",
     colorBgLayout: "#fafafa",
     colorBgSpotlight: "#f9fff4",
-    
+
     // Границы
     colorBorder: "#e8e8e8",
     colorBorderSecondary: "#f0f0f0",
-    
+
     // Радиусы
     borderRadius: 8,
     borderRadiusLG: 12,
     borderRadiusSM: 4,
     borderRadiusXS: 2,
-    
+
     // Размеры шрифтов
     fontSize: 14,
     fontSizeLG: 16,
     fontSizeSM: 12,
     fontSizeXL: 20,
-    
+
     // Отступы
     padding: 16,
     paddingLG: 24,
     paddingSM: 12,
     paddingXS: 8,
     paddingXXS: 4,
-    
+
     // Тени
     boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
     boxShadowSecondary: "0 4px 12px rgba(0,0,0,0.08)",
     boxShadowTertiary: "0 8px 24px rgba(0,0,0,0.12)",
-    
+
     // Высота строк
     lineHeight: 1.5715,
     lineHeightLG: 1.5,
@@ -105,13 +105,14 @@ export const customTheme: ThemeConfig = {
   },
 };
 
-// Утилиты для градиентов (используются только там, где Ant Design не поддерживает)
 export const gradients = {
   primary: "linear-gradient(135deg, #52c41a 0%, #fa8c16 100%)",
   primaryText: "linear-gradient(135deg, #52c41a 0%, #fa8c16 50%)",
-  primaryLight: "linear-gradient(135deg, rgba(82, 196, 26, 0.1) 0%, rgba(250, 140, 22, 0.1) 100%)",
+  primaryLight:
+    "linear-gradient(135deg, rgba(82, 196, 26, 0.1) 0%, rgba(250, 140, 22, 0.1) 100%)",
   primaryBackground: "linear-gradient(135deg, #f9fff4 0%, #f0f9e6 100%)",
-  primaryOverlay: "linear-gradient(135deg, rgba(82, 196, 26, 0.95) 0%, rgba(250, 140, 22, 0.95) 100%)",
+  primaryOverlay:
+    "linear-gradient(135deg, rgba(82, 196, 26, 0.95) 0%, rgba(250, 140, 22, 0.95) 100%)",
   green: "linear-gradient(135deg, #52c41a 0%, #73d13d 100%)",
   orange: "linear-gradient(135deg, #fa8c16 0%, #ffa940 100%)",
   blue: "linear-gradient(135deg, #1890ff 0%, #69c0ff 100%)",
@@ -146,7 +147,7 @@ export const componentProps = {
       size: "large" as const,
     },
   },
-  
+
   // Text компонент
   text: {
     secondary: {
@@ -170,7 +171,7 @@ export const componentProps = {
       style: { color: "#fff", fontSize: 16 },
     },
   },
-  
+
   // Button компонент
   button: {
     primaryGradient: {
@@ -185,14 +186,14 @@ export const componentProps = {
       size: "large" as const,
     },
   },
-  
+
   // Card компонент
   card: {
     withPadding: {
       bodyStyle: { padding: "16px 0" },
     },
   },
-  
+
   // Progress компонент
   progress: {
     small: {
@@ -209,7 +210,7 @@ export const commonStyles = {
     margin: "0 auto",
     padding: "40px 20px",
   },
-  
+
   // Информационные блоки
   infoBox: {
     background: "#f9f9f9",
@@ -217,14 +218,14 @@ export const commonStyles = {
     borderRadius: 8,
     marginBottom: 24,
   },
-  
+
   infoBoxSuccess: {
     background: "#f6ffed",
     padding: 12,
     borderRadius: 6,
     marginTop: 12,
   },
-  
+
   // Иконки в боксах
   iconBox: {
     width: 80,
@@ -235,7 +236,7 @@ export const commonStyles = {
     justifyContent: "center",
     margin: "0 auto 20px",
   },
-  
+
   iconBoxSmall: {
     width: 48,
     height: 48,
@@ -245,50 +246,50 @@ export const commonStyles = {
     justifyContent: "center",
     margin: "0 auto 8px",
   },
-  
+
   // Декоративные элементы
   decorativeCircle: {
     position: "absolute" as const,
     borderRadius: "50%",
     background: "rgba(255, 255, 255, 0.1)",
   },
-  
+
   // Flex контейнеры
   flexBetween: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  
+
   flexCenter: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
   },
-  
+
   // Текстовые блоки
   textCenter: {
     textAlign: "center" as const,
   },
-  
+
   // Hero секция
   heroSection: {
     background: gradients.primaryLight,
     padding: "80px 20px",
     textAlign: "center" as const,
   },
-  
+
   // Layout
   pageLayout: {
     minHeight: "100vh",
     display: "flex",
     flexDirection: "column" as const,
   },
-  
+
   mainContent: {
     flex: 1,
   },
-  
+
   // Auth side
   authSide: {
     height: "100%",
@@ -302,17 +303,17 @@ export const commonStyles = {
     padding: "60px 48px",
     overflow: "hidden" as const,
   },
-  
+
   // Auth формы
   authForm: {
     padding: "60px 48px",
   },
-  
+
   authFormHeader: {
     textAlign: "center" as const,
     marginBottom: 40,
   },
-  
+
   authIconBox: {
     width: 64,
     height: 64,
@@ -323,7 +324,7 @@ export const commonStyles = {
     justifyContent: "center",
     margin: "0 auto 20px",
   },
-  
+
   authTitle: {
     background: gradients.primaryText,
     WebkitBackgroundClip: "text",
@@ -331,7 +332,7 @@ export const commonStyles = {
     marginBottom: 12,
     fontWeight: 700,
   },
-  
+
   authCard: {
     maxWidth: 1200,
     width: "100%",
@@ -340,7 +341,7 @@ export const commonStyles = {
     boxShadow: "0 20px 60px rgba(82, 196, 26, 0.15)",
     background: "#fff",
   },
-  
+
   authContainer: {
     minHeight: "100vh",
     background: gradients.primaryBackground,
@@ -349,28 +350,28 @@ export const commonStyles = {
     justifyContent: "center",
     padding: "40px 20px",
   },
-  
+
   // Иконки
   iconPrimary: {
     color: "#52c41a",
   },
-  
+
   iconWhite: {
     color: "#fff",
     fontSize: 28,
   },
-  
+
   // Ссылки
   linkPrimary: {
     color: "#52c41a",
   },
-  
+
   linkPrimaryUnderline: {
     color: "#52c41a",
     fontWeight: 600,
     borderBottom: "1px dashed #52c41a",
   },
-  
+
   // Формы
   formLabel: {
     fontSize: 16,
@@ -378,16 +379,16 @@ export const commonStyles = {
     color: "#262626",
     marginBottom: 8,
   },
-  
+
   formItemMargin: {
     marginTop: 40,
   },
-  
+
   formTextCenter: {
     textAlign: "center" as const,
     marginBottom: 24,
   },
-  
+
   // Кнопки социальных сетей
   socialButton: {
     width: 52,
@@ -395,14 +396,14 @@ export const commonStyles = {
     border: "1px solid #e8e8e8",
     boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
   },
-  
+
   // Декоративные элементы auth
   decorativeCircleLight: {
     position: "absolute" as const,
     borderRadius: "50%",
     background: "rgba(255, 255, 255, 0.05)",
   },
-  
+
   // Иконки в боксах с blur
   iconBoxBlur: {
     width: 80,
@@ -416,7 +417,7 @@ export const commonStyles = {
     backdropFilter: "blur(10px)",
     marginBottom: 16,
   },
-  
+
   // Текст заголовков с градиентом
   titleGradient: {
     background: gradients.primaryText,
@@ -424,14 +425,14 @@ export const commonStyles = {
     WebkitTextFillColor: "transparent",
     fontWeight: 800,
   },
-  
+
   // Параграфы
   paragraphLarge: {
     fontSize: 20,
     maxWidth: 800,
     margin: "0 auto 48px",
   },
-  
+
   // Контейнеры с ограничением ширины
   containerNarrow: {
     maxWidth: 800,
