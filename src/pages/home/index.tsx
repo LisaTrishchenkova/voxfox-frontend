@@ -63,7 +63,7 @@ const HomePage = () => {
       if (currentSortBy) params.append("sortBy", currentSortBy);
       if (categoryId) params.append("categoryId", categoryId);
 
-      const url = `http://localhost:8081/api/Courses/search?${params.toString()}`;
+      const url = `http://localhost:8081/api/Courses?${params.toString()}`;
 
       const response = await fetch(url);
       const data = await response.json();
