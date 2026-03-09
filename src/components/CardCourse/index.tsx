@@ -3,15 +3,22 @@ import ReactMarkdown from "react-markdown";
 import type { CourseDto, TagsDto } from "../../api/types/course";
 import { BookOutlined, HeartOutlined } from "@ant-design/icons";
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 type CardCourseProps = {
   course: CourseDto;
 };
 const CardCourse = ({ course }: CardCourseProps) => {
+  const navigate = useNavigate();
   const { Title } = Typography;
+  const { Text } = Typography;
+
+  const goToCoursePage = () => {
+    navigate(`/course/${course.id}`);
+  };
 
   return (
     <Col span={6}>
-      <Card variant="borderless" size="default">
+      <Card variant="borderless" size="default" onClick={goToCoursePage}>
         <Row gutter={[8, 8]}>
           <Col span={12}>
             <BookOutlined style={{ fontSize: "20px", color: "#e97c15" }} />{" "}
@@ -37,8 +44,29 @@ const CardCourse = ({ course }: CardCourseProps) => {
             <ReactMarkdown>{course.description}</ReactMarkdown>
           </Col>
         </Row>
+        {course.author && (
+          <Row>
+            <Col span={24} style={{ margin: "18px 10px" }}>
+              <Text type="secondary">Автор: {course.author.name}</Text>
+            </Col>
+          </Row>
+        )}
+        {course.publishedAt && (
+          <Row>
+            <Col span={24} style={{ margin: "8px 10px" }}>
+              <Text type="secondary">
+                Опубликовано:{" "}
+                {new Date(course.publishedAt).toLocaleDateString("ru-RU", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </Text>
+            </Col>
+          </Row>
+        )}
         <Row>
-          <Col>
+          <Col style={{ margin: "8px 10px" }}>
             {course.tags &&
               course.tags.map((tag) => (
                 <Tag
@@ -56,7 +84,7 @@ const CardCourse = ({ course }: CardCourseProps) => {
             <Button
               style={{
                 width: "100px",
-                background: "rgba(59, 113, 89, 0.5)",
+                background: "rgba(0, 100, 0, 0.15)",
                 padding: "20px",
                 margin: "10px",
               }}

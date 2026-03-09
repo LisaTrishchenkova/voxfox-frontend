@@ -20,12 +20,18 @@ export interface CreateCourseDto {
   categoryId?: string | null;
   tags?: TagsDto[] | null;
 }
+export interface AuthorDto {
+  id: string;
+  name: string;
+}
 export interface CourseDto {
   id: string;
   title: string;
   description: string;
   isPublished: boolean;
   categoryId?: string | null;
+  author: AuthorDto;
+  publishedAt: string;
   tags?: TagsDto[] | null;
 }
 
