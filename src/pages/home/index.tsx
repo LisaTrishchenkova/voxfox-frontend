@@ -132,7 +132,6 @@ const HomePage = () => {
           textAlign: "center",
         }}
       >
-        <Title>URL_API:{API_URL}</Title>
         <Title level={1} style={{ marginBottom: 16 }}>
           Найдите свой идеальный курс!
         </Title>
