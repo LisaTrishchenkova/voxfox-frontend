@@ -1,5 +1,11 @@
 name: Deploy Dev
 
+env:
+  AWS_REGION: eu-north-1
+  AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
+  S3_BUCKET: voxfox-staging-frontend-dev-703671934401
+  CLOUDFRONT_DIST: E2QY8F5IBNEIV0
+
 on:
   workflow_run:
     workflows: ["CI"]
@@ -14,13 +20,10 @@ concurrency:
   group: deploy-staging
   cancel-in-progress: true
 
-env:
-  S3_BUCKET: voxfox-staging-frontend-dev-703671934401
-  CLOUDFRONT_DIST: E2QY8F5IBNEIV0
-
 jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'staging' }}
+    environment: staging
     runs-on: [ubuntu-22.04]
     steps:
       - name: Checkout exact commit
@@ -45,8 +48,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.AWS_IAM_ROLE }}
 
       - name: Upload to S3
         run: aws s3 sync dist/ s3://${{ env.S3_BUCKET }} --delete
