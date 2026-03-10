@@ -58,7 +58,7 @@ interface Course {
   lessons: number;
 }
 
-const HomePage = () => {
+const HomePage1 = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedLevel, setSelectedLevel] = useState<string>("all");
@@ -1151,4 +1151,4 @@ const HomePage = () => {
   );
 };
 
-export default HomePage;
+export default HomePage1;
