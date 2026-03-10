@@ -3,8 +3,6 @@ name: Deploy Dev
 env:
   AWS_REGION: eu-north-1
   AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
-  S3_BUCKET: voxfox-dev-frontend-dev-703671934401
-  CLOUDFRONT_DIST: E1M4R9OTCO57U9
 
 on:
   workflow_run:
@@ -26,41 +24,9 @@ jobs:
     environment: dev
     runs-on: [ubuntu-22.04]
     steps:
-      - name: Checkout exact commit
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
           audience: sts.amazonaws.com
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ env.AWS_IAM_ROLE }}
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build app
-        run: npm run build
-        env:
-          VITE_URL_API: ${{ vars.VITE_URL_API_DEV }}
-
-      - name: Test S3 access
-        run: |
-          echo "=== Testing S3 Access ==="
-          aws s3 ls s3://${{ env.S3_BUCKET }}/
-          aws s3api put-object --bucket ${{ env.S3_BUCKET }} --key test.txt --body /etc/hosts || echo "❌ Cannot upload"
-          aws s3 rm s3://${{ env.S3_BUCKET }}/test.txt || echo "❌ Cannot delete"
-
-      - name: Upload to S3
-        run: aws s3 sync dist/ s3://${{ env.S3_BUCKET }} --delete
-
-      - name: Invalidate CloudFront
-        run: aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DIST }} --paths "/*"
