@@ -20,6 +20,7 @@ env:
 jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev' }}
+    environment: dev
     runs-on: [ubuntu-22.04]
     steps:
       - name: Checkout exact commit
@@ -38,6 +39,8 @@ jobs:
 
       - name: Build app
         run: npm run build
+        env:
+          VITE_URL_API: ${{ vars.VITE_URL_API_DEV }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
