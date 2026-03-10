@@ -101,7 +101,6 @@ const HomePage = () => {
     const fetchData = async () => {
       try {
         await Promise.all([featchCourses(), fetchCategories()]);
-        // await new Promise((resolve) => setTimeout(resolve, 5000));
       } catch (error) {
         console.error(error);
       }
