@@ -52,6 +52,13 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ env.AWS_IAM_ROLE }}
 
+      - name: Test S3 access
+        run: |
+          echo "=== Testing S3 Access ==="
+          aws s3 ls s3://${{ env.S3_BUCKET }}/
+          aws s3api put-object --bucket ${{ env.S3_BUCKET }} --key test.txt --body /etc/hosts || echo "❌ Cannot upload"
+          aws s3 rm s3://${{ env.S3_BUCKET }}/test.txt || echo "❌ Cannot delete"
+
       - name: Upload to S3
         run: aws s3 sync dist/ s3://${{ env.S3_BUCKET }} --delete
 
