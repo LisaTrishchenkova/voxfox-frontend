@@ -10,17 +10,16 @@ permissions:
   id-token: write
 
 concurrency:
-  group: deploy-dev
+  group: deploy-staging
   cancel-in-progress: true
 
 env:
-  S3_BUCKET: voxfox-dev-frontend-dev-703671934401
-  CLOUDFRONT_DIST: E1M4R9OTCO57U9
+  S3_BUCKET: voxfox-staging-frontend-dev-703671934401
+  CLOUDFRONT_DIST: E2QY8F5IBNEIV0
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev' }}
-    environment: dev
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'staging' }}
     runs-on: [ubuntu-22.04]
     steps:
       - name: Checkout exact commit
@@ -40,7 +39,7 @@ jobs:
       - name: Build app
         run: npm run build
         env:
-          VITE_URL_API: ${{ vars.VITE_URL_API_DEV }}
+          VITE_URL_API: ${{ vars.VITE_URL_API_STAGING }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
