@@ -19,7 +19,6 @@ concurrency:
 jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev' }}
-    # environment: dev
     runs-on: [ubuntu-22.04]
     permissions:
       id-token: write
@@ -36,13 +35,6 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Debug OIDC
-        run: |
-          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN exists: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN != '' }}"
-          echo "ACTIONS_ID_TOKEN_REQUEST_URL exists: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL != '' }}"
-          echo "GITHUB_TOKEN permissions:"
-          echo "id-token: ${{ toJSON(github.token) }}"
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
@@ -58,15 +50,34 @@ jobs:
         env:
           VITE_URL_API: ${{ vars.VITE_URL_API_DEV }}
 
-      - name: Test S3 access
-        run: |
-          echo "=== Testing S3 Access ==="
-          aws s3 ls s3://${{ env.S3_BUCKET }}/
-          aws s3api put-object --bucket ${{ env.S3_BUCKET }} --key test.txt --body /etc/hosts || echo "❌ Cannot upload"
-          aws s3 rm s3://${{ env.S3_BUCKET }}/test.txt || echo "❌ Cannot delete"
-
       - name: Upload to S3
         run: aws s3 sync dist/ s3://${{ env.S3_BUCKET }} --delete
 
       - name: Invalidate CloudFront
         run: aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DIST }} --paths "/*"
+
+      - name: Notify success
+        if: success()
+        uses: actions-cool/maintain-one-comment@v3
+        with:
+          body: |
+            🚀 **Deployed to Dev successfully!**
+
+            Branch: `${{ github.event.workflow_run.head_branch }}`
+            Commit: [${{ github.event.workflow_run.head_sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }})
+            S3: `${{ env.S3_BUCKET }}`
+            CloudFront: https://${{ env.CLOUDFRONT_DIST }}.cloudfront.net
+
+            [View deployment run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+      - name: Notify failure
+        if: failure()
+        uses: actions-cool/maintain-one-comment@v3
+        with:
+          body: |
+            ❌ **Deploy to Dev failed!**
+
+            Branch: `${{ github.event.workflow_run.head_branch }}`
+            Commit: [${{ github.event.workflow_run.head_sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }})
+
+            [View failed run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
