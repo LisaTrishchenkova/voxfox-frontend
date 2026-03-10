@@ -19,9 +19,6 @@ jobs:
     timeout-minutes: 10
     runs-on: [ubuntu-22.04]
     strategy:
-      max-parallel: 1
-      matrix:
-        node-version: [22] # 20, 22, 24
       fail-fast: false
 
     steps:
@@ -29,7 +26,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: ${{matrix.node-version}}
+          node-version: 22
           cache: "npm"
 
       - name: Install dependencies
@@ -41,22 +38,22 @@ jobs:
       - name: Type check
         run: npm run type-check
 
-      # - name: Run tests
-      #   run: npm run test:ci
+      - name: Run tests
+        run: npm run test:ci
 
-      # - name: Test with coverage
-      #   if: matrix.node-version == '22'
-      #   run: npm run test:coverage
+      - name: Test with coverage
+        if: matrix.node-version == '22'
+        run: npm run test:coverage
 
-      # - name: Cache coverage
-      #   if: matrix.node-version == '22' && always()
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: ./coverage
-      #     key: coverage-${{ github.sha }}-${{matrix.node-version}}
-      #     restore-keys: |
-      #       coverage-${{github.sha}}-
-      #       coverage-
+      - name: Cache coverage
+        if: matrix.node-version == '22' && always()
+        uses: actions/cache@v4
+        with:
+          path: ./coverage
+          key: coverage-${{ github.sha }}-${{matrix.node-version}}
+          restore-keys: |
+            coverage-${{github.sha}}-
+            coverage-
 
       - name: Build
         run: npm run build

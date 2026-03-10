@@ -1,0 +1,84 @@
+name: Deploy Dev
+
+env:
+  AWS_REGION: eu-north-1
+  AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
+  S3_BUCKET: voxfox-dev-frontend-dev-703671934401
+  CLOUDFRONT_DIST: E1M4R9OTCO57U9
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [dev]
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev' }}
+    environment: dev
+    runs-on: [ubuntu-22.04]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npm run build
+        env:
+          VITE_URL_API: ${{ vars.VITE_URL_API_DEV }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          audience: sts.amazonaws.com
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.AWS_IAM_ROLE }}
+
+      - name: Upload to S3
+        run: aws s3 sync dist/ s3://${{ env.S3_BUCKET }} --delete
+
+      - name: Invalidate CloudFront
+        run: aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DIST }} --paths "/*"
+
+      - name: Notify success
+        if: success()
+        uses: actions-cool/maintain-one-comment@v3
+        with:
+          body: |
+            🚀 **Deployed to Dev successfully!**
+
+            Branch: `${{ github.event.workflow_run.head_branch }}`
+            Commit: [${{ github.event.workflow_run.head_sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }})
+            S3: `${{ env.S3_BUCKET }}`
+            CloudFront: https://${{ env.CLOUDFRONT_DIST }}.cloudfront.net
+
+            [View deployment run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+      - name: Notify failure
+        if: failure()
+        uses: actions-cool/maintain-one-comment@v3
+        with:
+          body: |
+            ❌ **Deploy to Dev failed!**
+
+            Branch: `${{ github.event.workflow_run.head_branch }}`
+            Commit: [${{ github.event.workflow_run.head_sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }})
+
+            [View failed run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
