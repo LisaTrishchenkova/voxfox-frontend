@@ -1,21 +1,22 @@
+import { LoginOutlined, SearchOutlined, UserOutlined } from "@ant-design/icons";
 import {
-  Row,
-  Col,
-  Menu,
-  Input,
+  Avatar,
   Button,
+  Col,
+  Image,
+  Input,
+  Menu,
+  Row,
   Space,
   Typography,
-  Image,
-  Avatar,
 } from "antd";
-import { LoginOutlined, SearchOutlined, UserOutlined } from "@ant-design/icons";
 import { useEffect, useState, type MouseEventHandler } from "react";
-import logo from "../assets/logo.jpg";
 import { useNavigate } from "react-router-dom";
-import { authStorage } from "../services/auth-storage.service";
 import type { UserResponse } from "../api/types/user";
 import { userApi } from "../api/userApi";
+import logo from "../assets/logo.jpg";
+import { API_URL } from "../config";
+import { authStorage } from "../services/auth-storage.service";
 
 const { Title } = Typography;
 
@@ -85,6 +86,8 @@ const Header = () => {
             </Col>
             <Col>
               <Menu mode="horizontal" style={{ border: "none" }}>
+                <Menu.Item>URL_API:{API_URL}</Menu.Item>
+
                 <Menu.Item
                   key="home"
                   style={{ fontWeight: 600, color: "#389e0d" }}
@@ -170,15 +173,18 @@ const Header = () => {
                 >
                   {userData.name}
                 </Title>
-                <Avatar 
-                style={{
-                      background: "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
-                      border: "4px solid #fff",
-                      boxShadow: "0 4px 12px rgba(76, 175, 80, 0.3)",
-                      // marginBottom: 16,
+                <Avatar
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
+                    border: "4px solid #fff",
+                    boxShadow: "0 4px 12px rgba(76, 175, 80, 0.3)",
+                    // marginBottom: 16,
                   }}
-                onClick={() => navigate("/user-profile")}
-                size={"default"} icon={<UserOutlined />} />{" "}
+                  onClick={() => navigate("/user-profile")}
+                  size={"default"}
+                  icon={<UserOutlined />}
+                />{" "}
               </>
             )}
           </Space>
