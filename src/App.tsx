@@ -9,12 +9,9 @@ import { Route, Routes } from "react-router-dom";
 // import RegPage from "./pages/OLD/RegPage";
 // import Test from "./pages/OLD/Test";
 // import UserProfile from "./pages/OLD/UserProfile";
-import { customTheme } from "./theme";
-import HomePage from "./pages/home";
-import Course from "./pages/OLD/Cource";
-import Home from "./pages/OLD/Home";
-import HomePage1 from "./pages/OLD/HomePage";
 import CardDetailPage from "./pages/cardDetail";
+import HomePage from "./pages/home";
+import { customTheme } from "./theme";
 
 // const Home = React.lazy(() => import("./pages/Home"));
 

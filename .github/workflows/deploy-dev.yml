@@ -38,10 +38,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check env vars
+        run: |
+          echo "VITE_API_URL is set to: $VITE_API_URL"
+          echo "GitHub vars.VITE_API_URL_DEV: ${{ vars.VITE_API_URL_DEV }}"
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL_DEV }}
+
       - name: Build app
         run: npm run build
         env:
-          VITE_URL_API: ${{ vars.VITE_URL_API_DEV }}
+          VITE_API_URL: ${{ vars.VITE_API_URL_DEV }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
