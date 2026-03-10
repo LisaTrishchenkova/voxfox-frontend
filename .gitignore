@@ -26,3 +26,4 @@ dist-ssr
 
 .fake
 .env
+/coverage
