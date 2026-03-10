@@ -1,18 +1,18 @@
-import { Layout, Row, Col, Typography, Space, Divider } from "antd";
 import {
-  RocketOutlined,
+  ArrowRightOutlined,
   CodeOutlined,
-  TeamOutlined,
-  TrophyOutlined,
-  MailOutlined,
-  PhoneOutlined,
   EnvironmentOutlined,
   FacebookOutlined,
-  TwitterOutlined,
-  InstagramOutlined,
   GithubOutlined,
-  ArrowRightOutlined,
+  InstagramOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  RocketOutlined,
+  TeamOutlined,
+  TrophyOutlined,
+  TwitterOutlined,
 } from "@ant-design/icons";
+import { Col, Divider, Layout, Row, Space, Typography } from "antd";
 
 const { Footer: AntFooter } = Layout;
 const { Title, Text } = Typography;
@@ -74,7 +74,7 @@ const FooterPrototype = () => {
 
         <Row gutter={[32, 32]}>
           <Col xs={24} md={6}>
-            <Space direction="vertical" size="large">
+            <Space orientation="vertical" size="large">
               <div
                 style={{ display: "flex", alignItems: "center", gap: "12px" }}
               >
