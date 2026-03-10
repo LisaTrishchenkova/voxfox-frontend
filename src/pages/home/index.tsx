@@ -22,6 +22,7 @@ import CardCourse from "../../components/CardCourse";
 import Header from "../../components/Header";
 import Paragraph from "antd/es/typography/Paragraph";
 import { SearchOutlined } from "@ant-design/icons";
+import { API_URL, ENVIRONMENT } from "../../config";
 
 const HomePage = () => {
   const { Title } = Typography;
@@ -79,7 +80,7 @@ const HomePage = () => {
       params.append("sortBy", currentSortBy);
       if (categoryId) params.append("categoryId", categoryId);
 
-      const url = `http://localhost:8081/api/Courses?${params.toString()}`;
+      const url = `${API_URL}/Courses?${params.toString()}`;
 
       const response = await fetch(url);
       const data = await response.json();
@@ -93,9 +94,11 @@ const HomePage = () => {
   };
 
   const fetchCategories = () => {
-    const url = `http://localhost:8081/api/Category`;
+    const url = `${API_URL}/Category`;
 
-    console.log(url);
+    if (ENVIRONMENT == "dev") {
+      console.log(url);
+    }
 
     fetch(url)
       .then((res) => res.json())
