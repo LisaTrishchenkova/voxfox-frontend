@@ -41,7 +41,7 @@ jobs:
       - name: Build app
         run: npm run build
         env:
-          VITE_URL_API: ${{ vars.VITE_URL_API_STAGING }}
+          VITE_API_URL: ${{ vars.VITE_API_URL_STAGING }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
