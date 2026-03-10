@@ -1,27 +1,18 @@
-import { useEffect, useState } from "react";
-import type {
-  Category,
-  CategoryDto,
-  PaginatedResponse,
-} from "../../api/types/course";
+import { SearchOutlined } from "@ant-design/icons";
 import {
   Button,
-  Card,
-  Image,
   Input,
-  Layout,
   Pagination,
   Select,
   Space,
   Spin,
   Typography,
 } from "antd";
-import ReactMarkdown from "react-markdown";
-import { data } from "react-router-dom";
+import Paragraph from "antd/es/typography/Paragraph";
+import { useEffect, useState } from "react";
+import type { CategoryDto, PaginatedResponse } from "../../api/types/course";
 import CardCourse from "../../components/CardCourse";
 import Header from "../../components/Header";
-import Paragraph from "antd/es/typography/Paragraph";
-import { SearchOutlined } from "@ant-design/icons";
 import { API_URL, ENVIRONMENT } from "../../config";
 
 const HomePage = () => {
@@ -142,6 +133,7 @@ const HomePage = () => {
           textAlign: "center",
         }}
       >
+        <Title>URL_API:{API_URL}</Title>
         <Title level={1} style={{ marginBottom: 16 }}>
           Найдите свой идеальный курс!
         </Title>
