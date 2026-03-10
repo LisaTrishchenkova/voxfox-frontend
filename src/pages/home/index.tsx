@@ -9,13 +9,20 @@ import {
   Card,
   Image,
   Input,
+  Layout,
   Pagination,
   Select,
+  Space,
   Spin,
   Typography,
 } from "antd";
 import ReactMarkdown from "react-markdown";
 import { data } from "react-router-dom";
+import CardCourse from "../../components/CardCourse";
+import Header from "../../components/Header";
+import Paragraph from "antd/es/typography/Paragraph";
+import { SearchOutlined } from "@ant-design/icons";
+import { API_URL, ENVIRONMENT } from "../../config";
 
 const HomePage = () => {
   const { Title } = Typography;
@@ -29,8 +36,10 @@ const HomePage = () => {
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [categoryId, setCategoryId] = useState<string>();
   const [isLoadingCourses, setIsLoadingCourses] = useState<boolean>(false);
+  const [isOpenCategoryBlock, setIsOpenCategoryBlock] =
+    useState<boolean>(false);
 
-  type SortBy = "Title" | "Relevance";
+  type SortBy = "Title" | "Relevance" | "Date" | "DateDesc";
   type SortDirection = "asc" | "desc";
 
   interface SortOption {
@@ -47,23 +56,15 @@ const HomePage = () => {
       label: "по заголовку",
       value: "Title",
     },
+    {
+      label: "по дате(самые новые)",
+      value: "Date",
+    },
+    {
+      label: "по дате(начиная со старых)",
+      value: "DateDesc",
+    },
   ];
-
-  // const Search = () => {
-  //   const url = `http://localhost:8081/api/Courses/search?searchTerm=${search}&page=${currentPage}&pageSize=${currentPageSize}&sortBy=${currentSortBy}&categoryId=${categoryId}`;
-
-  //   fetch(url)
-  //     .then((res) => res.json())
-  //     .then((data: PaginatedResponse) => {
-  //       setPaginatedCources(data);
-  //       setTotalCourse(data.totalCount);
-  //       setIsLoadingCourses(false);
-  //     })
-  //     .catch((error) => {
-  //       console.error("Ошибка при загрузке", error);
-  //       setIsLoadingCourses(false);
-  //     });
-  // };
 
   const featchCourses = async () => {
     try {
@@ -75,14 +76,16 @@ const HomePage = () => {
       if (currentPage) params.append("page", currentPage.toString());
       if (currentPageSize)
         params.append("pageSize", currentPageSize.toString());
-      if (currentSortBy) params.append("sortBy", currentSortBy);
+
+      params.append("sortBy", currentSortBy);
       if (categoryId) params.append("categoryId", categoryId);
 
-      const url = `http://localhost:8081/api/Courses/search?${params.toString()}`;
+      const url = `${API_URL}/Courses?${params.toString()}`;
 
       const response = await fetch(url);
       const data = await response.json();
       setPaginatedCources(data);
+      setTotalCourse(data.totalCount);
     } catch (error) {
       console.error("Ошибка загрузки", error);
     } finally {
@@ -91,9 +94,11 @@ const HomePage = () => {
   };
 
   const fetchCategories = () => {
-    const url = `http://localhost:8081/api/Category`;
+    const url = `${API_URL}/Category`;
 
-    console.log(url);
+    if (ENVIRONMENT == "dev") {
+      console.log(url);
+    }
 
     fetch(url)
       .then((res) => res.json())
@@ -112,63 +117,166 @@ const HomePage = () => {
     };
 
     fetchData();
-  }, [currentPage, currentPageSize, categoryId]);
+  }, [currentPage, currentPageSize, categoryId, currentSortBy]);
+
+  useEffect(() => {
+    console.log(isOpenCategoryBlock);
+  }, [isOpenCategoryBlock]);
 
   const OnChangePagination = (page: number, pageSize: number) => {
     setCurrentPage(page);
     setCurrentPageSize(pageSize);
   };
 
+  const visibleCategories = isOpenCategoryBlock
+    ? categories
+    : categories.slice(0, 5);
+
   return (
     <div>
-      <Input onChange={(e) => setSearch(e.target.value)} />
-      <Button onClick={() => featchCourses()}>Поиск</Button>
-      <Select
-        style={{ width: "200px" }}
-        options={sortOptions}
-        // showSearch={{ optionFilterProp: "label" }}
-        onChange={(value) => {
-          setCurrentSortBy(value);
-          console.log(currentSortBy);
+      <Header />
+      <div
+        style={{
+          backgroundColor: "rgba(0, 100, 0, 0.15)",
+          padding: "40px 20px",
+          textAlign: "center",
         }}
-        value={currentSortBy}
-      />
-      <Pagination
-        showSizeChanger
-        defaultCurrent={1}
-        total={totalCourse}
-        onChange={OnChangePagination}
-      />
-      <div style={{ display: "flex", gap: "30px" }}>
-        <div style={{ width: "250px" }}>
-          <Title>Категории:</Title>
-          {categories.map((cat) => (
-            <Button
-              onClick={(e) => {
-                setCategoryId(cat.id);
-              }}
-              style={{ width: "200px" }}
-              key={cat.id}
-            >
-              {cat.name}
-            </Button>
-          ))}
+      >
+        <Title level={1} style={{ marginBottom: 16 }}>
+          Найдите свой идеальный курс!
+        </Title>
+        <Paragraph
+          style={{
+            marginBottom: 24,
+            maxWidth: "800px",
+            marginLeft: "auto",
+            marginRight: "auto",
+          }}
+        >
+          В нашем каталоге — более 1000 курсов по самым востребованным
+          направлениям: программирование, дизайн, анализ данных и машинное
+          обучение, маркетинг и SMM, управление проектами, кибербезопасность,
+          разработка мобильных приложений, а также курсы по английскому языку,
+          финансам и инвестициям, психологии, творчеству и личностному росту.
+        </Paragraph>
+        <div style={{ maxWidth: "600px", margin: "0 auto" }}>
+          <Input.Search
+            size="large"
+            placeholder="Введите название курса..."
+            enterButton={<Button icon={<SearchOutlined />}>Найти курс</Button>}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onSearch={() => featchCourses()}
+          />
         </div>
-        {isLoadingCourses ? (
-          <Spin />
-        ) : (
-          <div style={{ flex: 1 }}>
-            <Title>Курсы:</Title>
-            {paginatedCourses?.items.map((cource) => (
-              <Card>
-                <Image src="https://static.aviasales.com/psgr-v2/ru/putevoditel-po-islandii/shutterstock_aa704c95ce.jpg?" />
-                <Title level={2}>{cource.title}</Title>
-                <p>{cource.categoryId}</p>
-                <ReactMarkdown>{cource.description}</ReactMarkdown>
-              </Card>
-            ))}
+      </div>
+
+      <div style={{ padding: "1%" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 16,
+          }}
+        >
+          <Title level={3} style={{ margin: 0 }}>
+            Категории:
+          </Title>
+          <Select
+            style={{ width: "300px" }}
+            options={sortOptions}
+            onChange={(value) => {
+              setCurrentSortBy(value);
+            }}
+            value={currentSortBy}
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: "2%" }}>
+          <div>
+            <div
+              style={{
+                width: "250px",
+                maxHeight: "300px",
+                overflowY: "auto",
+              }}
+            >
+              <Space size="small" style={{ width: "100%" }} wrap>
+                <Button
+                  onClick={() => setCategoryId(undefined)}
+                  type={!categoryId ? "primary" : "default"}
+                  style={{ width: "200px" }}
+                >
+                  Все категории
+                </Button>
+                {visibleCategories.map((cat) => (
+                  <Button
+                    onClick={() => {
+                      setCategoryId(cat.id);
+                    }}
+                    type={categoryId === cat.id ? "primary" : "default"}
+                    style={{ width: "200px" }}
+                    key={cat.id}
+                  >
+                    {cat.name}
+                  </Button>
+                ))}
+              </Space>
+            </div>
+            <span
+              onClick={() => {
+                setIsOpenCategoryBlock(!isOpenCategoryBlock);
+              }}
+              style={{
+                color: "rgba(0, 100, 0, 1)",
+                cursor: "pointer",
+                display: "inline-block",
+                marginTop: "20px",
+                width: "200px",
+                textAlign: "center",
+              }}
+            >
+              {isOpenCategoryBlock ? "Закрыть" : "Открыть"}
+            </span>
           </div>
-        )}
+          {isLoadingCourses ? (
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                justifyContent: "center",
+                padding: "48px",
+              }}
+            >
+              <Spin />
+            </div>
+          ) : (
+            <div style={{ flex: 1, gap: "30px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "30px",
+
+                  flexWrap: "wrap",
+                }}
+              >
+                {paginatedCourses?.items.map((cource) => (
+                  <CardCourse course={cource} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 24, display: "flex", justifyContent: "center" }}>
+        <Pagination
+          showSizeChanger
+          defaultCurrent={1}
+          total={totalCourse}
+          onChange={OnChangePagination}
+        />
       </div>
     </div>
   );
