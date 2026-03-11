@@ -5,6 +5,7 @@ env:
   AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
   S3_BUCKET: voxfox-dev-frontend-dev-703671934401
   CLOUDFRONT_DIST: E1M4R9OTCO57U9
+  CLOUDFRONT_DOMAIN: d3n1ouqorn84n8.cloudfront.net
 
 on:
   workflow_run:
@@ -143,6 +144,7 @@ jobs:
             --cache-control "public, max-age=0, must-revalidate" \
             --content-type "application/json" \
             --include "*.json" \
+            --exclude "*" \
             --only-show-errors
 
           echo "${VERSION}" > current-version.txt
@@ -165,7 +167,7 @@ jobs:
           echo "⏳ Waiting for CloudFront (10s)..."
           sleep 10
 
-          VERSION_URL="https://${{ env.CLOUDFRONT_DIST }}.cloudfront.net/version.json"
+          VERSION_URL="https://${{ env.CLOUDFRONT_DOMAIN }}/version.json"
           echo "Checking ${VERSION_URL}"
 
           DEPLOYED_VERSION=$(curl -s -f ${VERSION_URL} | jq -r '.version' || echo "failed")
