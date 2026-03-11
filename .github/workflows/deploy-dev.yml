@@ -5,6 +5,7 @@ env:
   AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
   S3_BUCKET: voxfox-dev-frontend-dev-703671934401
   CLOUDFRONT_DIST: E1M4R9OTCO57U9
+  CLOUDFRONT_DOMAIN: d3n1ouqorn84n8.cloudfront.net
 
 on:
   workflow_run:
@@ -19,11 +20,13 @@ concurrency:
 jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev' }}
-    environment: dev
     runs-on: [ubuntu-22.04]
     permissions:
       id-token: write
       contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v6
@@ -39,10 +42,44 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build app
-        run: npm run build
-        env:
-          VITE_URL_API: ${{ vars.VITE_URL_API_DEV }}
+      - name: Generate version
+        id: version
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date -u +'%Y%m%d-%H%M%S')
+          VERSION="${TIMESTAMP}-${SHORT_SHA}"
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+      - name: Build app with version
+        run: |
+          # Create .env for build
+          cat > .env << EOF
+          VITE_APP_VERSION=${{ steps.version.outputs.version }}
+          VITE_COMMIT_HASH=${{ steps.version.outputs.short_sha }}
+          VITE_BUILD_DATE=${{ steps.version.outputs.build_date }}
+          VITE_API_URL=${{ vars.VITE_API_URL_DEV }}
+          EOF
+
+          # Create version.json for runtime verification
+          cat > version.json << EOF
+          {
+            "version": "${{ steps.version.outputs.version }}",
+            "commit": "${{ steps.version.outputs.short_sha }}",
+            "buildTime": "${{ steps.version.outputs.build_date }}",
+            "environment": "dev"
+          }
+          EOF
+
+          # Build
+          npm run build
+
+          # Copy version.json to dist
+          cp version.json dist/
+
+          echo "✅ Build complete: $(du -sh dist/)"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
@@ -51,11 +88,69 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ env.AWS_IAM_ROLE }}
 
-      - name: Upload to S3
-        run: aws s3 sync dist/ s3://${{ env.S3_BUCKET }} --delete
+      - name: Get current version
+        id: current
+        run: |
+          CURRENT=$(aws s3 cp s3://${{ env.S3_BUCKET }}/meta/current-version.txt - 2>/dev/null || echo "none")
+          echo "current=${CURRENT}" >> $GITHUB_OUTPUT
+          echo "📦 Current version: ${CURRENT}"
+
+      - name: Deploy to S3
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BUCKET="${{ env.S3_BUCKET }}"
+          CURRENT="${{ steps.current.outputs.current }}"
+
+          echo "📦 Archiving version: ${VERSION}"
+          aws s3 sync dist/ s3://${BUCKET}/archive/${VERSION}/ --only-show-errors
+
+          cat > manifest.json << EOF
+          {
+            "version": "${VERSION}",
+            "deployedAt": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+            "commit": "${{ steps.version.outputs.short_sha }}",
+            "deployedBy": "${{ github.actor }}",
+            "previousVersion": "${CURRENT}",
+            "runId": "${{ github.run_id }}"
+          }
+          EOF
+          aws s3 cp manifest.json s3://${BUCKET}/archive/${VERSION}/manifest.json
+
+          echo "🚀 Deploying to current/ with cache headers"
+
+          aws s3 sync dist/ s3://${BUCKET}/current/ --delete
+
+          echo "${VERSION}" > current-version.txt
+          aws s3 cp current-version.txt s3://${BUCKET}/meta/current-version.txt
+
+          echo "${CURRENT}" > previous-version.txt
+          aws s3 cp previous-version.txt s3://${BUCKET}/meta/previous-version.txt
 
       - name: Invalidate CloudFront
-        run: aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DIST }} --paths "/*"
+        run: |
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CLOUDFRONT_DIST }} \
+            --paths "/*" \
+            --query 'Invalidation.Id' \
+            --output text)
+          echo "✅ CloudFront invalidation: ${INVALIDATION_ID}"
+
+      - name: Verify deployment
+        run: |
+          echo "⏳ Waiting for CloudFront (10s)..."
+          sleep 10
+
+          VERSION_URL="https://${{ env.CLOUDFRONT_DOMAIN }}/version.json"
+          echo "Checking ${VERSION_URL}"
+
+          DEPLOYED_VERSION=$(curl -s -f ${VERSION_URL} | jq -r '.version' || echo "failed")
+
+          if [ "${DEPLOYED_VERSION}" == "${{ steps.version.outputs.version }}" ]; then
+            echo "✅ Version verified: ${DEPLOYED_VERSION}"
+          else
+            echo "❌ Version mismatch! Expected: ${{ steps.version.outputs.version }}, Got: ${DEPLOYED_VERSION}"
+            exit 1
+          fi
 
       - name: Notify success
         if: success()
@@ -64,12 +159,27 @@ jobs:
           body: |
             🚀 **Deployed to Dev successfully!**
 
-            Branch: `${{ github.event.workflow_run.head_branch }}`
-            Commit: [${{ github.event.workflow_run.head_sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }})
-            S3: `${{ env.S3_BUCKET }}`
-            CloudFront: https://${{ env.CLOUDFRONT_DIST }}.cloudfront.net
+            **Version:** `${{ steps.version.outputs.version }}`
+            **Branch:** `${{ github.event.workflow_run.head_branch }}`
+            **Commit:** [`${{ steps.version.outputs.short_sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }})
+            **Previous version:** `${{ steps.current.outputs.current }}`
+
+            🔗 **Links:**
+            • 🌐 CloudFront: https://${{ env.CLOUDFRONT_DOMAIN }}
+            • 📦 Archive: s3://${{ env.S3_BUCKET }}/archive/${{ steps.version.outputs.version }}
 
             [View deployment run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+      - name: Auto-rollback on failure
+        if: failure()
+        run: |
+          PREV_VERSION="${{ steps.current.outputs.current }}"
+          if [ "${PREV_VERSION}" != "none" ] && [ ! -z "${PREV_VERSION}" ]; then
+            echo "🔄 Auto-rolling back to ${PREV_VERSION}"
+            aws s3 sync s3://${{ env.S3_BUCKET }}/archive/${PREV_VERSION}/ s3://${{ env.S3_BUCKET }}/current/ --delete
+            aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DIST }} --paths "/*"
+            echo "✅ Rolled back to ${PREV_VERSION}"
+          fi
 
       - name: Notify failure
         if: failure()
@@ -78,7 +188,10 @@ jobs:
           body: |
             ❌ **Deploy to Dev failed!**
 
-            Branch: `${{ github.event.workflow_run.head_branch }}`
-            Commit: [${{ github.event.workflow_run.head_sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }})
+            **Version:** `${{ steps.version.outputs.version }}`
+            **Branch:** `${{ github.event.workflow_run.head_branch }}`
+            **Commit:** [`${{ steps.version.outputs.short_sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }})
+
+            **Rollback:** ${{ steps.current.outputs.current != 'none' && '🔄 Auto-rollback triggered' || '⚠️ No previous version' }}
 
             [View failed run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})

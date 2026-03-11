@@ -148,7 +148,6 @@ export const componentProps = {
     },
   },
 
-  // Text компонент
   text: {
     secondary: {
       type: "secondary" as const,

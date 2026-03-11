@@ -1,28 +1,19 @@
-import { useEffect, useState } from "react";
-import type {
-  Category,
-  CategoryDto,
-  PaginatedResponse,
-} from "../../api/types/course";
+import { SearchOutlined } from "@ant-design/icons";
 import {
   Button,
-  Card,
-  Image,
   Input,
-  Layout,
   Pagination,
   Select,
   Space,
   Spin,
   Typography,
 } from "antd";
-import ReactMarkdown from "react-markdown";
-import { data } from "react-router-dom";
+import Paragraph from "antd/es/typography/Paragraph";
+import { useEffect, useState } from "react";
+import type { CategoryDto, PaginatedResponse } from "../../api/types/course";
 import CardCourse from "../../components/CardCourse";
 import Header from "../../components/Header";
-import Paragraph from "antd/es/typography/Paragraph";
-import { SearchOutlined } from "@ant-design/icons";
-import { API_URL, ENVIRONMENT } from "../../config";
+import { API_URL } from "../../config";
 
 const HomePage = () => {
   const { Title } = Typography;
@@ -96,10 +87,6 @@ const HomePage = () => {
   const fetchCategories = () => {
     const url = `${API_URL}/Category`;
 
-    if (ENVIRONMENT == "dev") {
-      console.log(url);
-    }
-
     fetch(url)
       .then((res) => res.json())
       .then(setCategories)
@@ -110,7 +97,6 @@ const HomePage = () => {
     const fetchData = async () => {
       try {
         await Promise.all([featchCourses(), fetchCategories()]);
-        // await new Promise((resolve) => setTimeout(resolve, 5000));
       } catch (error) {
         console.error(error);
       }
