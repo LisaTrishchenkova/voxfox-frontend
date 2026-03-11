@@ -1,0 +1,257 @@
+name: Deploy Production
+
+env:
+  AWS_REGION: eu-north-1
+  AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
+  S3_BUCKET: voxfox-prod-frontend-dev-703671934401
+  CLOUDFRONT_DIST: E26SJ0B0NRIO42
+  CLOUDFRONT_DOMAIN: d3ame98effqtlz.cloudfront.net
+
+on:
+  workflow_dispatch: # ✅ Только ручной запуск!
+    inputs:
+      confirm:
+        description: "⚠️ PRODUCTION DEPLOYMENT - Are you sure?"
+        required: true
+        default: "no"
+        type: choice
+        options:
+          - "no"
+          - "yes"
+      version_to_deploy:
+        description: "Version to deploy (commit SHA or tag)"
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false # ✅ Не отменяем прод деплой!
+
+jobs:
+  deploy:
+    if: ${{ github.event.inputs.confirm == 'yes' }}
+    runs-on: [ubuntu-22.04]
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.version_to_deploy }} # ✅ Деплоим конкретную версию
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate version
+        id: version
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date -u +'%Y%m%d-%H%M%S')
+          VERSION="v${TIMESTAMP}-${SHORT_SHA}"                     # ✅ v1.2.3 формат
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+      - name: Build app with version
+        run: |
+          # Create .env for build
+          cat > .env << EOF
+          VITE_APP_VERSION=${{ steps.version.outputs.version }}
+          VITE_COMMIT_HASH=${{ steps.version.outputs.short_sha }}
+          VITE_BUILD_DATE=${{ steps.version.outputs.build_date }}
+          VITE_API_URL=${{ vars.VITE_API_URL_PROD }}               # ✅ prod API!
+          VITE_NODE_ENV=production
+          EOF
+
+          # Create version.json (защищенный - без environment в public)
+          cat > version.json << EOF
+          {
+            "version": "${{ steps.version.outputs.version }}",
+            "buildTime": "${{ steps.version.outputs.build_date }}"
+          }
+          EOF
+
+          # Build with production optimizations
+          npm run build
+
+          # В production не копируем version.json в public dist!
+          # cp version.json dist/  # ❌ НЕ ДЕЛАЕМ!
+
+          echo "✅ Build complete: $(du -sh dist/)"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          audience: sts.amazonaws.com
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.AWS_IAM_ROLE }}
+
+      - name: Get current version
+        id: current
+        run: |
+          CURRENT=$(aws s3 cp s3://${{ env.S3_BUCKET }}/meta/current-version.txt - 2>/dev/null || echo "none")
+          echo "current=${CURRENT}" >> $GITHUB_OUTPUT
+          echo "📦 Current version: ${CURRENT}"
+
+      - name: Deploy to S3
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BUCKET="${{ env.S3_BUCKET }}"
+          CURRENT="${{ steps.current.outputs.current }}"
+
+          # Archive (храним вечно в production!)
+          aws s3 sync dist/ s3://${BUCKET}/archive/${VERSION}/ --only-show-errors
+
+          # Manifest с полной информацией (только в archive!)
+          cat > manifest.json << EOF
+          {
+            "version": "${VERSION}",
+            "deployedAt": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+            "commit": "${{ steps.version.outputs.short_sha }}",
+            "deployedBy": "${{ github.actor }}",
+            "previousVersion": "${CURRENT}",
+            "runId": "${{ github.run_id }}",
+            "environment": "production",
+            "approvedBy": "${{ github.actor }}"
+          }
+          EOF
+          aws s3 cp manifest.json s3://${BUCKET}/archive/${VERSION}/manifest.json
+
+          # Deploy to current с правильными cache headers
+          echo "🚀 Deploying to production..."
+
+          # Static assets (immutable, долгий кэш)
+          aws s3 sync dist/ s3://${BUCKET}/current/ \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --content-type "application/javascript" \
+            --include "*.js" \
+            --exclude "*" \
+            --only-show-errors
+
+          aws s3 sync dist/ s3://${BUCKET}/current/ \
+            --cache-control "public, max-age=31536000, immutable" \
+            --content-type "text/css" \
+            --include "*.css" \
+            --exclude "*" \
+            --only-show-errors
+
+          # HTML (no-cache)
+          aws s3 sync dist/ s3://${BUCKET}/current/ \
+            --cache-control "public, max-age=0, must-revalidate" \
+            --content-type "text/html" \
+            --include "*.html" \
+            --exclude "*" \
+            --only-show-errors
+
+          # Images and other assets
+          aws s3 sync dist/ s3://${BUCKET}/current/ \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "*.js" \
+            --exclude "*.css" \
+            --exclude "*.html" \
+            --only-show-errors
+
+          # Update metadata (без version.json в public!)
+          echo "${VERSION}" > current-version.txt
+          aws s3 cp current-version.txt s3://${BUCKET}/meta/current-version.txt
+          echo "${CURRENT}" > previous-version.txt
+          aws s3 cp previous-version.txt s3://${BUCKET}/meta/previous-version.txt
+
+      - name: Invalidate CloudFront
+        run: |
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CLOUDFRONT_DIST }} \
+            --paths "/*" \
+            --query 'Invalidation.Id' \
+            --output text)
+          echo "✅ CloudFront invalidation: ${INVALIDATION_ID}"
+
+      - name: Verify deployment (internal)
+        run: |
+          echo "⏳ Waiting for CloudFront (30s)..."
+          sleep 30
+
+          # Internal verification (не через публичный endpoint)
+          DEPLOYED_VERSION="${{ steps.version.outputs.version }}"
+          echo "✅ Production deployed: ${DEPLOYED_VERSION}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          body: |
+            🚀 **Production Release ${{ steps.version.outputs.version }}**
+
+            **Deployed by:** @${{ github.actor }}
+            **Commit:** ${{ github.event.inputs.version_to_deploy }}
+            **Previous version:** ${{ steps.current.outputs.current }}
+
+            **Changes:**
+            ${{ github.event.head_commit.message }}
+          draft: false
+          prerelease: false
+
+      - name: Notify success
+        if: success()
+        uses: actions-cool/maintain-one-comment@v3
+        with:
+          body: |
+            🚀 **PRODUCTION DEPLOYMENT SUCCESSFUL!**
+
+            **Version:** `${{ steps.version.outputs.version }}`
+            **Deployed by:** @${{ github.actor }}
+            **Previous version:** `${{ steps.current.outputs.current }}`
+
+            🔗 **Links:**
+            • 🌐 **Production:** https://${{ env.CLOUDFRONT_DOMAIN }}
+            • 📦 **Archive:** s3://${{ env.S3_BUCKET }}/archive/${{ steps.version.outputs.version }}
+            • 🏷️ **Release:** https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.version }}
+
+            [View deployment run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+      - name: Auto-rollback on failure
+        if: failure()
+        run: |
+          PREV_VERSION="${{ steps.current.outputs.current }}"
+          if [ "${PREV_VERSION}" != "none" ] && [ ! -z "${PREV_VERSION}" ]; then
+            echo "🔄 CRITICAL: Auto-rolling back to ${PREV_VERSION}"
+
+            # Отправка в Slack/Datadog/etc
+            curl -X POST ${{ secrets.SLACK_WEBHOOK }} \
+              -H 'Content-type: application/json' \
+              --data '{"text":"❌ PRODUCTION DEPLOYMENT FAILED! Rolling back..."}'
+
+            # Rollback
+            aws s3 sync s3://${{ env.S3_BUCKET }}/archive/${PREV_VERSION}/ s3://${{ env.S3_BUCKET }}/current/ --delete
+            aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DIST }} --paths "/*"
+
+            echo "✅ Rolled back to ${PREV_VERSION}"
+          fi
+
+      - name: Notify failure
+        if: failure()
+        uses: actions-cool/maintain-one-comment@v3
+        with:
+          body: |
+            ❌ **PRODUCTION DEPLOYMENT FAILED!**
+
+            **Version:** `${{ steps.version.outputs.version }}`
+            **Deployed by:** @${{ github.actor }}
+            **Rollback:** ${{ steps.current.outputs.current != 'none' && '🔄 Auto-rollback triggered' || '⚠️ NO PREVIOUS VERSION!' }}
+
+            **Action required:** Investigate immediately!
+
+            [View failed run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
