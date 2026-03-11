@@ -19,7 +19,6 @@ concurrency:
 jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev' }}
-    environment: dev
     runs-on: [ubuntu-22.04]
     permissions:
       id-token: write
@@ -39,16 +38,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check env vars
+      - name: Generate version
+        id: version
         run: |
-          echo "VITE_API_URL is set to: $VITE_API_URL"
-          echo "GitHub vars.VITE_API_URL_DEV: ${{ vars.VITE_API_URL_DEV }}"
-        env:
-          VITE_API_URL: ${{ vars.VITE_API_URL_DEV }}
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date -u + '%Y%m%d-%H%M%S')
+          VERSION="${TIMESTAMP}-${SHORT_SHA}"
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "build_date=$(date -u + '%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
 
       - name: Build app
-        run: npm run build
+        run: |
+          cat > .env << EOF
+          VITE_APP_VERSION=${{ steps.version.outputs.version }}
+          VITE_COMMIT_HASH=${{ steps.version.outputs.short_sha }}
+          VITE_BUILD_DATE=${{ steps.version.outputs.build_date }}
+          VITE_API_URL=${{ vars.VITE_API_URL_DEV }}
+          EOF
+
+          npm run build
+
+          cp version.json dist/
         env:
+          VITE_APP_VERSION: ${{steps.version.outputs.version}}
+          VITE_COMMIT_HASH: ${{steps.version.outputs.short_sha}}
+          VITE_BUILD_DATE: ${{steps.version.outputs.build_date}}
           VITE_API_URL: ${{ vars.VITE_API_URL_DEV }}
 
       - name: Configure AWS credentials
