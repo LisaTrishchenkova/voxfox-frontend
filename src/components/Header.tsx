@@ -15,7 +15,6 @@ import { useNavigate } from "react-router-dom";
 import type { UserResponse } from "../api/types/user";
 import { userApi } from "../api/userApi";
 import logo from "../assets/logo.jpg";
-import { API_URL } from "../config";
 import { authStorage } from "../services/auth-storage.service";
 
 const { Title } = Typography;
@@ -86,8 +85,6 @@ const Header = () => {
             </Col>
             <Col>
               <Menu mode="horizontal" style={{ border: "none" }}>
-                <Menu.Item>URL_API:{API_URL}</Menu.Item>
-
                 <Menu.Item
                   key="home"
                   style={{ fontWeight: 600, color: "#389e0d" }}
