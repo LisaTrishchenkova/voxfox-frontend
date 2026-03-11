@@ -10,6 +10,10 @@ env:
 on:
   workflow_dispatch:
     inputs:
+      version_to_deploy:
+        description: "Version to deploy (commit SHA or tag)"
+        required: true
+        type: string
       confirm:
         description: "⚠️ PRODUCTION DEPLOYMENT - Are you sure?"
         required: true
@@ -18,14 +22,10 @@ on:
         options:
           - "no"
           - "yes"
-      version_to_deploy:
-        description: "Version to deploy (commit SHA or tag)"
-        required: true
-        type: string
 
 concurrency:
   group: deploy-prod
-  cancel-in-progress: false # ✅ Не отменяем прод деплой!
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -33,7 +33,8 @@ jobs:
     runs-on: [ubuntu-22.04]
     permissions:
       id-token: write
-      contents: read
+      contents: write
+      pull-requests: write
     outputs:
       version: ${{ steps.version.outputs.version }}
 
@@ -41,7 +42,7 @@ jobs:
       - name: Checkout exact commit
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.inputs.version_to_deploy }} # ✅ Деплоим конкретную версию
+          ref: ${{ github.event.inputs.version_to_deploy }}
 
       - name: Setup Node
         uses: actions/setup-node@v6
