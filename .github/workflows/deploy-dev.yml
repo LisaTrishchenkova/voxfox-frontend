@@ -59,8 +59,6 @@ jobs:
           EOF
 
           npm run build
-
-          cp version.json dist/
         env:
           VITE_APP_VERSION: ${{steps.version.outputs.version}}
           VITE_COMMIT_HASH: ${{steps.version.outputs.short_sha}}
