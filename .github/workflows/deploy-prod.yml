@@ -8,7 +8,7 @@ env:
   CLOUDFRONT_DOMAIN: d3ame98effqtlz.cloudfront.net
 
 on:
-  workflow_dispatch: # ✅ Только ручной запуск!
+  workflow_dispatch:
     inputs:
       confirm:
         description: "⚠️ PRODUCTION DEPLOYMENT - Are you sure?"
@@ -100,7 +100,16 @@ jobs:
       - name: Get current version
         id: current
         run: |
-          CURRENT=$(aws s3 cp s3://${{ env.S3_BUCKET }}/meta/current-version.txt - 2>/dev/null || echo "none")
+          if aws s3api head-object --bucket ${{ env.S3_BUCKET }} --key meta/current-version.txt 2>/dev/null; then
+          CURRENT=$(aws s3 cp s3://${{ env.S3_BUCKET }}/meta/current-version.txt -)
+          else
+          CURRENT="none"
+          echo "📦 First deployment to this bucket"
+
+          echo "none" > current-version.txt
+          aws s3 cp current-version.txt s3://${{ env.S3_BUCKET }}/meta/current-version.txt
+          fi
+
           echo "current=${CURRENT}" >> $GITHUB_OUTPUT
           echo "📦 Current version: ${CURRENT}"
 
