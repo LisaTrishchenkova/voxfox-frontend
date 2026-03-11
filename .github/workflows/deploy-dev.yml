@@ -94,7 +94,7 @@ jobs:
           echo "current=${CURRENT}" >> $GITHUB_OUTPUT
           echo "📦 Current version: ${CURRENT}"
 
-      - name: Deploy to S3 (Archive + Current)
+      - name: Deploy to S3
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           BUCKET="${{ env.S3_BUCKET }}"
