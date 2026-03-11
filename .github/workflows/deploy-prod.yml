@@ -8,8 +8,12 @@ env:
   CLOUDFRONT_DOMAIN: d3ame98effqtlz.cloudfront.net
 
 on:
-  workflow_dispatch: # ✅ Только ручной запуск!
+  workflow_dispatch:
     inputs:
+      version_to_deploy:
+        description: "Version to deploy (commit SHA or tag)"
+        required: true
+        type: string
       confirm:
         description: "⚠️ PRODUCTION DEPLOYMENT - Are you sure?"
         required: true
@@ -18,14 +22,10 @@ on:
         options:
           - "no"
           - "yes"
-      version_to_deploy:
-        description: "Version to deploy (commit SHA or tag)"
-        required: true
-        type: string
 
 concurrency:
   group: deploy-prod
-  cancel-in-progress: false # ✅ Не отменяем прод деплой!
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -33,7 +33,8 @@ jobs:
     runs-on: [ubuntu-22.04]
     permissions:
       id-token: write
-      contents: read
+      contents: write
+      pull-requests: write
     outputs:
       version: ${{ steps.version.outputs.version }}
 
@@ -41,7 +42,7 @@ jobs:
       - name: Checkout exact commit
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.inputs.version_to_deploy }} # ✅ Деплоим конкретную версию
+          ref: ${{ github.event.inputs.version_to_deploy }}
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -100,7 +101,16 @@ jobs:
       - name: Get current version
         id: current
         run: |
-          CURRENT=$(aws s3 cp s3://${{ env.S3_BUCKET }}/meta/current-version.txt - 2>/dev/null || echo "none")
+          if aws s3api head-object --bucket ${{ env.S3_BUCKET }} --key meta/current-version.txt 2>/dev/null; then
+          CURRENT=$(aws s3 cp s3://${{ env.S3_BUCKET }}/meta/current-version.txt -)
+          else
+          CURRENT="none"
+          echo "📦 First deployment to this bucket"
+
+          echo "none" > current-version.txt
+          aws s3 cp current-version.txt s3://${{ env.S3_BUCKET }}/meta/current-version.txt
+          fi
+
           echo "current=${CURRENT}" >> $GITHUB_OUTPUT
           echo "📦 Current version: ${CURRENT}"
 
@@ -132,36 +142,39 @@ jobs:
           echo "🚀 Deploying to production..."
 
           # Static assets (immutable, долгий кэш)
+          # JS files (immutable)
           aws s3 sync dist/ s3://${BUCKET}/current/ \
-            --delete \
-            --cache-control "public, max-age=31536000, immutable" \
-            --content-type "application/javascript" \
-            --include "*.js" \
-            --exclude "*" \
-            --only-show-errors
+          --delete \
+          --cache-control "public, max-age=31536000, immutable" \
+          --content-type "application/javascript" \
+          --include "*.js" \
+          --only-show-errors
 
+          # CSS files (immutable)
           aws s3 sync dist/ s3://${BUCKET}/current/ \
-            --cache-control "public, max-age=31536000, immutable" \
-            --content-type "text/css" \
-            --include "*.css" \
-            --exclude "*" \
-            --only-show-errors
+          --cache-control "public, max-age=31536000, immutable" \
+          --content-type "text/css" \
+          --include "*.css" \
+          --only-show-errors
 
-          # HTML (no-cache)
+          # HTML files (no-cache)
           aws s3 sync dist/ s3://${BUCKET}/current/ \
-            --cache-control "public, max-age=0, must-revalidate" \
-            --content-type "text/html" \
-            --include "*.html" \
-            --exclude "*" \
-            --only-show-errors
+          --cache-control "public, max-age=0, must-revalidate" \
+          --content-type "text/html" \
+          --include "*.html" \
+          --only-show-errors
 
           # Images and other assets
           aws s3 sync dist/ s3://${BUCKET}/current/ \
-            --cache-control "public, max-age=31536000, immutable" \
-            --exclude "*.js" \
-            --exclude "*.css" \
-            --exclude "*.html" \
-            --only-show-errors
+          --cache-control "public, max-age=31536000, immutable" \
+          --include "*.jpg" \
+          --include "*.jpeg" \
+          --include "*.png" \
+          --include "*.gif" \
+          --include "*.svg" \
+          --include "*.ico" \
+          --include "*.webp" \
+          --only-show-errors
 
           # Update metadata (без version.json в public!)
           echo "${VERSION}" > current-version.txt
