@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import type { CategoryDto, PaginatedResponse } from "../../api/types/course";
 import CardCourse from "../../components/CardCourse";
 import Header from "../../components/Header";
-import { API_URL, ENVIRONMENT } from "../../config";
+import { API_URL } from "../../config";
 
 const HomePage = () => {
   const { Title } = Typography;
@@ -87,10 +87,6 @@ const HomePage = () => {
   const fetchCategories = () => {
     const url = `${API_URL}/Category`;
 
-    if (ENVIRONMENT == "dev") {
-      console.log(url);
-    }
-
     fetch(url)
       .then((res) => res.json())
       .then(setCategories)
@@ -132,7 +128,6 @@ const HomePage = () => {
           textAlign: "center",
         }}
       >
-        <Title>URL_API:{API_URL}</Title>
         <Title level={1} style={{ marginBottom: 16 }}>
           Найдите свой идеальный курс!
         </Title>
