@@ -94,10 +94,8 @@ jobs:
           BUCKET="${{ env.S3_BUCKET }}"
           CURRENT="${{ steps.current.outputs.current }}"
 
-          # Archive
           aws s3 sync dist/ s3://${BUCKET}/archive/${VERSION}/ --only-show-errors
 
-          # Manifest
           cat > manifest.json << EOF
           {
             "version": "${VERSION}",
@@ -111,10 +109,8 @@ jobs:
           EOF
           aws s3 cp manifest.json s3://${BUCKET}/archive/${VERSION}/manifest.json
 
-          # Deploy to current
           aws s3 sync dist/ s3://${BUCKET}/current/ --delete
 
-          # Update metadata
           echo "${VERSION}" > current-version.txt
           aws s3 cp current-version.txt s3://${BUCKET}/meta/current-version.txt
           echo "${CURRENT}" > previous-version.txt
