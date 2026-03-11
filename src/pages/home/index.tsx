@@ -74,23 +74,39 @@ const HomePage = () => {
       const url = `${API_URL}/Courses?${params.toString()}`;
 
       const response = await fetch(url);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `HTTP  error! status: ${response.status}, message: ${errorText}`,
+        );
+      }
       const data = await response.json();
       setPaginatedCources(data);
       setTotalCourse(data.totalCount);
     } catch (error) {
-      console.error("Ошибка загрузки", error);
+      console.error("Ошибка загрузки", error); // почему тут не поймал ошибку
     } finally {
       setIsLoadingCourses(false);
     }
   };
 
-  const fetchCategories = () => {
-    const url = `${API_URL}/Category`;
+  const fetchCategories = async () => {
+    try {
+      const url = `${API_URL}/Category`;
+      const response = await fetch(url);
 
-    fetch(url)
-      .then((res) => res.json())
-      .then(setCategories)
-      .catch(console.error);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `HTTP error! status: ${response.status}, message: ${errorText}`,
+        );
+      }
+
+      const data = await response.json();
+      setCategories(data);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   useEffect(() => {
@@ -262,6 +278,7 @@ const HomePage = () => {
           defaultCurrent={1}
           total={totalCourse}
           onChange={OnChangePagination}
+          pageSizeOptions={[10, 20, 50]}
         />
       </div>
     </div>
