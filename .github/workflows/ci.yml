@@ -14,12 +14,11 @@ permissions:
 concurrency:
   group: ${{github.workflow}}-${{github.ref}}
   cancel-in-progress: true
+
 jobs:
   test:
     timeout-minutes: 10
-    runs-on: [ubuntu-22.04]
-    strategy:
-      fail-fast: false
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v5
@@ -45,17 +44,16 @@ jobs:
         run: npm run test:ci
 
       - name: Test with coverage
-        if: matrix.node-version == '22'
         run: npm run test:coverage
 
       - name: Cache coverage
-        if: matrix.node-version == '22' && always()
+        if: always()
         uses: actions/cache@v4
         with:
           path: ./coverage
-          key: coverage-${{ github.sha }}-${{matrix.node-version}}
+          key: coverage-${{ github.sha }}
           restore-keys: |
-            coverage-${{github.sha}}-
+            coverage-${{ github.sha }}-
             coverage-
 
       - name: Build
@@ -64,23 +62,23 @@ jobs:
       - name: Upload dist
         uses: actions/upload-artifact@v7
         with:
-          name: build-${{github.sha}}-node${{matrix.node-version}}
+          name: build-${{ github.sha }}-node22
           path: dist
           retention-days: 30
 
       - name: Check bundle size
-        run: npm run bundlemon || echo "⚠️ Bundle size warning"
+        run: npm run bundlemon
 
       - name: Comment PR
         uses: actions/github-script@v8
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && matrix.node-version == '22'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         with:
           script: |
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `✅ CI passed on Node ${{ matrix.node-version }}!\nArtifact: build-${{ github.sha }}`
+              body: `✅ CI passed on Node 22!\nArtifact: build-${{ github.sha }}`
             })
 
       - name: Notify on failure
@@ -88,6 +86,6 @@ jobs:
         uses: actions-cool/maintain-one-comment@v3
         with:
           body: |
-            ❌ CI failed on ${{ github.event.pull_request.number }}
-            Node: ${{ matrix.node-version }}
+            ❌ CI failed on ${{ github.ref_name }}
+            Node: 22
             See: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
