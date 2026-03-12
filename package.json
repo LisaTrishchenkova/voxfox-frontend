@@ -5,11 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite --mode development",
-    "dev:staging": "vite --mode staging",
-    "dev:prod": "vite --mode production",
-    "build:prod": "tsc -b && vite build --mode production",
-    "build:staging": "tsc -b && vite build --mode staging",
-    "build:dev": "tsc -b && vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
@@ -18,7 +13,8 @@
     "test": "vitest",
     "test:ci": "vitest run",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "bundlemon": "bundlemon"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
@@ -54,14 +50,16 @@
     "vite": "^7.2.4",
     "vitest": "^4.0.18"
   },
-  "bundlesize": [
-    {
-      "path": "./dist/assets/*.js",
-      "maxSize": "500 kB"
-    },
-    {
-      "path": "./dist/assets/*.css",
-      "maxSize": "50 kB"
-    }
-  ]
+  "bundlemon": {
+    "files": [
+      {
+        "path": "./dist/assets/*.js",
+        "maxSize": "500 kB"
+      },
+      {
+        "path": "./dist/assets/*.css",
+        "maxSize": "50 kB"
+      }
+    ]
+  }
 }
