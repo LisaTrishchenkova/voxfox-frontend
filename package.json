@@ -24,12 +24,13 @@
     "@ant-design/icons": "^6.1.0",
     "antd": "^6.1.0",
     "antd-dayjs-webpack-plugin": "^1.0.6",
-    "axios": "^1.13.2",
+    "axios": "^1.13.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.10.1"
   },
+  "overrides": {},
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@testing-library/jest-dom": "^6.9.1",
