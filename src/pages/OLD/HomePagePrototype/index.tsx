@@ -1,6 +1,6 @@
 import { Col, Row, Typography } from "antd";
-import FooterPrototype from "../../components/FooterPrototype";
-import HeaderPrototype from "../../components/HeaderPrototype";
+import FooterPrototype from "../../../components/FooterPrototype";
+import HeaderPrototype from "../../../components/HeaderPrototype";
 
 const { Title, Text, Paragraph } = Typography;
 

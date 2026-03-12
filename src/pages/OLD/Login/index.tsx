@@ -1,7 +1,7 @@
 import { Button, Form, Input, type FormProps } from "antd";
 import type React from "react";
-import type { LoginFormData } from "../../api/types/auth";
-import { authApi } from "../../api/authApi";
+import type { LoginFormData } from "../../../api/types/auth";
+import { authApi } from "../../../api/authApi";
 
 const onFinish: FormProps<LoginFormData>["onFinish"] = async (values) => {
   console.log(values);
@@ -10,7 +10,7 @@ const onFinish: FormProps<LoginFormData>["onFinish"] = async (values) => {
 };
 
 const onFinishFailed: FormProps<LoginFormData>["onFinishFailed"] = (
-  errorInfo
+  errorInfo,
 ) => {
   console.log(errorInfo);
 };

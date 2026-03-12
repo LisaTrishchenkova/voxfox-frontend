@@ -19,9 +19,9 @@ import {
   ArrowRightOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import type { LoginFormData } from "../../api/types/auth";
-import { authApi } from "../../api/authApi";
-import { gradients, commonStyles, componentProps } from "../../theme";
+import type { LoginFormData } from "../../../api/types/auth";
+import { authApi } from "../../../api/authApi";
+import { gradients, commonStyles, componentProps } from "../../../theme";
 
 const { Title, Text, Link } = Typography;
 
@@ -41,7 +41,7 @@ const LoginPage = () => {
   };
 
   const onFinishFailed: FormProps<LoginFormData>["onFinishFailed"] = (
-    errorInfo
+    errorInfo,
   ) => {
     console.log(errorInfo);
   };
