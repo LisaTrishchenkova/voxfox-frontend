@@ -1,0 +1,26 @@
+# Git
+.git
+.gitignore
+
+# Logs
+*.log
+npm-debug.log*
+
+# Среда разработки
+.env.local
+.env.development
+.env.test
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+node_modules/

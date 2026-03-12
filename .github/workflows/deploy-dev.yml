@@ -120,6 +120,8 @@ jobs:
 
           aws s3 sync dist/ s3://${BUCKET}/current/ --delete
 
+          aws s3 sync dist/ s3://${BUCKET}/ --delete
+
           echo "${VERSION}" > current-version.txt
           aws s3 cp current-version.txt s3://${BUCKET}/meta/current-version.txt
 
