@@ -1,17 +1,14 @@
-version: "3.8"
-
 networks:
   voxfox-network:
     driver: bridge
 
 services:
   voxfox:
-    # container_name: ${IMAGE_NAME}
-    # image: ${DOCKER_HUB_USERNAME}/${IMAGE_NAME}:${VERSION}
+    container_name: voxfox
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8082:80"
     networks:
       - voxfox-network
-    # env_file:
-    #   - .env
-    #   - .env.${ENVIRONMENT}
