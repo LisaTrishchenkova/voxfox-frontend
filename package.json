@@ -22,7 +22,7 @@
     "antd-dayjs-webpack-plugin": "^1.0.6",
     "axios": "^1.13.5",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "react-dom": "^19.2.4",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.10.1"
   },
