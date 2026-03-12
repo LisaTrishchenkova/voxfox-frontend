@@ -126,14 +126,14 @@ jobs:
           # Manifest с полной информацией (только в archive!)
           cat > manifest.json << EOF
           {
-              "version": "${VERSION}",
-              "deployedAt": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
-              "commit": "${{ steps.version.outputs.short_sha }}",
-              "deployedBy": "${{ github.actor }}",
-              "previousVersion": "${CURRENT}",
-              "runId": "${{ github.run_id }}",
-              "environment": "production",
-              "approvedBy": "${{ github.actor }}"
+            "version": "${VERSION}",
+            "deployedAt": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+            "commit": "${{ steps.version.outputs.short_sha }}",
+            "deployedBy": "${{ github.actor }}",
+            "previousVersion": "${CURRENT}",
+            "runId": "${{ github.run_id }}",
+            "environment": "production",
+            "approvedBy": "${{ github.actor }}"
           }
           EOF
           aws s3 cp manifest.json s3://${BUCKET}/archive/${VERSION}/manifest.json
