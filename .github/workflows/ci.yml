@@ -69,7 +69,7 @@ jobs:
           retention-days: 30
 
       - name: Check bundle size
-        run: npm run bundlemon || echo "⚠️ Bundle size warning"
+        run: nnpm run size || echo "⚠️ Bundle size warning"
 
       - name: Comment PR
         uses: actions/github-script@v8
