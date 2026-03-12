@@ -141,40 +141,45 @@ jobs:
           # Deploy to current с правильными cache headers
           echo "🚀 Deploying to production..."
 
-          # Static assets (immutable, долгий кэш)
-          # JS files (immutable)
-          aws s3 sync dist/ s3://${BUCKET}/current/ \
-          --delete \
-          --cache-control "public, max-age=31536000, immutable" \
-          --content-type "application/javascript" \
-          --include "*.js" \
-          --only-show-errors
+          aws s3 sync dist/ s3://${BUCKET}/current/ --delete
 
-          # CSS files (immutable)
-          aws s3 sync dist/ s3://${BUCKET}/current/ \
-          --cache-control "public, max-age=31536000, immutable" \
-          --content-type "text/css" \
-          --include "*.css" \
-          --only-show-errors
-
-          # HTML files (no-cache)
-          aws s3 sync dist/ s3://${BUCKET}/current/ \
-          --cache-control "public, max-age=0, must-revalidate" \
-          --content-type "text/html" \
-          --include "*.html" \
-          --only-show-errors
-
-          # Images and other assets
-          aws s3 sync dist/ s3://${BUCKET}/current/ \
-          --cache-control "public, max-age=31536000, immutable" \
-          --include "*.jpg" \
-          --include "*.jpeg" \
-          --include "*.png" \
-          --include "*.gif" \
-          --include "*.svg" \
-          --include "*.ico" \
-          --include "*.webp" \
-          --only-show-errors
+          # эт оне рабоатет он то файл перезпишет не туда тип контента
+          #   # Static assets (immutable, долгий кэш)
+          #   # JS files (immutable)
+          #   aws s3 sync dist/ s3://${BUCKET}/current/ \
+          #   --delete \
+          #   --cache-control "public, max-age=0, must-revalidate" \
+          #   --content-type "text/html; charset=utf-8" \
+          #   --include "*.html" \
+          #   --exclude "*" \
+          #   --only-show-errors
+          #   # ✅ ПОТОМ загружаем все остальное
+          #   # JS files
+          #   aws s3 sync dist/ s3://${BUCKET}/current/ \
+          #   --cache-control "public, max-age=31536000, immutable" \
+          #   --content-type "application/javascript" \
+          #   --include "*.js" \
+          #   --exclude "*" \
+          #   --only-show-errors
+          #   # CSS files
+          #   aws s3 sync dist/ s3://${BUCKET}/current/ \
+          #   --cache-control "public, max-age=31536000, immutable" \
+          #   --content-type "text/css" \
+          #   --include "*.css" \
+          #   --exclude "*" \
+          #   --only-show-errors
+          #   # Images
+          #   aws s3 sync dist/ s3://${BUCKET}/current/ \
+          #   --cache-control "public, max-age=31536000, immutable" \
+          #   --include "*.jpg" \
+          #   --include "*.jpeg" \
+          #   --include "*.png" \
+          #   --include "*.gif" \
+          #   --include "*.svg" \
+          #   --include "*.ico" \
+          #   --include "*.webp" \
+          #   --exclude "*" \
+          #   --only-show-errors
 
           # Update metadata (без version.json в public!)
           echo "${VERSION}" > current-version.txt
