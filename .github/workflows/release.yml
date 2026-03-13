@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v1.2.3)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version info
+        id: info
+        run: |
+          # Если workflow_dispatch — берём из input, иначе из тега
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
+          PREV_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]' | sed -n '2p' || echo "")
+          echo "prev_tag=${PREV_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          TAG="${{ steps.info.outputs.tag }}"
+          PREV="${{ steps.info.outputs.prev_tag }}"
+
+          if [ -n "${PREV}" ]; then
+            # Коммиты между тегами
+            LOG=$(git log ${PREV}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          else
+            LOG=$(git log --pretty=format:"- %s (%h)" --no-merges | head -20)
+          fi
+
+          # Записываем в файл (избегаем проблем с multiline в output)
+          echo "${LOG}" > changelog.txt
+          echo "Previous tag: ${PREV}"
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const tag = '${{ steps.info.outputs.tag }}';
+            const prevTag = '${{ steps.info.outputs.prev_tag }}';
+            const changelog = fs.readFileSync('changelog.txt', 'utf8');
+
+            const body = [
+              `## What's Changed`,
+              ``,
+              changelog,
+              ``,
+              prevTag ? `**Full diff:** https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${prevTag}...${tag}` : '',
+            ].join('\n');
+
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `Release ${tag}`,
+              body: body,
+              draft: false,
+              prerelease: tag.includes('-'),  // v1.2.3-beta → prerelease
+            });
