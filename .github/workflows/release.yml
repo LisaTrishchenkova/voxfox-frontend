@@ -52,7 +52,6 @@ jobs:
           # Записываем в файл (избегаем проблем с multiline в output)
           echo "${LOG}" > changelog.txt
           echo "Previous tag: ${PREV}"
-
       - name: Create GitHub Release
         uses: actions/github-script@v7
         with:
