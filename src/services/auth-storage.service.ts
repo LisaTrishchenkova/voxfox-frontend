@@ -1,8 +1,5 @@
 import { storage } from "./storage.service";
 
-/**
- * Сервис для работы с данными авторизации
- */
 class AuthStorageService {
   private readonly ACCESS_TOKEN_KEY = "tokenAccess";
   private readonly REFRESH_TOKEN_KEY = "tokenRefresh";
