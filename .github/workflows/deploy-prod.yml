@@ -20,7 +20,7 @@ jobs:
   deploy:
     if: ${{ github.event.inputs.confirm == 'YES' }}
     environment: production
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       id-token: write
       contents: read
@@ -48,7 +48,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - run: npm ci
