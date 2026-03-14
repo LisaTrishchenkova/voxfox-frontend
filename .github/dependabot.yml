@@ -4,8 +4,64 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Moscow"
+    target-branch: "dev"
+    labels:
+      - "dependencies"
+      - "npm"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "GulidovAlexander"
+    commit-message:
+      prefix: "chore"
+    groups:
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react*"
+      vite:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+      testing:
+        patterns:
+          - "vitest"
+          - "@testing-library/*"
+          - "@types/jest*"
 
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Moscow"
+    target-branch: "dev"
+    labels:
+      - "dependencies"
+      - "docker"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "GulidovAlexander"
+    commit-message:
+      prefix: "chore"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Moscow"
+    target-branch: "dev"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "GulidovAlexander"
+    commit-message:
+      prefix: "ci"
