@@ -1,12 +1,5 @@
 name: Deploy Dev
 
-env:
-  AWS_REGION: eu-north-1
-  AWS_IAM_ROLE: arn:aws:iam::703671934401:role/github-actions
-  S3_BUCKET: voxfox-dev-frontend-dev-703671934401
-  CLOUDFRONT_DIST: E1M4R9OTCO57U9
-  CLOUDFRONT_DOMAIN: d3n1ouqorn84n8.cloudfront.net
-
 on:
   workflow_run:
     workflows: ["CI"]
@@ -20,7 +13,8 @@ concurrency:
 jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev' }}
-    runs-on: [ubuntu-22.04]
+    environment: dev
+    runs-on: ubuntu-24.04
     permissions:
       id-token: write
       contents: read
@@ -36,7 +30,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -82,23 +76,23 @@ jobs:
           echo "✅ Build complete: $(du -sh dist/)"
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           audience: sts.amazonaws.com
-          aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ env.AWS_IAM_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
 
       - name: Get current version
         id: current
         run: |
-          CURRENT=$(aws s3 cp s3://${{ env.S3_BUCKET }}/meta/current-version.txt - 2>/dev/null || echo "none")
+          CURRENT=$(aws s3 cp s3://${{ vars.S3_BUCKET }}/meta/current-version.txt - 2>/dev/null || echo "none")
           echo "current=${CURRENT}" >> $GITHUB_OUTPUT
           echo "📦 Current version: ${CURRENT}"
 
       - name: Deploy to S3
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          BUCKET="${{ env.S3_BUCKET }}"
+          BUCKET="${{ vars.S3_BUCKET }}"
           CURRENT="${{ steps.current.outputs.current }}"
 
           echo "📦 Archiving version: ${VERSION}"
@@ -129,7 +123,7 @@ jobs:
       - name: Invalidate CloudFront
         run: |
           INVALIDATION_ID=$(aws cloudfront create-invalidation \
-            --distribution-id ${{ env.CLOUDFRONT_DIST }} \
+            --distribution-id ${{ secrets.CLOUDFRONT_DIST }} \
             --paths "/*" \
             --query 'Invalidation.Id' \
             --output text)
@@ -140,7 +134,7 @@ jobs:
           echo "⏳ Waiting for CloudFront (10s)..."
           sleep 10
 
-          VERSION_URL="https://${{ env.CLOUDFRONT_DOMAIN }}/version.json"
+          VERSION_URL="https://${{ vars.CLOUDFRONT_DOMAIN }}/version.json"
           echo "Checking ${VERSION_URL}"
 
           DEPLOYED_VERSION=$(curl -s -f ${VERSION_URL} | jq -r '.version' || echo "failed")
@@ -165,8 +159,8 @@ jobs:
             **Previous version:** `${{ steps.current.outputs.current }}`
 
             🔗 **Links:**
-            • 🌐 CloudFront: https://${{ env.CLOUDFRONT_DOMAIN }}
-            • 📦 Archive: s3://${{ env.S3_BUCKET }}/archive/${{ steps.version.outputs.version }}
+            • 🌐 CloudFront: https://${{ vars.CLOUDFRONT_DOMAIN }}
+            • 📦 Archive: s3://${{ vars.S3_BUCKET }}/archive/${{ steps.version.outputs.version }}
 
             [View deployment run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
@@ -176,8 +170,8 @@ jobs:
           PREV_VERSION="${{ steps.current.outputs.current }}"
           if [ "${PREV_VERSION}" != "none" ] && [ ! -z "${PREV_VERSION}" ]; then
             echo "🔄 Auto-rolling back to ${PREV_VERSION}"
-            aws s3 sync s3://${{ env.S3_BUCKET }}/archive/${PREV_VERSION}/ s3://${{ env.S3_BUCKET }}/current/ --delete
-            aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DIST }} --paths "/*"
+            aws s3 sync s3://${{ vars.S3_BUCKET }}/archive/${PREV_VERSION}/ s3://${{ vars.S3_BUCKET }}/current/ --delete
+            aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DIST }} --paths "/*"
             echo "✅ Rolled back to ${PREV_VERSION}"
           fi
 
