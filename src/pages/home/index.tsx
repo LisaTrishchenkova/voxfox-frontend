@@ -92,7 +92,7 @@ const HomePage = () => {
 
   const fetchCategories = async () => {
     try {
-      const url = `${API_URL}/Category`;
+      const url = `${API_URL}/Categories`;
       const response = await fetch(url);
 
       if (!response.ok) {
