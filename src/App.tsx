@@ -10,10 +10,12 @@ import { Route, Routes } from "react-router-dom";
 // import Test from "./pages/OLD/Test";
 // import UserProfile from "./pages/OLD/UserProfile";
 import { API_URL, APP_VERSION, BUILD_DATE, COMMIT_HASH } from "./config";
-import CardDetailPage from "./pages/cardDetail";
 import HomePage from "./pages/home";
 import { customTheme } from "./theme";
 import CourseDetailPage from "./pages/courseDetail";
+import RegPage from "./pages/RegPage";
+import OldLogPage from "./pages/OldLogPage";
+import CourseLearningPage from "./pages/CourseLearning";
 
 // const Home = React.lazy(() => import("./pages/Home"));
 
@@ -41,6 +43,9 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/course/:id" element={<CourseDetailPage />} />
+              <Route path="/login" element={<OldLogPage />} />
+              <Route path="/registration" element={<RegPage />} />
+              <Route path="/course/:id/learn" element={<CourseLearningPage />} />
             <Route
               path="/debug"
               element={

@@ -18,15 +18,17 @@ import {
   FacebookOutlined,
   ArrowRightOutlined,
 } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
-import type { LoginFormData } from "../../../api/types/auth";
-import { authApi } from "../../../api/authApi";
-import { gradients, commonStyles, componentProps } from "../../../theme";
+import type { LoginFormData } from "../../api/types/auth.ts";
+import { authApi } from "../../api/authApi.ts";
+import { gradients, commonStyles, componentProps } from "../../theme.ts";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 const { Title, Text, Link } = Typography;
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const[searrchParams] = useSearchParams();
+  const redirect = searrchParams.get("redirect") ?? "/";
   const [form] = Form.useForm();
 
   const onFinish: FormProps<LoginFormData>["onFinish"] = async (values) => {
@@ -37,7 +39,7 @@ const LoginPage = () => {
       return;
     }
     localStorage.setItem("tokenAccess", loginResponse.tokenAccess);
-    navigate("/user-profile");
+    navigate(redirect, {replace: true});
   };
 
   const onFinishFailed: FormProps<LoginFormData>["onFinishFailed"] = (

@@ -20,9 +20,9 @@ import {
   ArrowRightOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import type { RegistrationFormData } from "../../../api/types/auth";
-import { authApi } from "../../../api/authApi";
-import { gradients, commonStyles, componentProps } from "../../../theme";
+import type { RegistrationFormData } from "../../api/types/auth.ts";
+import { authApi } from "../../api/authApi.ts";
+import { gradients, commonStyles, componentProps } from "../../theme.ts";
 
 const { Title, Text, Link } = Typography;
 
