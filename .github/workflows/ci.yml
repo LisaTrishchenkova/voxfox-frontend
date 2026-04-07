@@ -73,7 +73,6 @@ jobs:
       - name: Run tests with coverage
         id: coverage
         run: |
-          # Запускаем тесты с покрытием (не падаем из-за низкого покрытия)
           npm run test:coverage || true
 
           if [ -f "coverage/coverage-summary.json" ]; then
@@ -81,7 +80,6 @@ jobs:
             echo "coverage=${COVERAGE}" >> $GITHUB_OUTPUT
             echo "📊 Coverage: ${COVERAGE}%"
 
-            # Только предупреждение, не падаем
             if (( $(echo "$COVERAGE < ${{ env.COVERAGE_THRESHOLD }}" | bc -l) )); then
               echo "coverage_status=warning" >> $GITHUB_OUTPUT
               echo "⚠️ Coverage ${COVERAGE}% is below recommended threshold ${{ env.COVERAGE_THRESHOLD }}%"
@@ -90,14 +88,14 @@ jobs:
               echo "✅ Coverage ${COVERAGE}% meets recommended threshold"
             fi
 
-            # Создаем summary
             echo "## 🧪 Test Coverage" >> $GITHUB_STEP_SUMMARY
             echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
             echo "| Coverage | **${COVERAGE}%** |" >> $GITHUB_STEP_SUMMARY
             echo "| Recommended | ${{ env.COVERAGE_THRESHOLD }}% |" >> $GITHUB_STEP_SUMMARY
 
-            if [ "$COVERAGE_STATUS" = "warning" ]; then
+            # Исправлено: coverage_status вместо COVERAGE_STATUS
+            if [ "$(echo $coverage_status)" = "warning" ]; then
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "⚠️ **Note:** Current coverage is below the recommended threshold. Consider adding more tests." >> $GITHUB_STEP_SUMMARY
             fi
@@ -108,13 +106,26 @@ jobs:
           fi
 
       - name: Upload coverage artifact
+        id: upload
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ github.sha }}
-          path: coverage/
-          retention-days: 7
+          path: |
+            coverage/coverage-summary.json
+            coverage/lcov-report/
+          retention-days: 2
+          overwrite: true
           if-no-files-found: warn
+
+      - name: Handle upload failure
+        if: steps.upload.outcome == 'failure'
+        run: |
+          echo "⚠️ Failed to upload coverage artifact (likely storage quota exceeded)"
+          echo "## ⚠️ Artifact Upload Warning" >> $GITHUB_STEP_SUMMARY
+          echo "Failed to upload coverage artifact. This is non-blocking." >> $GITHUB_STEP_SUMMARY
+          echo "Possible reasons: storage quota exceeded or network issue." >> $GITHUB_STEP_SUMMARY
 
   build:
     timeout-minutes: 5
@@ -144,11 +155,22 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Upload build artifact
+        id: upload_build
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ github.sha }}
           path: dist/
-          retention-days: 7
+          retention-days: 1
+          overwrite: true
+          if-no-files-found: warn
+
+      - name: Handle build upload failure
+        if: steps.upload_build.outcome == 'failure'
+        run: |
+          echo "⚠️ Failed to upload build artifact (likely storage quota exceeded)"
+          echo "## ⚠️ Build Artifact Upload Warning" >> $GITHUB_STEP_SUMMARY
+          echo "Failed to upload build artifact. This is non-blocking." >> $GITHUB_STEP_SUMMARY
 
   comment:
     runs-on: ubuntu-24.04
@@ -211,3 +233,19 @@ jobs:
             🔍 [View details](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
             Please check the logs and fix the issues.
+
+  cleanup:
+    timeout-minutes: 5
+    runs-on: ubuntu-24.04
+    if: always() && github.event_name == 'push'
+    needs: [build]
+    steps:
+      - name: Delete old artifacts
+        continue-on-error: true
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            coverage-*
+            build-*
+          useGlob: true
+          failOnError: false
