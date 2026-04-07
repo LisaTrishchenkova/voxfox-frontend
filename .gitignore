@@ -27,3 +27,4 @@ dist-ssr
 .fake
 .env
 /coverage
+test-output.txt
