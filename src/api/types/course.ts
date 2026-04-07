@@ -68,6 +68,18 @@ export interface PaginatedResponse {
   totalPages: number;
   pageSize: number;
 }
+export interface LessonDto {
+  id: string;
+  title: string;
+  description: string;
+  content?: string | null;
+}
+
+export interface SectionDto {
+  id: string;
+  title: string;
+  description: string;
+}
 // export interface CourseFormData {
 //   title: string;
 //   description: string;

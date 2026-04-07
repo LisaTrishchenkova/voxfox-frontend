@@ -1,9 +1,8 @@
-import { Button, Card, Col, Image, Row, Tag, Typography } from "antd";
+import { Button, Card, Col, Row, Tag, Typography } from "antd";
 import ReactMarkdown from "react-markdown";
-import type { CourseDto, TagsDto } from "../../api/types/course";
-import { BookOutlined, HeartOutlined } from "@ant-design/icons";
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import {HeartOutlined, StarOutlined} from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import type {CourseDto} from "../../api/types/course.ts";
 type CardCourseProps = {
   course: CourseDto;
 };
@@ -21,7 +20,10 @@ const CardCourse = ({ course }: CardCourseProps) => {
       <Card variant="borderless" size="default" onClick={goToCoursePage}>
         <Row gutter={[8, 8]}>
           <Col span={12}>
-            <BookOutlined style={{ fontSize: "20px", color: "#e97c15" }} />{" "}
+            <Text style={{ fontSize: 14 }}>
+              <StarOutlined style={{ color: "#faad14", marginRight: 6 }} />
+              {course.rating.toFixed(1)}
+            </Text>
           </Col>
           <Col span={12} style={{ textAlign: "right" }}>
             {/* <Image src="https://static.aviasales.com/psgr-v2/ru/putevoditel-po-islandii/shutterstock_aa704c95ce.jpg?" /> */}

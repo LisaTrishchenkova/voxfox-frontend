@@ -1,6 +1,6 @@
 import { Button, Card, Col, Form, Row, Typography } from "antd";
 import type React from "react";
-import type { LoginFormData } from "../../../api/types/auth";
+import type { LoginFormData } from "../../../api/types/auth.ts";
 import Input from "antd/es/input/Input";
 
 const { Text, Title } = Typography;
