@@ -1,12 +1,15 @@
 import {Button, Col, Divider, Row, Skeleton, Tag, Typography} from "antd";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import {useNavigate, useParams} from "react-router-dom";
 import type { CourseDto } from "../../api/types/course";
 import { API_URL } from "../../config";
 import { BookOutlined, ClockCircleOutlined, StarOutlined, TeamOutlined, TrophyOutlined } from "@ant-design/icons";
 import Header from "../../components/Header";
 import ReactMarkdown from "react-markdown";
 import Footer from "../../components/Footer.tsx";
+import {enrollmentApi} from "../../api/enrollmentApi.ts";
+import type {EnrollmentDto} from "../../api/types/enrollment.ts";
+import {authStorage} from "../../services/auth-storage.service.ts";
 
 const {Title, Text, Paragraph} = Typography;
 
@@ -18,8 +21,12 @@ const levelLabels: Record<string, string> = {
 
 const CourseDetailPage = () => {
     const {id} = useParams<{id: string}>();
+    const navigate = useNavigate();
     const [cource, setCourse] = useState<CourseDto | null>(null);
     const [loading, setLoading] = useState(true);
+    const [enrollment, setEnrollment] = useState<EnrollmentDto | null>(null);
+    const [enrollLoading, setEnrollLoading] = useState(false);
+    const isAuth = authStorage.isAuthenticated();
 
     useEffect(() => {
         const fetchCourse = async () => {
@@ -35,7 +42,14 @@ const CourseDetailPage = () => {
             }
         };
         fetchCourse();
-    }, [id]);
+        const checkEnrollment = async () => {
+            const enrollments = await enrollmentApi.getMyEnrollments();
+            const found = enrollments.find(e => e.courseId === id);
+            setEnrollment(found ?? null);
+        };
+
+        if (isAuth) checkEnrollment();
+    }, [id, isAuth]);
 
     if (loading) return <><Header /><Skeleton active style={{ padding: 40 }} /></>;
     if (!cource) return <><Header /><div style={{ padding: 40 }}>Курс не найден!</div></>;
@@ -106,13 +120,45 @@ const CourseDetailPage = () => {
                             <Title level={3} style={{ margin: 0 }}>
                                 {cource.isFree ? "Бесплатно" : `${cource.price} ₽`}
                             </Title>
-                            <Button
-                                type="primary"
-                                size="large"
-                                style={{ marginTop: 12, width: "100%", background: "rgba(0,100,0,0.8)" }}
-                            >
-                                Записаться на курс
-                            </Button>
+                            {isAuth ? (
+                                enrollment ? (
+                                    <Button
+                                        type="primary"
+                                        size="large"
+                                        block
+                                        style={{ marginTop: 12, height: 48, fontSize: 16, background: "rgba(0,100,0,0.8)" }}
+                                        onClick={() => navigate(`/course/${id}/learn`)}
+                                    >
+                                        Начать курс
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        type="primary"
+                                        size="large"
+                                        block
+                                        loading={enrollLoading}
+                                        style={{ marginTop: 12, height: 48, fontSize: 16, background: "rgba(0,100,0,0.8)" }}
+                                        onClick={async () => {
+                                            setEnrollLoading(true);
+                                            const result = await enrollmentApi.enroll(id!);
+                                            if (result) setEnrollment(result);
+                                            setEnrollLoading(false);
+                                        }}
+                                    >
+                                        Записаться на курс
+                                    </Button>
+                                )
+                            ) : (
+                                <Button
+                                    type="primary"
+                                    size="large"
+                                    block
+                                    style={{ marginTop: 12, height: 48, fontSize: 16, background: "rgba(0,100,0,0.8)" }}
+                                    onClick={() => navigate(`/login?redirect=/course/${id}`)}
+                                >
+                                    Войти чтобы записаться
+                                </Button>
+                            )}
                         </div>
                     </Col>
                 </Row>
