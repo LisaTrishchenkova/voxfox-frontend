@@ -7,22 +7,19 @@ import {
   Button,
   Divider,
   Typography,
-  Space,
   type FormProps,
 } from "antd";
 import {
   MailOutlined,
   UserOutlined,
   LockOutlined,
-  GoogleOutlined,
-  GithubOutlined,
-  FacebookOutlined,
   ArrowRightOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import type { RegistrationFormData } from "../../api/types/auth.ts";
 import { authApi } from "../../api/authApi.ts";
 import { gradients, commonStyles, componentProps } from "../../theme.ts";
+import { Select } from "antd";
 
 const { Title, Text, Link } = Typography;
 
@@ -39,6 +36,7 @@ const RegPage = () => {
       values.email,
       values.name,
       values.password,
+        values.role,
     );
     console.log(status);
     if (status === 204) {
@@ -217,6 +215,16 @@ const RegPage = () => {
                   prefix={<LockOutlined style={commonStyles.iconPrimary} />}
                 />
               </Form.Item>
+                <Form.Item<RegistrationFormData>
+                    label={<div style={commonStyles.formLabel}>Я регистрируюсь как</div>}
+                    name="role"
+                    rules={[{ required: true, message: "Пожалуйста, выберите роль" }]}
+                >
+                    <Select size="large" placeholder="Выберите роль">
+                        <Select.Option value="Student">Студент</Select.Option>
+                        <Select.Option value="Teacher">Преподаватель</Select.Option>
+                    </Select>
+                </Form.Item>
 
               {/* <Form.Item
                 label={
@@ -271,38 +279,6 @@ const RegPage = () => {
                 </Link>
               </Text>
             </div>
-
-            <Divider>
-              <Text type="secondary">или продолжить через</Text>
-            </Divider>
-
-            <Space
-              direction="vertical"
-              align="center"
-              style={{ width: "100%" }}
-              size="large"
-            >
-              <Space size="large">
-                <Button
-                  shape="circle"
-                  icon={<GoogleOutlined />}
-                  size="large"
-                  style={commonStyles.socialButton}
-                />
-                <Button
-                  shape="circle"
-                  icon={<GithubOutlined />}
-                  size="large"
-                  style={commonStyles.socialButton}
-                />
-                <Button
-                  shape="circle"
-                  icon={<FacebookOutlined />}
-                  size="large"
-                  style={commonStyles.socialButton}
-                />
-              </Space>
-            </Space>
           </div>
         </Col>
 

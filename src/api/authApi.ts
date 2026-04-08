@@ -2,7 +2,7 @@ import axios from "axios";
 import type {
   LoginRequest,
   LoginResponse,
-  RegistrationRequest,
+  RegistrationRequest, UserRole,
 } from "./types/auth";
 import { authStorage } from "../services/auth-storage.service";
 import { API_URL } from "../config.ts";
@@ -51,8 +51,9 @@ export const authApi = {
     email: string,
     name: string,
     password: string,
+    role: UserRole
   ): Promise<number> => {
-    const requestData: RegistrationRequest = { email, name, password };
+    const requestData: RegistrationRequest = { email, name, password, role };
 
     const response = await axios.post(
       `${API_URL}/Auth/registration`,
