@@ -14,10 +14,13 @@ export interface LoginFormData {
   password: string;
 }
 
+export type UserRole = "Student" | "Teacher";
+
 export interface RegistrationRequest {
   email: string;
   name: string;
   password: string;
+  role: UserRole;
 }
 export interface RegistrationResponse {
   userId: string;
@@ -28,4 +31,5 @@ export interface RegistrationFormData {
   email: string;
   name: string;
   password: string;
+  role: UserRole;
 }
