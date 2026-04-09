@@ -14,6 +14,8 @@ import type { CategoryDto, PaginatedResponse } from "../../api/types/course";
 import CardCourse from "../../components/CardCourse";
 import Header from "../../components/Header";
 import { API_URL } from "../../config";
+import {authStorage} from "../../services/auth-storage.service.ts";
+import {favoriteApi} from "../../api/favoriteApi.ts";
 
 const HomePage = () => {
   const { Title } = Typography;
@@ -27,11 +29,12 @@ const HomePage = () => {
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [categoryId, setCategoryId] = useState<string>();
   const [isLoadingCourses, setIsLoadingCourses] = useState<boolean>(false);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [isOpenCategoryBlock, setIsOpenCategoryBlock] =
     useState<boolean>(false);
 
   type SortBy = "Title" | "Relevance" | "Date" | "DateDesc";
-  type SortDirection = "asc" | "desc";
+  // type SortDirection = "asc" | "desc";
 
   interface SortOption {
     label: string;
@@ -112,7 +115,18 @@ const HomePage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        await Promise.all([featchCourses(), fetchCategories()]);
+        const promises: Promise<void>[] = [
+          featchCourses(),
+          fetchCategories(),
+        ];
+        if (authStorage.isAuthenticated()) {
+          promises.push(
+              favoriteApi.getMyFavorites().then(favs => {
+                setFavoriteIds(new Set(favs.map(f => f.courseId)));
+              })
+          );
+        }
+        await Promise.all(promises);
       } catch (error) {
         console.error(error);
       }
@@ -263,8 +277,12 @@ const HomePage = () => {
                   flexWrap: "wrap",
                 }}
               >
-                {paginatedCourses?.items.map((cource) => (
-                  <CardCourse course={cource} />
+                {paginatedCourses?.items.map((course) => (
+                    <CardCourse
+                        key={course.id}
+                        course={course}
+                        isFavorite={favoriteIds.has(course.id)}
+                    />
                 ))}
               </div>
             </div>
