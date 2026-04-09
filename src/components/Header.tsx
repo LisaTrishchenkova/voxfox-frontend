@@ -1,4 +1,4 @@
-import { LoginOutlined, SearchOutlined, UserOutlined } from "@ant-design/icons";
+import {LoginOutlined, LogoutOutlined, SearchOutlined, UserOutlined} from "@ant-design/icons";
 import {
   Avatar,
   Button,
@@ -158,31 +158,36 @@ const Header = () => {
               </Button>
             )}
             {userData && (
-              <>
-                <Title
-                  onClick={() => navigate("/user-profile")}
-                  level={4}
-                  style={{
-                    margin: 0,
-                    fontSize: "14px",
-                    fontWeight: 500,
-                  }}
-                >
-                  {userData.name}
-                </Title>
-                <Avatar
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
-                    border: "4px solid #fff",
-                    boxShadow: "0 4px 12px rgba(76, 175, 80, 0.3)",
-                    // marginBottom: 16,
-                  }}
-                  onClick={() => navigate("/user-profile")}
-                  size={"default"}
-                  icon={<UserOutlined />}
-                />{" "}
-              </>
+                <>
+                  <Title
+                      onClick={() => navigate("/profile")}
+                      level={4}
+                      style={{ margin: 0, fontSize: "14px", fontWeight: 500, cursor: "pointer" }}
+                  >
+                    {userData.name}
+                  </Title>
+                  <Avatar
+                      style={{
+                        background: "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
+                        border: "4px solid #fff",
+                        boxShadow: "0 4px 12px rgba(76, 175, 80, 0.3)",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => navigate("/profile")}
+                      size="default"
+                      icon={<UserOutlined />}
+                  />
+                  <Button
+                      icon={<LogoutOutlined />}
+                      type="text"
+                      danger
+                      onClick={() => {
+                        authStorage.clearAllAuthData();
+                        navigate("/");
+                        window.location.reload();
+                      }}
+                  />
+                </>
             )}
           </Space>
         </Col>
