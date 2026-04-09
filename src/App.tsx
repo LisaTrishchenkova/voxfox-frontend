@@ -16,6 +16,7 @@ import CourseDetailPage from "./pages/courseDetail";
 import RegPage from "./pages/RegPage";
 import OldLogPage from "./pages/OldLogPage";
 import CourseLearningPage from "./pages/CourseLearning";
+import UserProfilePage from "./pages/UserProfile";
 
 // const Home = React.lazy(() => import("./pages/Home"));
 
@@ -46,6 +47,7 @@ function App() {
             <Route path="/login" element={<OldLogPage />} />
             <Route path="/registration" element={<RegPage />} />
             <Route path="/course/:id/learn" element={<CourseLearningPage />} />
+              <Route path="/profile" element={<UserProfilePage />} />
             <Route
               path="/debug"
               element={
