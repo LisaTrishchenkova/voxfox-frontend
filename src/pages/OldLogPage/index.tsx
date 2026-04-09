@@ -5,7 +5,6 @@ import {
   Input,
   Button,
   Checkbox,
-  Divider,
   Typography,
   Space,
   type FormProps,
@@ -13,9 +12,6 @@ import {
 import {
   MailOutlined,
   LockOutlined,
-  GoogleOutlined,
-  GithubOutlined,
-  FacebookOutlined,
   ArrowRightOutlined,
 } from "@ant-design/icons";
 import type { LoginFormData } from "../../api/types/auth.ts";
