@@ -13,10 +13,11 @@ import { userApi } from "../../api/userApi.ts";
 import { enrollmentApi } from "../../api/enrollmentApi.ts";
 import { favoriteApi } from "../../api/favoriteApi.ts";
 import { authStorage } from "../../services/auth-storage.service.ts";
-import type {MeResponse, UserResponse} from "../../api/types/user.ts";
+import type { MeResponse } from "../../api/types/user.ts";
 import type { EnrollmentDto } from "../../api/types/enrollment.ts";
 import type { FavoriteDto } from "../../api/types/favorite.ts";
 import CardCourse from "../../components/CardCourse";
+import { useUserStore, getAvatarUrl } from "../../stores/userStore.ts";
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -35,46 +36,59 @@ const UserProfilePage = () => {
   const [activeSection, setActiveSection] = useState<Section>("profile");
   const [me, setMe] = useState<MeResponse | null>(null);
   const [enrollments, setEnrollments] = useState<EnrollmentDto[]>([]);
-  const [userData, setUserData] = useState<UserResponse | null>(null);
   const [favorites, setFavorites] = useState<FavoriteDto[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const { userData, fetchUser, setAvatarUrl } = useUserStore();
+
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInitialData = async () => {
       try {
-        const [meData, enrollmentsData, favoritesData] = await Promise.all([
-          userApi.getMe(),
-          enrollmentApi.getMyEnrollments(),
-          favoriteApi.getMyFavorites(),
-        ]);
+        const [meData] = await Promise.all([userApi.getMe()]);
         setMe(meData);
-        setEnrollments(enrollmentsData);
-        setFavorites(favoritesData);
       } catch (e) {
         console.error(e);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      const userId = authStorage.getUserData<string>();
-      if (!userId) {
-        return;
-      }
-      const userResponse = await userApi.getUserById(userId);
-      setUserData(userResponse);
-    };
+    fetchInitialData();
     fetchUser();
   }, []);
 
+  useEffect(() => {
+    const fetchSectionData = async () => {
+      try {
+        if (activeSection === "courses") {
+          const data = await enrollmentApi.getMyEnrollments();
+          setEnrollments(data);
+        } else if (activeSection === "favorites") {
+          const data = await favoriteApi.getMyFavorites();
+          setFavorites(data);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchSectionData();
+  }, [activeSection]);
+
   const handleLogout = () => {
     authStorage.clearAllAuthData();
+    useUserStore.getState().clear();
     navigate("/");
     window.location.reload();
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const result = await userApi.uploadAvatar(file);
+    if (result) {
+      setAvatarUrl(result.avatarUrl);
+      setMe(prev => prev ? { ...prev, avatarUrl: result.avatarUrl } : prev);
+    }
+    e.target.value = "";
   };
 
   const menuItems = [
@@ -102,13 +116,32 @@ const UserProfilePage = () => {
               style={{ background: "#fff", borderRight: "1px solid #f0f0f0" }}
               theme="light"
           >
-            {/* Аватар и имя */}
-            <div style={{ padding: "32px 16px 16px", textAlign: "center", borderBottom: "1px solid #f0f0f0" }}>
+            <input
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp"
+                style={{ display: "none" }}
+                id="avatar-upload"
+                onChange={handleAvatarChange}
+            />
+
+            <div
+                style={{
+                  padding: "32px 16px 16px",
+                  textAlign: "center",
+                  borderBottom: "1px solid #f0f0f0",
+                  cursor: "pointer",
+                }}
+                onClick={() => document.getElementById("avatar-upload")?.click()}
+                title="Нажмите чтобы изменить аватар"
+            >
               <Avatar
                   size={72}
-                  icon={<UserOutlined />}
+                  src={getAvatarUrl(userData?.avatarUrl)}
+                  icon={!userData?.avatarUrl && <UserOutlined />}
                   style={{
-                    background: "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
+                    background: userData?.avatarUrl
+                        ? undefined
+                        : "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
                     marginBottom: 12,
                   }}
               />
@@ -116,8 +149,8 @@ const UserProfilePage = () => {
                   <>
                     <div>
                       {userData && (
-                      <Text strong style={{ fontSize: 15 }}>{userData.name}</Text>)
-                      }
+                          <Text strong style={{ fontSize: 15 }}>{userData.name}</Text>
+                      )}
                     </div>
                     <Tag color="green" style={{ marginTop: 8 }}>
                       {roleLabels[me.role] ?? me.role}
@@ -134,7 +167,6 @@ const UserProfilePage = () => {
                 onClick={({ key }) => setActiveSection(key as Section)}
             />
 
-            {/* Кнопка выхода внизу */}
             <div style={{ padding: "16px", position: "absolute", bottom: 0, width: "100%" }}>
               <Button
                   danger

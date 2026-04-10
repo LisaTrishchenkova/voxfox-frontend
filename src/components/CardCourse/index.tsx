@@ -6,10 +6,12 @@ import type {CourseDto} from "../../api/types/course.ts";
 import {useState} from "react";
 import {authStorage} from "../../services/auth-storage.service.ts";
 import {favoriteApi} from "../../api/favoriteApi.ts";
+
 type CardCourseProps = {
   course: CourseDto;
   isFavorite?: boolean;
 };
+
 const CardCourse = ({ course, isFavorite = false }: CardCourseProps) => {
   const navigate = useNavigate();
   const { Title } = Typography;
@@ -20,8 +22,9 @@ const CardCourse = ({ course, isFavorite = false }: CardCourseProps) => {
   const goToCoursePage = () => {
     navigate(`/course/${course.id}`);
   };
+
   const toggleFavorite = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // не переходим на страницу курса
+    e.stopPropagation();
     if (!authStorage.isAuthenticated()) {
       navigate(`/login?redirect=/`);
       return;
@@ -38,8 +41,14 @@ const CardCourse = ({ course, isFavorite = false }: CardCourseProps) => {
   };
 
   return (
-      <Col span={6}>
-        <Card variant="borderless" size="default" onClick={goToCoursePage}>
+      <Col span={6} style={{ display: "flex" }}>
+        <Card
+            variant="borderless"
+            size="default"
+            onClick={goToCoursePage}
+            style={{ width: "100%", display: "flex", flexDirection: "column" }}
+            styles={{ body: { flex: 1, display: "flex", flexDirection: "column" } }}
+        >
           <Row gutter={[8, 8]}>
             <Col span={12}>
               <Text style={{ fontSize: 14 }}>
@@ -63,18 +72,18 @@ const CardCourse = ({ course, isFavorite = false }: CardCourseProps) => {
           </Row>
           <hr style={{ backgroundColor: "black", margin: "10px 0" }} />
           <Row>
-            <Col span={24} style={{ textAlign: "center" }}>
+            <Col span={24} style={{ textAlign: "center", minHeight: 80 }}>
               <Title level={3}>{course.title}</Title>
             </Col>
           </Row>
           <Row>
-            <Col span={24} style={{ textAlign: "center" }}>
+            <Col span={24} style={{ textAlign: "center", minHeight: 60 }}>
               <ReactMarkdown>{course.description}</ReactMarkdown>
             </Col>
           </Row>
           {course.author && (
               <Row>
-                <Col span={24} style={{ margin: "18px 10px" }}>
+                <Col span={24} style={{ margin: "18px 10px", minHeight: 40 }}>
                   <Text type="secondary">Автор: {course.author.name}</Text>
                 </Col>
               </Row>
@@ -94,7 +103,7 @@ const CardCourse = ({ course, isFavorite = false }: CardCourseProps) => {
               </Row>
           )}
           <Row>
-            <Col style={{ margin: "8px 10px" }}>
+            <Col style={{ margin: "8px 10px", minHeight: 60 }}>
               {course.tags?.map((tag) => (
                   <Tag key={tag.name} color="#3b7159" style={{ margin: 5, fontSize: 15 }}>
                     {tag.name}
@@ -102,7 +111,7 @@ const CardCourse = ({ course, isFavorite = false }: CardCourseProps) => {
               ))}
             </Col>
           </Row>
-          <Row justify="center">
+          <Row justify="center" style={{ marginTop: "auto" }}>
             <Col style={{ marginTop: "20px" }}>
               <Button
                   style={{
@@ -124,4 +133,5 @@ const CardCourse = ({ course, isFavorite = false }: CardCourseProps) => {
       </Col>
   );
 };
+
 export default CardCourse;
