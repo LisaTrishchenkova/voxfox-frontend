@@ -14,7 +14,7 @@ export interface LoginFormData {
   password: string;
 }
 
-export type UserRole = "Student" | "Teacher";
+type UserRole = "Student" | "Teacher" | "Moderator" | "Admin";
 
 export interface RegistrationRequest {
   email: string;
