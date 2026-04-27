@@ -18,6 +18,7 @@ import type { LoginFormData } from "../../api/types/auth.ts";
 import { authApi } from "../../api/authApi.ts";
 import { gradients, commonStyles, componentProps } from "../../theme.ts";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import {useUserStore} from "../../stores/userStore.ts";
 
 const { Title, Text, Link } = Typography;
 
@@ -26,6 +27,7 @@ const LoginPage = () => {
   const[searrchParams] = useSearchParams();
   const redirect = searrchParams.get("redirect") ?? "/";
   const [form] = Form.useForm();
+  const { fetchUser } = useUserStore();
 
   const onFinish: FormProps<LoginFormData>["onFinish"] = async (values) => {
     console.log(values);
@@ -34,7 +36,7 @@ const LoginPage = () => {
     if (loginResponse == null) {
       return;
     }
-    localStorage.setItem("tokenAccess", loginResponse.tokenAccess);
+    await fetchUser();
     navigate(redirect, {replace: true});
   };
 

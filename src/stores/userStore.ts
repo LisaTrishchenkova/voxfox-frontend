@@ -24,7 +24,7 @@ export const useUserStore = create<UserStore>((set) => ({
         const userId = authStorage.getUserData<string>();
         if (!userId) return;
         const user = await userApi.getUserById(userId);
-        set({ userData: user });
+        if (user) set({ userData: user });
     },
 
     setAvatarUrl: (url) =>
