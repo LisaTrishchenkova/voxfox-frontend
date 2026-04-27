@@ -1,4 +1,4 @@
-import { Avatar, Divider, Layout, Menu, Row, Spin, Tag, Typography, Button } from "antd";
+import { Avatar, Divider, Layout, Menu, Row, Col, Spin, Tag, Typography, Button } from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -39,12 +39,12 @@ const UserProfilePage = () => {
   const [favorites, setFavorites] = useState<FavoriteDto[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const { userData, fetchUser, setAvatarUrl } = useUserStore();
+  const { userData, fetchUser } = useUserStore();
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [meData] = await Promise.all([userApi.getMe()]);
+        const meData = await userApi.getMe();
         setMe(meData);
       } catch (e) {
         console.error(e);
@@ -83,10 +83,11 @@ const UserProfilePage = () => {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const result = await userApi.uploadAvatar(file);
-    if (result) {
-      setAvatarUrl(result.avatarUrl);
-      setMe(prev => prev ? { ...prev, avatarUrl: result.avatarUrl } : prev);
+    const ok = await userApi.uploadAvatar(file);
+    if (ok) {
+      await fetchUser();
+      const meData = await userApi.getMe();
+      if (meData) setMe(meData);
     }
     e.target.value = "";
   };
@@ -145,18 +146,21 @@ const UserProfilePage = () => {
                     marginBottom: 12,
                   }}
               />
-              {me && (
-                  <>
-                    <div>
-                      {userData && (
-                          <Text strong style={{ fontSize: 15 }}>{userData.name}</Text>
-                      )}
-                    </div>
-                    <Tag color="green" style={{ marginTop: 8 }}>
-                      {roleLabels[me.role] ?? me.role}
-                    </Tag>
-                  </>
+              {userData && (
+                  <div>
+                    <Text strong style={{ fontSize: 15 }}>{userData.name}</Text>
+                  </div>
               )}
+              {me && (
+                  <Tag color="green" style={{ marginTop: 8 }}>
+                    {roleLabels[me.role] ?? me.role}
+                  </Tag>
+              )}
+              <div style={{ marginTop: 6 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Нажмите для смены фото
+                </Text>
+              </div>
             </div>
 
             <Menu
@@ -168,12 +172,7 @@ const UserProfilePage = () => {
             />
 
             <div style={{ padding: "16px", position: "absolute", bottom: 0, width: "100%" }}>
-              <Button
-                  danger
-                  block
-                  icon={<LogoutOutlined />}
-                  onClick={handleLogout}
-              >
+              <Button danger block icon={<LogoutOutlined />} onClick={handleLogout}>
                 Выйти
               </Button>
             </div>
@@ -186,9 +185,19 @@ const UserProfilePage = () => {
                   <Divider />
                   <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                     <div>
+                      <Text type="secondary">Имя</Text>
+                      <div><Text strong>{me.name}</Text></div>
+                    </div>
+                    <div>
                       <Text type="secondary">Email</Text>
                       <div><Text strong>{me.email}</Text></div>
                     </div>
+                    {me.bio && (
+                        <div>
+                          <Text type="secondary">О себе</Text>
+                          <div><Text>{me.bio}</Text></div>
+                        </div>
+                    )}
                     <div>
                       <Text type="secondary">Роль</Text>
                       <div>
@@ -228,10 +237,9 @@ const UserProfilePage = () => {
                   ) : (
                       <Row gutter={[24, 24]}>
                         {enrollments.map(e => e.course && (
-                            <CardCourse
-                                key={e.id}
-                                course={e.course}
-                            />
+                            <Col key={e.id} xs={24} sm={12} lg={8}>
+                              <CardCourse course={e.course} />
+                            </Col>
                         ))}
                       </Row>
                   )}
@@ -247,11 +255,9 @@ const UserProfilePage = () => {
                   ) : (
                       <Row gutter={[24, 24]}>
                         {favorites.map(f => f.course && (
-                            <CardCourse
-                                key={f.id}
-                                course={f.course}
-                                isFavorite={true}
-                            />
+                            <Col key={f.id} xs={24} sm={12} lg={8}>
+                              <CardCourse course={f.course} isFavorite={true} />
+                            </Col>
                         ))}
                       </Row>
                   )}

@@ -12,12 +12,12 @@ export interface UserResponse {
 export interface MeResponse {
   id: string;
   name: string;
-  email: string;
-  avatarUrl: string | null;
   bio: string | null;
+  email: string;
   role: string;
+  isEmailVerified: boolean;
+  avatarUrl: string | null;
   createdAt: string;
-  isDeleted: boolean;
 }
 
 export interface UpdateProfileRequest {
