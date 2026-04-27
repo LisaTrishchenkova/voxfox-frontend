@@ -13,7 +13,9 @@ import type { CertificateDto } from "./types/certificate";
 export const userApi = {
   getUserById: async (id: string): Promise<UserResponse | null> => {
     try {
-      const res = await fetch(`${API_URL}/Users/${id}`);
+      const res = await fetch(`${API_URL}/Users/${id}`, {
+        headers: authStorage.getAuthHeaders(),
+      });
       if (!res.ok) return null;
       return res.json();
     } catch {

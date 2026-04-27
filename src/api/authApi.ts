@@ -2,7 +2,8 @@ import axios from "axios";
 import type {
   LoginRequest,
   LoginResponse,
-  RegistrationRequest, UserRole,
+  RegistrationRequest,
+  UserRole
 } from "./types/auth";
 import { authStorage } from "../services/auth-storage.service";
 import { API_URL } from "../config.ts";

@@ -1,93 +1,83 @@
-import { SearchOutlined } from "@ant-design/icons";
+import { SearchOutlined, FilterOutlined } from "@ant-design/icons";
 import {
   Button,
-  Input,
+  Checkbox,
+  Col,
+  InputNumber,
   Pagination,
+  Row,
   Select,
-  Space,
   Spin,
   Typography,
+  Input,
+  Divider,
 } from "antd";
 import Paragraph from "antd/es/typography/Paragraph";
 import { useEffect, useState } from "react";
-import type { CategoryDto, PaginatedResponse } from "../../api/types/course";
+import type { CategoryDto, CourseLevel, PaginatedResponse } from "../../api/types/course";
 import CardCourse from "../../components/CardCourse";
 import Header from "../../components/Header";
 import { API_URL } from "../../config";
-import {authStorage} from "../../services/auth-storage.service.ts";
-import {favoriteApi} from "../../api/favoriteApi.ts";
+import { authStorage } from "../../services/auth-storage.service.ts";
+import { favoriteApi } from "../../api/favoriteApi.ts";
+import { courseApi } from "../../api/courseApi.ts";
+import Footer from "../../components/Footer.tsx";
+
+type SortBy = "Title" | "Relevance" | "Date" | "DateDesc" | "Price";
+
+const sortOptions = [
+  { label: "По популярности", value: "Relevance" },
+  { label: "По заголовку", value: "Title" },
+  { label: "По дате (новые)", value: "Date" },
+  { label: "По дате (старые)", value: "DateDesc" },
+  { label: "По цене", value: "Price" },
+];
+
+const levelOptions: { label: string; value: CourseLevel }[] = [
+  { label: "Начинающий", value: "Beginner" },
+  { label: "Средний", value: "Intermediate" },
+  { label: "Продвинутый", value: "Advanced" },
+];
+
+const { Title } = Typography;
 
 const HomePage = () => {
-  const { Title } = Typography;
-
-  const [paginatedCourses, setPaginatedCources] = useState<PaginatedResponse>();
-  const [search, setSearch] = useState<string>("");
+  const [paginatedCourses, setPaginatedCourses] = useState<PaginatedResponse>();
+  const [search, setSearch] = useState("");
   const [totalCourse, setTotalCourse] = useState<number>();
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [currentPageSize, setCurrentPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(10);
   const [currentSortBy, setCurrentSortBy] = useState<SortBy>("Relevance");
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [categoryId, setCategoryId] = useState<string>();
-  const [isLoadingCourses, setIsLoadingCourses] = useState<boolean>(false);
+  const [isLoadingCourses, setIsLoadingCourses] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
-  const [isOpenCategoryBlock, setIsOpenCategoryBlock] =
-    useState<boolean>(false);
+  const [isOpenCategoryBlock, setIsOpenCategoryBlock] = useState(false);
+  const [selectedLevel, setSelectedLevel] = useState<CourseLevel | undefined>();
+  const [isFree, setIsFree] = useState<boolean | undefined>();
+  const [minPrice, setMinPrice] = useState<number | undefined>();
+  const [maxPrice, setMaxPrice] = useState<number | undefined>();
 
-  type SortBy = "Title" | "Relevance" | "Date" | "DateDesc";
-  // type SortDirection = "asc" | "desc";
-
-  interface SortOption {
-    label: string;
-    value: SortBy;
-  }
-
-  const sortOptions: SortOption[] = [
-    {
-      label: "по пулярности",
-      value: "Relevance",
-    },
-    {
-      label: "по заголовку",
-      value: "Title",
-    },
-    {
-      label: "по дате(самые новые)",
-      value: "Date",
-    },
-    {
-      label: "по дате(начиная со старых)",
-      value: "DateDesc",
-    },
-  ];
-
-  const featchCourses = async () => {
+  const fetchCourses = async () => {
     try {
       setIsLoadingCourses(true);
-
-      const params = new URLSearchParams();
-
-      if (search) params.append("searchTerm", search);
-      if (currentPage) params.append("page", currentPage.toString());
-      if (currentPageSize)
-        params.append("pageSize", currentPageSize.toString());
-
-      params.append("sortBy", currentSortBy);
-      if (categoryId) params.append("categoryId", categoryId);
-
-      const url = `${API_URL}/Courses?${params.toString()}`;
-
-      const response = await fetch(url);
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `HTTP  error! status: ${response.status}, message: ${errorText}`,
-        );
+      const data = await courseApi.getCourses({
+        searchTerm: search || undefined,
+        page: currentPage,
+        pageSize: currentPageSize,
+        sortBy: currentSortBy,
+        categoryId,
+        level: selectedLevel,
+        isFree,
+        minPrice: isFree ? undefined : minPrice,
+        maxPrice: isFree ? undefined : maxPrice,
+      });
+      if (data) {
+        setPaginatedCourses(data);
+        setTotalCourse(data.totalCount);
       }
-      const data = await response.json();
-      setPaginatedCources(data);
-      setTotalCourse(data.totalCount);
     } catch (error) {
-      console.error("Ошибка загрузки", error); // почему тут не поймал ошибку
+      console.error("Ошибка загрузки", error);
     } finally {
       setIsLoadingCourses(false);
     }
@@ -95,17 +85,9 @@ const HomePage = () => {
 
   const fetchCategories = async () => {
     try {
-      const url = `${API_URL}/Categories`;
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `HTTP error! status: ${response.status}, message: ${errorText}`,
-        );
-      }
-
-      const data = await response.json();
+      const res = await fetch(`${API_URL}/Categories`);
+      if (!res.ok) return;
+      const data = await res.json();
       setCategories(data);
     } catch (error) {
       console.error(error);
@@ -113,193 +95,222 @@ const HomePage = () => {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const promises: Promise<void>[] = [
-          featchCourses(),
-          fetchCategories(),
-        ];
-        if (authStorage.isAuthenticated()) {
-          promises.push(
-              favoriteApi.getMyFavorites().then(favs => {
-                setFavoriteIds(new Set(favs.map(f => f.courseId)));
-              })
-          );
-        }
-        await Promise.all(promises);
-      } catch (error) {
-        console.error(error);
+    const load = async () => {
+      const promises: Promise<unknown>[] = [fetchCourses(), fetchCategories()];
+      if (authStorage.isAuthenticated()) {
+        promises.push(
+            favoriteApi.getMyFavorites().then((favs) => {
+              setFavoriteIds(new Set(favs.map((f) => f.courseId)));
+            })
+        );
       }
+      await Promise.all(promises);
     };
+    load();
+  }, [currentPage, currentPageSize, categoryId, currentSortBy, selectedLevel, isFree]);
 
-    fetchData();
-  }, [currentPage, currentPageSize, categoryId, currentSortBy]);
-
-  useEffect(() => {
-    console.log(isOpenCategoryBlock);
-  }, [isOpenCategoryBlock]);
-
-  const OnChangePagination = (page: number, pageSize: number) => {
-    setCurrentPage(page);
-    setCurrentPageSize(pageSize);
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchCourses();
   };
 
-  const visibleCategories = isOpenCategoryBlock
-    ? categories
-    : categories.slice(0, 5);
+  const handleResetFilters = () => {
+    setSelectedLevel(undefined);
+    setIsFree(undefined);
+    setMinPrice(undefined);
+    setMaxPrice(undefined);
+    setCategoryId(undefined);
+    setCurrentSortBy("Relevance");
+    setSearch("");
+    setCurrentPage(1);
+  };
+
+  const visibleCategories = isOpenCategoryBlock ? categories : categories.slice(0, 5);
 
   return (
-    <div>
-      <Header />
-      <div
-        style={{
-          backgroundColor: "rgba(0, 100, 0, 0.15)",
-          padding: "40px 20px",
-          textAlign: "center",
-        }}
-      >
-        <Title level={1} style={{ marginBottom: 16 }}>
-          Найдите свой идеальный курс!
-        </Title>
-        <Paragraph
-          style={{
-            marginBottom: 24,
-            maxWidth: "800px",
-            marginLeft: "auto",
-            marginRight: "auto",
-          }}
-        >
-          В нашем каталоге — более 1000 курсов по самым востребованным
-          направлениям: программирование, дизайн, анализ данных и машинное
-          обучение, маркетинг и SMM, управление проектами, кибербезопасность,
-          разработка мобильных приложений, а также курсы по английскому языку,
-          финансам и инвестициям, психологии, творчеству и личностному росту.
-        </Paragraph>
-        <div style={{ maxWidth: "600px", margin: "0 auto" }}>
-          <Input.Search
-            size="large"
-            placeholder="Введите название курса..."
-            enterButton={<Button icon={<SearchOutlined />}>Найти курс</Button>}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onSearch={() => featchCourses()}
-          />
-        </div>
-      </div>
+      <div>
+        <Header />
 
-      <div style={{ padding: "1%" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 16,
-          }}
-        >
-          <Title level={3} style={{ margin: 0 }}>
-            Категории:
-          </Title>
-          <Select
-            style={{ width: "300px" }}
-            options={sortOptions}
-            onChange={(value) => {
-              setCurrentSortBy(value);
-            }}
-            value={currentSortBy}
-          />
-        </div>
-
-        <div style={{ display: "flex", gap: "2%" }}>
-          <div>
-            <div
-              style={{
-                width: "250px",
-                maxHeight: "300px",
-                overflowY: "auto",
-              }}
-            >
-              <Space size="small" style={{ width: "100%" }} wrap>
-                <Button
-                  onClick={() => setCategoryId(undefined)}
-                  type={!categoryId ? "primary" : "default"}
-                  style={{ width: "200px" }}
-                >
-                  Все категории
-                </Button>
-                {visibleCategories.map((cat) => (
-                  <Button
-                    onClick={() => {
-                      setCategoryId(cat.id);
-                    }}
-                    type={categoryId === cat.id ? "primary" : "default"}
-                    style={{ width: "200px" }}
-                    key={cat.id}
-                  >
-                    {cat.name}
-                  </Button>
-                ))}
-              </Space>
-            </div>
-            <span
-              onClick={() => {
-                setIsOpenCategoryBlock(!isOpenCategoryBlock);
-              }}
-              style={{
-                color: "rgba(0, 100, 0, 1)",
-                cursor: "pointer",
-                display: "inline-block",
-                marginTop: "20px",
-                width: "200px",
-                textAlign: "center",
-              }}
-            >
-              {isOpenCategoryBlock ? "Закрыть" : "Открыть"}
-            </span>
+        <div style={{ backgroundColor: "rgba(0,100,0,0.15)", padding: "40px 20px", textAlign: "center" }}>
+          <Title level={1} style={{ marginBottom: 16 }}>Найдите свой идеальный курс!</Title>
+          <Paragraph style={{ marginBottom: 24, maxWidth: 800, margin: "0 auto 24px" }}>
+            В нашем каталоге — курсы по программированию, дизайну, анализу данных,
+            маркетингу, управлению проектами и многому другому.
+          </Paragraph>
+          <div style={{ maxWidth: 600, margin: "0 auto" }}>
+            <Input.Search
+                size="large"
+                placeholder="Введите название курса..."
+                enterButton={<Button icon={<SearchOutlined />}>Найти курс</Button>}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onSearch={handleSearch}
+            />
           </div>
-          {isLoadingCourses ? (
-            <div
-              style={{
-                flex: 1,
-                display: "flex",
-                justifyContent: "center",
-                padding: "48px",
-              }}
-            >
-              <Spin />
-            </div>
-          ) : (
-            <div style={{ flex: 1, gap: "30px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  gap: "30px",
-
-                  flexWrap: "wrap",
-                }}
-              >
-                {paginatedCourses?.items.map((course) => (
-                    <CardCourse
-                        key={course.id}
-                        course={course}
-                        isFavorite={favoriteIds.has(course.id)}
-                    />
-                ))}
-              </div>
-            </div>
-          )}
         </div>
-      </div>
 
-      <div style={{ marginTop: 24, display: "flex", justifyContent: "center" }}>
-        <Pagination
-          showSizeChanger
-          defaultCurrent={1}
-          total={totalCourse}
-          onChange={OnChangePagination}
-          pageSizeOptions={[10, 20, 50]}
-        />
+        <div style={{ padding: "16px 2%" }}>
+          <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+            <Title level={3} style={{ margin: 0 }}>Каталог курсов</Title>
+            <Select
+                style={{ width: 260 }}
+                options={sortOptions}
+                value={currentSortBy}
+                onChange={(v) => { setCurrentSortBy(v); setCurrentPage(1); }}
+            />
+          </Row>
+
+          <div style={{ display: "flex", gap: "2%" }}>
+            {/* Сайдбар */}
+            <div style={{ width: 220, flexShrink: 0 }}>
+
+              {/* Категории */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontWeight: 600, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                  <FilterOutlined /> Категории
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <Button
+                      onClick={() => { setCategoryId(undefined); setCurrentPage(1); }}
+                      type={!categoryId ? "primary" : "default"}
+                      size="small"
+                      style={{ width: "100%", textAlign: "left" }}
+                  >
+                    Все категории
+                  </Button>
+                  {visibleCategories.map((cat) => (
+                      <Button
+                          key={cat.id}
+                          onClick={() => { setCategoryId(cat.id); setCurrentPage(1); }}
+                          type={categoryId === cat.id ? "primary" : "default"}
+                          size="small"
+                          style={{ width: "100%", textAlign: "left" }}
+                      >
+                        {cat.name}
+                      </Button>
+                  ))}
+                </div>
+                {categories.length > 5 && (
+                    <span
+                        onClick={() => setIsOpenCategoryBlock(!isOpenCategoryBlock)}
+                        style={{ color: "rgba(0,100,0,1)", cursor: "pointer", display: "block", marginTop: 8, fontSize: 13 }}
+                    >
+                  {isOpenCategoryBlock ? "Скрыть" : `Ещё ${categories.length - 5}...`}
+                </span>
+                )}
+              </div>
+
+              <Divider style={{ margin: "12px 0" }} />
+
+              {/* Уровень */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontWeight: 600, marginBottom: 8 }}>Уровень</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {levelOptions.map((opt) => (
+                      <Checkbox
+                          key={opt.value}
+                          checked={selectedLevel === opt.value}
+                          onChange={(e) => {
+                            setSelectedLevel(e.target.checked ? opt.value : undefined);
+                            setCurrentPage(1);
+                          }}
+                      >
+                        {opt.label}
+                      </Checkbox>
+                  ))}
+                </div>
+              </div>
+
+              <Divider style={{ margin: "12px 0" }} />
+
+              {/* Цена */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontWeight: 600, marginBottom: 8 }}>Цена</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <Checkbox
+                      checked={isFree === true}
+                      onChange={(e) => {
+                        setIsFree(e.target.checked ? true : undefined);
+                        if (e.target.checked) { setMinPrice(undefined); setMaxPrice(undefined); }
+                        setCurrentPage(1);
+                      }}
+                  >
+                    Только бесплатные
+                  </Checkbox>
+                  {isFree !== true && (
+                      <>
+                        <InputNumber
+                            placeholder="От ₽"
+                            style={{ width: "100%" }}
+                            min={0}
+                            value={minPrice}
+                            onChange={(v) => setMinPrice(v ?? undefined)}
+                        />
+                        <InputNumber
+                            placeholder="До ₽"
+                            style={{ width: "100%" }}
+                            min={0}
+                            value={maxPrice}
+                            onChange={(v) => setMaxPrice(v ?? undefined)}
+                        />
+                        <Button
+                            size="small"
+                            style={{ width: "100%" }}
+                            onClick={() => { setCurrentPage(1); fetchCourses(); }}
+                        >
+                          Применить
+                        </Button>
+                      </>
+                  )}
+                </div>
+              </div>
+
+              <Divider style={{ margin: "12px 0" }} />
+
+              <Button size="small" style={{ width: "100%" }} onClick={handleResetFilters}>
+                Сбросить фильтры
+              </Button>
+            </div>
+
+            {/* Сетка курсов */}
+            {isLoadingCourses ? (
+                <div style={{ flex: 1, display: "flex", justifyContent: "center", padding: 48 }}>
+                  <Spin size="large" />
+                </div>
+            ) : (
+                <div style={{ flex: 1 }}>
+                  {paginatedCourses?.items.length === 0 && (
+                      <div style={{ textAlign: "center", padding: 48, color: "#888" }}>
+                        Курсы не найдены. Попробуйте изменить фильтры.
+                      </div>
+                  )}
+                  <Row gutter={[24, 24]}>
+                    {paginatedCourses?.items.map((course) => (
+                        <Col key={course.id} xs={24} sm={12} lg={8} xl={6}>
+                          <CardCourse
+                              course={course}
+                              isFavorite={favoriteIds.has(course.id)}
+                          />
+                        </Col>
+                    ))}
+                  </Row>
+                </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ marginTop: 24, display: "flex", justifyContent: "center", paddingBottom: 40 }}>
+          <Pagination
+              showSizeChanger
+              current={currentPage}
+              pageSize={currentPageSize}
+              total={totalCourse}
+              onChange={(page, pageSize) => { setCurrentPage(page); setCurrentPageSize(pageSize); }}
+              pageSizeOptions={[10, 20, 50]}
+          />
+        </div>
+        <Footer/>
       </div>
-    </div>
   );
 };
 
