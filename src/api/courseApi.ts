@@ -1,127 +1,178 @@
-import axios from "axios";
-import type { CourseDto, CreateCourseDto } from "./types/course";
 import { authStorage } from "../services/auth-storage.service";
-import { API_BASE_URL } from "./config";
+import { API_URL } from "../config";
+import type {
+  CourseDto,
+  CreateCourseDto,
+  PaginatedResponse,
+  CourseLevel,
+  CourseStatus,
+} from "./types/course";
+
+export interface CourseSearchParams {
+  searchTerm?: string;
+  page?: number;
+  pageSize?: number;
+  categoryId?: string;
+  sortBy?: "Relevance" | "Title" | "Date" | "DateDesc" | "Price";
+  level?: CourseLevel;
+  minPrice?: number;
+  maxPrice?: number;
+  isFree?: boolean;
+}
 
 export const courseApi = {
-  // СОЗДАНИЕ КУРСА - POST /api/Courses
-  // Тело запроса: CreateCourseDto
-  // Ответ: CourseDto
-  createCourse: async (
-    courseData: CreateCourseDto,
-  ): Promise<CourseDto | null> => {
+  getCourses: async (params: CourseSearchParams = {}): Promise<PaginatedResponse | null> => {
     try {
-      const response = await axios.post<CourseDto>(
-        `${API_BASE_URL}/Courses`,
-        courseData,
-        {
-          headers: authStorage.getAuthHeaders(),
-        },
-      );
+      const p = new URLSearchParams();
+      if (params.searchTerm) p.append("searchTerm", params.searchTerm);
+      if (params.page) p.append("page", params.page.toString());
+      if (params.pageSize) p.append("pageSize", params.pageSize.toString());
+      if (params.sortBy) p.append("sortBy", params.sortBy);
+      if (params.categoryId) p.append("categoryId", params.categoryId);
+      if (params.level) p.append("level", params.level);
+      if (params.minPrice != null) p.append("minPrice", params.minPrice.toString());
+      if (params.maxPrice != null) p.append("maxPrice", params.maxPrice.toString());
+      if (params.isFree != null) p.append("isFree", params.isFree.toString());
 
-      // В сваггере указан 200 OK
-      if (response.status === 200) {
-        console.log("Курс создан:", response.data);
-        return response.data;
-      }
-
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 400) {
-          console.error("Ошибка валидации:", error.response.data);
-          // Тут могут быть конкретные ошибки по полям
-        } else if (error.response?.status === 401) {
-          console.error("Не авторизован");
-          authStorage.clearAllAuthData();
-        } else {
-          console.error("Ошибка при создании курса:", error.response?.data);
-        }
-      } else {
-        console.error("Неизвестная ошибка:", error);
-      }
+      const res = await fetch(`${API_URL}/Courses?${p.toString()}`);
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
       return null;
     }
   },
+
+  getCourseById: async (id: string): Promise<CourseDto | null> => {
+    try {
+      const res = await fetch(`${API_URL}/Courses/${id}`);
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  getMyCourses: async (status?: CourseStatus): Promise<CourseDto[]> => {
+    try {
+      const p = new URLSearchParams();
+      if (status) p.append("status", status);
+      const res = await fetch(`${API_URL}/Courses/my?${p.toString()}`, {
+        headers: authStorage.getAuthHeaders(),
+      });
+      if (!res.ok) return [];
+      return res.json();
+    } catch {
+      return [];
+    }
+  },
+
+  getPendingCourses: async (page = 1, pageSize = 20): Promise<PaginatedResponse | null> => {
+    try {
+      const res = await fetch(`${API_URL}/Courses/pending?page=${page}&pageSize=${pageSize}`, {
+        headers: authStorage.getAuthHeaders(),
+      });
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  createCourse: async (data: CreateCourseDto): Promise<CourseDto | null> => {
+    try {
+      const res = await fetch(`${API_URL}/Courses`, {
+        method: "POST",
+        headers: authStorage.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  updateCourse: async (id: string, data: Partial<CreateCourseDto>): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/Courses/${id}`, {
+        method: "PUT",
+        headers: authStorage.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  deleteCourse: async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/Courses/${id}`, {
+        method: "DELETE",
+        headers: authStorage.getAuthHeaders(),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  submitForModeration: async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/Courses/${id}/moderate`, {
+        method: "PUT",
+        headers: authStorage.getAuthHeaders(),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  approveCourse: async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/Courses/${id}/approve`, {
+        method: "PUT",
+        headers: authStorage.getAuthHeaders(),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  rejectCourse: async (id: string, reason?: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/Courses/${id}/reject`, {
+        method: "PUT",
+        headers: authStorage.getAuthHeaders(),
+        body: JSON.stringify({ reason }),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  getSections: async (courseId: string) => {
+    try {
+      const res = await fetch(`${API_URL}/Courses/${courseId}/sections`);
+      if (!res.ok) return [];
+      return res.json();
+    } catch {
+      return [];
+    }
+  },
+
+  getCourseEnrollments: async (courseId: string) => {
+    try {
+      const res = await fetch(`${API_URL}/Courses/${courseId}/enrollments`, {
+        headers: authStorage.getAuthHeaders(),
+      });
+      if (!res.ok) return [];
+      return res.json();
+    } catch {
+      return [];
+    }
+  },
 };
-
-// import axios from "axios";
-// import type { CourseRequest, CourseResponse } from "./types/course";
-// import { authStorage } from "../services/auth-storage.service";
-// import { API_BASE_URL } from "./config";
-
-// export const courseApi = {
-//   createCourse: async (
-//     courseData: CourseRequest
-//   ): Promise<CourseResponse | null> => {
-//     try {
-//       const response = await axios.post<CourseResponse>(
-//         `${API_BASE_URL}/Courses`,
-//         courseData,
-//         {
-//           headers: authStorage.getAuthHeaders(),
-//         }
-//       );
-//       if (response.status === 201) {
-//         return response.data;
-//       }
-//       return response.data;
-//     } catch (error) {
-//       if (axios.isAxiosError(error)) {
-//         if (error.response?.status === 400) {
-//           console.error("Ошибка валидации данных курса:", error.response.data);
-//         } else if (error.response?.status === 401) {
-//           console.error("Не авторизован");
-//           authStorage.clearAllAuthData();
-//         } else {
-//           console.error("Ошибка при создании курса:", error.response?.data);
-//         }
-//       } else {
-//         console.error("Неизвестная ошибка:", error);
-//       }
-//       return null;
-//     }
-//   },
-
-//   getMyCourses: async (): Promise<CourseResponse[] | null> => {
-//     try {
-//       const response = await axios.get<CourseResponse[]>(
-//         `${API_BASE_URL}/Courses/my`,
-//         {
-//           headers: authStorage.getAuthHeaders(),
-//         }
-//       );
-//       return response.data;
-//     } catch (error) {
-//       if (axios.isAxiosError(error)) {
-//         if (error.response?.status === 401) {
-//           console.error("Не авторизован для получения своих курсов");
-//         } else {
-//           console.error(
-//             "Ошибка при получении моих курсов:",
-//             error.response?.data
-//           );
-//         }
-//       } else {
-//         console.error("Неизвестная ошибка:", error);
-//       }
-//       return null;
-//     }
-//   },
-//   getCourseById: async (id: string): Promise<CourseResponse | null> => {
-//     try{
-//       const response = await axios.get(`${API_BASE_URL}/Courses/${id}`);
-//       return response.data;
-//     }
-//     catch(error){
-//       if (axios.isAxiosError(error)) {
-//       if (error.response?.status === 404) {
-//         console.error("Курс не найден");
-//       } else {
-//         console.error("Ошибка при получении курса:", error.response?.data);
-//       }
-//     }
-//     return null;
-//     }
-//   }
-// };
