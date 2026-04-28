@@ -1,4 +1,4 @@
-import { Avatar, Divider, Layout, Menu, Row, Col, Spin, Tag, Typography, Button } from "antd";
+import { Avatar, Divider, Layout, Menu, Row, Col, Spin, Tag, Typography, Button, Form, Input, message } from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -6,6 +6,8 @@ import {
   HeartOutlined,
   BookOutlined,
   LogoutOutlined,
+  EditOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
 import Header from "../../components/Header.tsx";
 import Footer from "../../components/Footer.tsx";
@@ -38,6 +40,13 @@ const UserProfilePage = () => {
   const [enrollments, setEnrollments] = useState<EnrollmentDto[]>([]);
   const [favorites, setFavorites] = useState<FavoriteDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editingPassword, setEditingPassword] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  const [profileForm] = Form.useForm();
+  const [passwordForm] = Form.useForm();
 
   const { userData, fetchUser } = useUserStore();
 
@@ -90,6 +99,37 @@ const UserProfilePage = () => {
       if (meData) setMe(meData);
     }
     e.target.value = "";
+  };
+
+  const handleSaveProfile = async (values: { name: string; bio?: string }) => {
+    setSavingProfile(true);
+    const ok = await userApi.updateProfile({ name: values.name, bio: values.bio ?? null });
+    if (ok) {
+      message.success("Профиль обновлён");
+      await fetchUser();
+      const meData = await userApi.getMe();
+      if (meData) setMe(meData);
+      setEditingProfile(false);
+    } else {
+      message.error("Ошибка при сохранении");
+    }
+    setSavingProfile(false);
+  };
+
+  const handleSavePassword = async (values: { oldPassword: string; newPassword: string }) => {
+    setSavingPassword(true);
+    const ok = await userApi.changePassword({
+      oldPassword: values.oldPassword,
+      newPassword: values.newPassword,
+    });
+    if (ok) {
+      message.success("Пароль изменён");
+      passwordForm.resetFields();
+      setEditingPassword(false);
+    } else {
+      message.error("Неверный текущий пароль или ошибка сервера");
+    }
+    setSavingPassword(false);
   };
 
   const menuItems = [
@@ -183,48 +223,175 @@ const UserProfilePage = () => {
                 <div style={{ maxWidth: 600 }}>
                   <Title level={3}>Мои данные</Title>
                   <Divider />
-                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                    <div>
-                      <Text type="secondary">Имя</Text>
-                      <div><Text strong>{me.name}</Text></div>
-                    </div>
-                    <div>
-                      <Text type="secondary">Email</Text>
-                      <div><Text strong>{me.email}</Text></div>
-                    </div>
-                    {me.bio && (
+
+                  {/* Просмотр / редактирование профиля */}
+                  {!editingProfile ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                        <div>
+                          <Text type="secondary">Имя</Text>
+                          <div><Text strong>{me.name}</Text></div>
+                        </div>
+                        <div>
+                          <Text type="secondary">Email</Text>
+                          <div><Text strong>{me.email}</Text></div>
+                        </div>
                         <div>
                           <Text type="secondary">О себе</Text>
-                          <div><Text>{me.bio}</Text></div>
+                          <div>
+                            <Text>{me.bio ?? <Text type="secondary" italic>Не указано</Text>}</Text>
+                          </div>
                         </div>
-                    )}
-                    <div>
-                      <Text type="secondary">Роль</Text>
-                      <div>
-                        <Tag color="green">{roleLabels[me.role] ?? me.role}</Tag>
+                        <div>
+                          <Text type="secondary">Роль</Text>
+                          <div>
+                            <Tag color="green">{roleLabels[me.role] ?? me.role}</Tag>
+                          </div>
+                        </div>
+                        <div>
+                          <Text type="secondary">Дата регистрации</Text>
+                          <div>
+                            <Text>
+                              {new Date(me.createdAt).toLocaleDateString("ru-RU", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                              })}
+                            </Text>
+                          </div>
+                        </div>
+                        {/*<div>*/}
+                        {/*  <Text type="secondary">Email подтверждён</Text>*/}
+                        {/*  <div>*/}
+                        {/*    <Tag color={me.isEmailVerified ? "green" : "orange"}>*/}
+                        {/*      {me.isEmailVerified ? "Да" : "Нет"}*/}
+                        {/*    </Tag>*/}
+                        {/*  </div>*/}
+                        {/*</div>*/}
+                        <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                          <Button
+                              icon={<EditOutlined />}
+                              onClick={() => {
+                                profileForm.setFieldsValue({ name: me.name, bio: me.bio ?? "" });
+                                setEditingProfile(true);
+                                setEditingPassword(false);
+                              }}
+                          >
+                            Редактировать профиль
+                          </Button>
+                          <Button
+                              icon={<LockOutlined />}
+                              onClick={() => {
+                                setEditingPassword(true);
+                                setEditingProfile(false);
+                              }}
+                          >
+                            Сменить пароль
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <Text type="secondary">Дата регистрации</Text>
-                      <div>
-                        <Text>
-                          {new Date(me.createdAt).toLocaleDateString("ru-RU", {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          })}
-                        </Text>
-                      </div>
-                    </div>
-                    <div>
-                      <Text type="secondary">Email подтверждён</Text>
-                      <div>
-                        <Tag color={me.isEmailVerified ? "green" : "orange"}>
-                          {me.isEmailVerified ? "Да" : "Нет"}
-                        </Tag>
-                      </div>
-                    </div>
-                  </div>
+                  ) : (
+                      /* Форма редактирования профиля */
+                      <Form
+                          form={profileForm}
+                          layout="vertical"
+                          onFinish={handleSaveProfile}
+                          requiredMark={false}
+                      >
+                        <Form.Item
+                            label="Имя"
+                            name="name"
+                            rules={[
+                              { required: true, message: "Введите имя" },
+                              { min: 2, message: "Минимум 2 символа" },
+                              { max: 100, message: "Максимум 100 символов" },
+                            ]}
+                        >
+                          <Input size="large" />
+                        </Form.Item>
+                        <Form.Item
+                            label="О себе"
+                            name="bio"
+                            rules={[{ max: 500, message: "Максимум 500 символов" }]}
+                        >
+                          <Input.TextArea rows={4} placeholder="Расскажите о себе..." />
+                        </Form.Item>
+                        <div style={{ display: "flex", gap: 12 }}>
+                          <Button
+                              type="primary"
+                              htmlType="submit"
+                              loading={savingProfile}
+                              style={{ background: "rgba(0,100,0,0.8)" }}
+                          >
+                            Сохранить
+                          </Button>
+                          <Button onClick={() => setEditingProfile(false)}>
+                            Отмена
+                          </Button>
+                        </div>
+                      </Form>
+                  )}
+
+                  {/* Форма смены пароля */}
+                  {editingPassword && !editingProfile && (
+                      <>
+                        <Divider />
+                        <Title level={4}>Смена пароля</Title>
+                        <Form
+                            form={passwordForm}
+                            layout="vertical"
+                            onFinish={handleSavePassword}
+                            requiredMark={false}
+                        >
+                          <Form.Item
+                              label="Текущий пароль"
+                              name="oldPassword"
+                              rules={[{ required: true, message: "Введите текущий пароль" }]}
+                          >
+                            <Input.Password size="large" />
+                          </Form.Item>
+                          <Form.Item
+                              label="Новый пароль"
+                              name="newPassword"
+                              rules={[
+                                { required: true, message: "Введите новый пароль" },
+                                { min: 8, message: "Минимум 8 символов" },
+                              ]}
+                          >
+                            <Input.Password size="large" />
+                          </Form.Item>
+                          <Form.Item
+                              label="Повторите новый пароль"
+                              name="confirmPassword"
+                              dependencies={["newPassword"]}
+                              rules={[
+                                { required: true, message: "Повторите пароль" },
+                                ({ getFieldValue }) => ({
+                                  validator(_, value) {
+                                    if (!value || getFieldValue("newPassword") === value)
+                                      return Promise.resolve();
+                                    return Promise.reject(new Error("Пароли не совпадают"));
+                                  },
+                                }),
+                              ]}
+                          >
+                            <Input.Password size="large" />
+                          </Form.Item>
+                          <div style={{ display: "flex", gap: 12 }}>
+                            <Button
+                                type="primary"
+                                htmlType="submit"
+                                loading={savingPassword}
+                                style={{ background: "rgba(0,100,0,0.8)" }}
+                            >
+                              Сохранить
+                            </Button>
+                            <Button onClick={() => setEditingPassword(false)}>
+                              Отмена
+                            </Button>
+                          </div>
+                        </Form>
+                      </>
+                  )}
                 </div>
             )}
 
