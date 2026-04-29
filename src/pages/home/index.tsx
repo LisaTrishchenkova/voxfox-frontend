@@ -14,6 +14,7 @@ import {
 } from "antd";
 import Paragraph from "antd/es/typography/Paragraph";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { CategoryDto, CourseLevel, PaginatedResponse } from "../../api/types/course";
 import CardCourse from "../../components/CardCourse";
 import Header from "../../components/Header";
@@ -42,8 +43,9 @@ const levelOptions: { label: string; value: CourseLevel }[] = [
 const { Title } = Typography;
 
 const HomePage = () => {
-  const [paginatedCourses, setPaginatedCourses] = useState<PaginatedResponse>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
+  const [paginatedCourses, setPaginatedCourses] = useState<PaginatedResponse>();
   const [totalCourse, setTotalCourse] = useState<number>();
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(10);
@@ -57,6 +59,17 @@ const HomePage = () => {
   const [isFree, setIsFree] = useState<boolean | undefined>();
   const [minPrice, setMinPrice] = useState<number | undefined>();
   const [maxPrice, setMaxPrice] = useState<number | undefined>();
+
+  // Читаем search из URL при монтировании и при изменении параметров
+  useEffect(() => {
+    const searchParam = searchParams.get("search") || "";
+    setSearch(searchParam);
+  }, [searchParams]);
+
+  // При изменении поиска сбрасываем на первую страницу
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
 
   const fetchCourses = async () => {
     try {
@@ -107,11 +120,17 @@ const HomePage = () => {
       await Promise.all(promises);
     };
     load();
-  }, [currentPage, currentPageSize, categoryId, currentSortBy, selectedLevel, isFree]);
+  }, [currentPage, currentPageSize, categoryId, currentSortBy, selectedLevel, isFree, search]);
 
-  const handleSearch = () => {
-    setCurrentPage(1);
-    fetchCourses();
+  const handleLocalSearch = () => {
+    const newParams = new URLSearchParams(searchParams);
+    if (search.trim()) {
+      newParams.set("search", search.trim());
+    } else {
+      newParams.delete("search");
+    }
+    setSearchParams(newParams);
+    // currentPage сбросится автоматически через useEffect(search)
   };
 
   const handleResetFilters = () => {
@@ -121,8 +140,12 @@ const HomePage = () => {
     setMaxPrice(undefined);
     setCategoryId(undefined);
     setCurrentSortBy("Relevance");
-    setSearch("");
     setCurrentPage(1);
+    // Удаляем search из URL
+    setSearchParams((prev) => {
+      prev.delete("search");
+      return prev;
+    });
   };
 
   const visibleCategories = isOpenCategoryBlock ? categories : categories.slice(0, 5);
@@ -134,7 +157,7 @@ const HomePage = () => {
         <div style={{ backgroundColor: "rgba(0,100,0,0.15)", padding: "40px 20px", textAlign: "center" }}>
           <Title level={1} style={{ marginBottom: 16 }}>Найдите свой идеальный курс!</Title>
           <Paragraph style={{ marginBottom: 24, maxWidth: 800, margin: "0 auto 24px" }}>
-            В нашем каталоге — курсы по программированию, дизайну, анализу данных,
+            В нашем каталоге - курсы по программированию, дизайну, иностранным языкам,
             маркетингу, управлению проектами и многому другому.
           </Paragraph>
           <div style={{ maxWidth: 600, margin: "0 auto" }}>
@@ -144,7 +167,7 @@ const HomePage = () => {
                 enterButton={<Button icon={<SearchOutlined />}>Найти курс</Button>}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                onSearch={handleSearch}
+                onSearch={handleLocalSearch}
             />
           </div>
         </div>
