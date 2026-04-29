@@ -224,16 +224,16 @@ const QuestionCard = ({
 };
 
 // утилита для очистки всех данных пользователя из localStorage
-export const clearUserCourseData = (userId: string) => {
-    const keysToDelete: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(`voxfox_${userId}_`)) {
-            keysToDelete.push(key);
-        }
-    }
-    keysToDelete.forEach(k => localStorage.removeItem(k));
-};
+// export const clearUserCourseData = (userId: string) => {
+//     const keysToDelete: string[] = [];
+//     for (let i = 0; i < localStorage.length; i++) {
+//         const key = localStorage.key(i);
+//         if (key && key.startsWith(`voxfox_${userId}_`)) {
+//             keysToDelete.push(key);
+//         }
+//     }
+//     keysToDelete.forEach(k => localStorage.removeItem(k));
+// };
 
 const CourseLearningPage = () => {
     const {id} = useParams<{id: string}>();

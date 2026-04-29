@@ -25,13 +25,14 @@ const Header = () => {
   const { userData, fetchUser } = useUserStore();
   const [searchValue, setSearchValue] = useState("");
 
-  // Синхронизация поисковой строки с URL-параметром ?search= на главной странице
   useEffect(() => {
     if (location.pathname === "/") {
       const params = new URLSearchParams(location.search);
       const searchParam = params.get("search") || "";
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSearchValue(searchParam);
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSearchValue(""); // очищаем на других страницах
     }
   }, [location]);
