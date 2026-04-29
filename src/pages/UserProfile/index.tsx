@@ -83,8 +83,20 @@ const UserProfilePage = () => {
   }, [activeSection]);
 
   const handleLogout = () => {
+    const userId = authStorage.getUserData<string>();
     authStorage.clearAllAuthData();
     useUserStore.getState().clear();
+    // чистим все данные пользователя из localStorage
+    if (userId) {
+      const keysToDelete: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(`voxfox_${userId}_`)) {
+          keysToDelete.push(key);
+        }
+      }
+      keysToDelete.forEach(k => localStorage.removeItem(k));
+    }
     navigate("/");
     window.location.reload();
   };

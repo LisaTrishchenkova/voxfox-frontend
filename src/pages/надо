@@ -370,3 +370,503 @@ const CourseLearningPage = () => {
 };
 
 export default CourseLearningPage;
+
+
+
+
+
+
+
+
+
+
+import { SearchOutlined, FilterOutlined } from "@ant-design/icons";
+import {
+  Button,
+  Checkbox,
+  Col,
+  InputNumber,
+  Pagination,
+  Row,
+  Select,
+  Spin,
+  Typography,
+  Input,
+  Divider,
+} from "antd";
+import Paragraph from "antd/es/typography/Paragraph";
+import { useEffect, useState } from "react";
+import type { CategoryDto, CourseLevel, PaginatedResponse } from "../../api/types/course";
+import CardCourse from "../../components/CardCourse";
+import Header from "../../components/Header";
+import { API_URL } from "../../config";
+import { authStorage } from "../../services/auth-storage.service.ts";
+import { favoriteApi } from "../../api/favoriteApi.ts";
+import { courseApi } from "../../api/courseApi.ts";
+import Footer from "../../components/Footer.tsx";
+
+type SortBy = "Title" | "Relevance" | "Date" | "DateDesc" | "Price";
+
+const sortOptions = [
+  { label: "По популярности", value: "Relevance" },
+  { label: "По заголовку", value: "Title" },
+  { label: "По дате (новые)", value: "Date" },
+  { label: "По дате (старые)", value: "DateDesc" },
+  { label: "По цене", value: "Price" },
+];
+
+const levelOptions: { label: string; value: CourseLevel }[] = [
+  { label: "Начинающий", value: "Beginner" },
+  { label: "Средний", value: "Intermediate" },
+  { label: "Продвинутый", value: "Advanced" },
+];
+
+const { Title } = Typography;
+
+const HomePage = () => {
+  const [paginatedCourses, setPaginatedCourses] = useState<PaginatedResponse>();
+  const [search, setSearch] = useState("");
+  const [totalCourse, setTotalCourse] = useState<number>();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(10);
+  const [currentSortBy, setCurrentSortBy] = useState<SortBy>("Relevance");
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [categoryId, setCategoryId] = useState<string>();
+  const [isLoadingCourses, setIsLoadingCourses] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [isOpenCategoryBlock, setIsOpenCategoryBlock] = useState(false);
+  const [selectedLevel, setSelectedLevel] = useState<CourseLevel | undefined>();
+  const [isFree, setIsFree] = useState<boolean | undefined>();
+  const [minPrice, setMinPrice] = useState<number | undefined>();
+  const [maxPrice, setMaxPrice] = useState<number | undefined>();
+
+  const fetchCourses = async () => {
+    try {
+      setIsLoadingCourses(true);
+      const data = await courseApi.getCourses({
+        searchTerm: search || undefined,
+        page: currentPage,
+        pageSize: currentPageSize,
+        sortBy: currentSortBy,
+        categoryId,
+        level: selectedLevel,
+        isFree,
+        minPrice: isFree ? undefined : minPrice,
+        maxPrice: isFree ? undefined : maxPrice,
+      });
+      if (data) {
+        setPaginatedCourses(data);
+        setTotalCourse(data.totalCount);
+      }
+    } catch (error) {
+      console.error("Ошибка загрузки", error);
+    } finally {
+      setIsLoadingCourses(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch(`${API_URL}/Categories`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setCategories(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      const promises: Promise<unknown>[] = [fetchCourses(), fetchCategories()];
+      if (authStorage.isAuthenticated()) {
+        promises.push(
+            favoriteApi.getMyFavorites().then((favs) => {
+              setFavoriteIds(new Set(favs.map((f) => f.courseId)));
+            })
+        );
+      }
+      await Promise.all(promises);
+    };
+    load();
+  }, [currentPage, currentPageSize, categoryId, currentSortBy, selectedLevel, isFree]);
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchCourses();
+  };
+
+  const handleResetFilters = () => {
+    setSelectedLevel(undefined);
+    setIsFree(undefined);
+    setMinPrice(undefined);
+    setMaxPrice(undefined);
+    setCategoryId(undefined);
+    setCurrentSortBy("Relevance");
+    setSearch("");
+    setCurrentPage(1);
+  };
+
+  const visibleCategories = isOpenCategoryBlock ? categories : categories.slice(0, 5);
+
+  return (
+      <div>
+        <Header />
+
+        <div style={{ backgroundColor: "rgba(0,100,0,0.15)", padding: "40px 20px", textAlign: "center" }}>
+          <Title level={1} style={{ marginBottom: 16 }}>Найдите свой идеальный курс!</Title>
+          <Paragraph style={{ marginBottom: 24, maxWidth: 800, margin: "0 auto 24px" }}>
+            В нашем каталоге — курсы по программированию, дизайну, анализу данных,
+            маркетингу, управлению проектами и многому другому.
+          </Paragraph>
+          <div style={{ maxWidth: 600, margin: "0 auto" }}>
+            <Input.Search
+                size="large"
+                placeholder="Введите название курса..."
+                enterButton={<Button icon={<SearchOutlined />}>Найти курс</Button>}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onSearch={handleSearch}
+            />
+          </div>
+        </div>
+
+        <div style={{ padding: "16px 2%" }}>
+          <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+            <Title level={3} style={{ margin: 0 }}>Каталог курсов</Title>
+            <Select
+                style={{ width: 260 }}
+                options={sortOptions}
+                value={currentSortBy}
+                onChange={(v) => { setCurrentSortBy(v); setCurrentPage(1); }}
+            />
+          </Row>
+
+          <div style={{ display: "flex", gap: "2%" }}>
+            {/* Сайдбар */}
+            <div style={{ width: 220, flexShrink: 0 }}>
+
+              {/* Категории */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontWeight: 600, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                  <FilterOutlined /> Категории
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <Button
+                      onClick={() => { setCategoryId(undefined); setCurrentPage(1); }}
+                      type={!categoryId ? "primary" : "default"}
+                      size="small"
+                      style={{ width: "100%", textAlign: "left" }}
+                  >
+                    Все категории
+                  </Button>
+                  {visibleCategories.map((cat) => (
+                      <Button
+                          key={cat.id}
+                          onClick={() => { setCategoryId(cat.id); setCurrentPage(1); }}
+                          type={categoryId === cat.id ? "primary" : "default"}
+                          size="small"
+                          style={{ width: "100%", textAlign: "left" }}
+                      >
+                        {cat.name}
+                      </Button>
+                  ))}
+                </div>
+                {categories.length > 5 && (
+                    <span
+                        onClick={() => setIsOpenCategoryBlock(!isOpenCategoryBlock)}
+                        style={{ color: "rgba(0,100,0,1)", cursor: "pointer", display: "block", marginTop: 8, fontSize: 13 }}
+                    >
+                  {isOpenCategoryBlock ? "Скрыть" : `Ещё ${categories.length - 5}...`}
+                </span>
+                )}
+              </div>
+
+              <Divider style={{ margin: "12px 0" }} />
+
+              {/* Уровень */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontWeight: 600, marginBottom: 8 }}>Уровень</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {levelOptions.map((opt) => (
+                      <Checkbox
+                          key={opt.value}
+                          checked={selectedLevel === opt.value}
+                          onChange={(e) => {
+                            setSelectedLevel(e.target.checked ? opt.value : undefined);
+                            setCurrentPage(1);
+                          }}
+                      >
+                        {opt.label}
+                      </Checkbox>
+                  ))}
+                </div>
+              </div>
+
+              <Divider style={{ margin: "12px 0" }} />
+
+              {/* Цена */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontWeight: 600, marginBottom: 8 }}>Цена</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <Checkbox
+                      checked={isFree === true}
+                      onChange={(e) => {
+                        setIsFree(e.target.checked ? true : undefined);
+                        if (e.target.checked) { setMinPrice(undefined); setMaxPrice(undefined); }
+                        setCurrentPage(1);
+                      }}
+                  >
+                    Только бесплатные
+                  </Checkbox>
+                  {isFree !== true && (
+                      <>
+                        <InputNumber
+                            placeholder="От ₽"
+                            style={{ width: "100%" }}
+                            min={0}
+                            value={minPrice}
+                            onChange={(v) => setMinPrice(v ?? undefined)}
+                        />
+                        <InputNumber
+                            placeholder="До ₽"
+                            style={{ width: "100%" }}
+                            min={0}
+                            value={maxPrice}
+                            onChange={(v) => setMaxPrice(v ?? undefined)}
+                        />
+                        <Button
+                            size="small"
+                            style={{ width: "100%" }}
+                            onClick={() => { setCurrentPage(1); fetchCourses(); }}
+                        >
+                          Применить
+                        </Button>
+                      </>
+                  )}
+                </div>
+              </div>
+
+              <Divider style={{ margin: "12px 0" }} />
+
+              <Button size="small" style={{ width: "100%" }} onClick={handleResetFilters}>
+                Сбросить фильтры
+              </Button>
+            </div>
+
+            {/* Сетка курсов */}
+            {isLoadingCourses ? (
+                <div style={{ flex: 1, display: "flex", justifyContent: "center", padding: 48 }}>
+                  <Spin size="large" />
+                </div>
+            ) : (
+                <div style={{ flex: 1 }}>
+                  {paginatedCourses?.items.length === 0 && (
+                      <div style={{ textAlign: "center", padding: 48, color: "#888" }}>
+                        Курсы не найдены. Попробуйте изменить фильтры.
+                      </div>
+                  )}
+                  <Row gutter={[24, 24]}>
+                    {paginatedCourses?.items.map((course) => (
+                        <Col key={course.id} xs={24} sm={12} lg={8} xl={6}>
+                          <CardCourse
+                              course={course}
+                              isFavorite={favoriteIds.has(course.id)}
+                          />
+                        </Col>
+                    ))}
+                  </Row>
+                </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ marginTop: 24, display: "flex", justifyContent: "center", paddingBottom: 40 }}>
+          <Pagination
+              showSizeChanger
+              current={currentPage}
+              pageSize={currentPageSize}
+              total={totalCourse}
+              onChange={(page, pageSize) => { setCurrentPage(page); setCurrentPageSize(pageSize); }}
+              pageSizeOptions={[10, 20, 50]}
+          />
+        </div>
+        <Footer/>
+      </div>
+  );
+};
+
+export default HomePage;
+
+
+
+
+
+
+
+
+import { LoginOutlined, LogoutOutlined, SearchOutlined, UserOutlined } from "@ant-design/icons";
+import {
+  Avatar,
+  Button,
+  Col,
+  Image,
+  Input,
+  Menu,
+  Row,
+  Space,
+  Typography,
+} from "antd";
+import { useEffect, type MouseEventHandler } from "react";
+import { useNavigate } from "react-router-dom";
+import logo from "../assets/logo.jpg";
+import { authStorage } from "../services/auth-storage.service";
+import { useUserStore, getAvatarUrl } from "../stores/userStore";
+
+const { Title } = Typography;
+
+const Header = () => {
+  const navigate = useNavigate();
+  const isAuth = authStorage.isAuthenticated();
+  const { userData, fetchUser } = useUserStore();
+
+  const redirectToLogin: MouseEventHandler<HTMLElement> = (event) => {
+    event.preventDefault();
+    navigate("/login");
+  };
+
+  const handleLogout = () => {
+    const userId = authStorage.getUserData<string>();
+    authStorage.clearAllAuthData();
+    useUserStore.getState().clear();
+    if (userId) {
+      const keysToDelete: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(`voxfox_${userId}_`)) {
+          keysToDelete.push(key);
+        }
+      }
+      keysToDelete.forEach(k => localStorage.removeItem(k));
+    }
+    navigate("/");
+    window.location.reload();
+  };
+
+  useEffect(() => {
+    fetchUser();
+  }, []);
+
+  return (
+      <header
+          style={{
+            background: "#fff",
+            padding: "0 24px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+            borderBottom: "1px solid #e8e8e8",
+            position: "sticky",
+            top: 0,
+            zIndex: 1000,
+          }}
+      >
+        <Row justify="space-between" align="middle">
+          <Col>
+            <Row align="middle" gutter={24}>
+              <Col>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <Image
+                      src={logo}
+                      alt="VoxFox"
+                      preview={false}
+                      style={{ height: "40px", width: "auto", objectFit: "contain" }}
+                  />
+                </div>
+              </Col>
+              <Col>
+                <Menu mode="horizontal" style={{ border: "none" }}>
+                  <Menu.Item
+                      key="home"
+                      style={{ fontWeight: 600, color: "#389e0d" }}
+                      onClick={() => navigate("/")}
+                  >
+                    Главная
+                  </Menu.Item>
+                  {isAuth && (
+                      <Menu.Item key="projects" style={{ fontWeight: 600, color: "#389e0d" }}>
+                        Проекты
+                      </Menu.Item>
+                  )}
+                  {isAuth && (
+                      <Menu.Item
+                          key="learn"
+                          style={{ fontWeight: 600, color: "#389e0d" }}
+                          onClick={() => navigate("/cource")}
+                      >
+                        Преподавание
+                      </Menu.Item>
+                  )}
+                  <Menu.Item key="community" style={{ fontWeight: 600, color: "#389e0d" }}>
+                    Сообщество
+                  </Menu.Item>
+                  <Menu.Item key="about" style={{ fontWeight: 600, color: "#389e0d" }}>
+                    О нас
+                  </Menu.Item>
+                  <Menu.Item key="pricing" style={{ fontWeight: 600, color: "#389e0d" }}>
+                    Цены
+                  </Menu.Item>
+                </Menu>
+              </Col>
+            </Row>
+          </Col>
+          <Col>
+            <Space size="middle" align="center">
+              <Input.Search
+                  placeholder="Поиск курсов..."
+                  allowClear
+                  prefix={<SearchOutlined style={{ color: "#52c41a" }} />}
+                  style={{ width: 240, borderRadius: 20 }}
+              />
+              {!isAuth && (
+                  <Button icon={<LoginOutlined />} onClick={redirectToLogin}>
+                    Войти
+                  </Button>
+              )}
+              {userData && (
+                  <>
+                    <Title
+                        onClick={() => navigate("/profile")}
+                        level={4}
+                        style={{ margin: 0, fontSize: "14px", fontWeight: 500, cursor: "pointer" }}
+                    >
+                      {userData.name}
+                    </Title>
+                    <Avatar
+                        src={getAvatarUrl(userData.avatarUrl)}
+                        icon={!userData.avatarUrl && <UserOutlined />}
+                        style={{
+                          background: userData.avatarUrl
+                              ? undefined
+                              : "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
+                          border: "4px solid #fff",
+                          boxShadow: "0 4px 12px rgba(76, 175, 80, 0.3)",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => navigate("/profile")}
+                        size="default"
+                    />
+                    <Button
+                        icon={<LogoutOutlined />}
+                        type="text"
+                        danger
+                        onClick={handleLogout}
+                    />
+                  </>
+              )}
+            </Space>
+          </Col>
+        </Row>
+      </header>
+  );
+};
+
+export default Header;
