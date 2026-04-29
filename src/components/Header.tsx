@@ -10,8 +10,8 @@ import {
   Space,
   Typography,
 } from "antd";
-import { useEffect, type MouseEventHandler } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, type MouseEventHandler, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/logo.jpg";
 import { authStorage } from "../services/auth-storage.service";
 import { useUserStore, getAvatarUrl } from "../stores/userStore";
@@ -20,12 +20,53 @@ const { Title } = Typography;
 
 const Header = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const isAuth = authStorage.isAuthenticated();
   const { userData, fetchUser } = useUserStore();
+  const [searchValue, setSearchValue] = useState("");
+
+  useEffect(() => {
+    if (location.pathname === "/") {
+      const params = new URLSearchParams(location.search);
+      const searchParam = params.get("search") || "";
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSearchValue(searchParam);
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSearchValue(""); // очищаем на других страницах
+    }
+  }, [location]);
 
   const redirectToLogin: MouseEventHandler<HTMLElement> = (event) => {
     event.preventDefault();
     navigate("/login");
+  };
+
+  const handleLogout = () => {
+    const userId = authStorage.getUserData<string>();
+    authStorage.clearAllAuthData();
+    useUserStore.getState().clear();
+    if (userId) {
+      const keysToDelete: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(`voxfox_${userId}_`)) {
+          keysToDelete.push(key);
+        }
+      }
+      keysToDelete.forEach(k => localStorage.removeItem(k));
+    }
+    navigate("/");
+    window.location.reload();
+  };
+
+  const handleHeaderSearch = (value: string) => {
+    const trimmed = value.trim();
+    if (trimmed) {
+      navigate(`/?search=${encodeURIComponent(trimmed)}`);
+    } else {
+      navigate("/");
+    }
   };
 
   useEffect(() => {
@@ -100,6 +141,9 @@ const Header = () => {
                   allowClear
                   prefix={<SearchOutlined style={{ color: "#52c41a" }} />}
                   style={{ width: 240, borderRadius: 20 }}
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  onSearch={handleHeaderSearch}
               />
               {!isAuth && (
                   <Button icon={<LoginOutlined />} onClick={redirectToLogin}>
@@ -133,12 +177,7 @@ const Header = () => {
                         icon={<LogoutOutlined />}
                         type="text"
                         danger
-                        onClick={() => {
-                          authStorage.clearAllAuthData();
-                          useUserStore.getState().clear();
-                          navigate("/");
-                          window.location.reload();
-                        }}
+                        onClick={handleLogout}
                     />
                   </>
               )}
