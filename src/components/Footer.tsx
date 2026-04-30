@@ -16,10 +16,6 @@ import {
   MailOutlined,
   PhoneOutlined,
   EnvironmentOutlined,
-  FacebookOutlined,
-  TwitterOutlined,
-  InstagramOutlined,
-  GithubOutlined,
   ArrowRightOutlined,
 } from "@ant-design/icons";
 import { gradients } from "../theme";
