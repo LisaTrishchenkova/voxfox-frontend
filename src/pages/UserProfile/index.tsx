@@ -1,4 +1,18 @@
-import { Avatar, Divider, Layout, Menu, Row, Col, Spin, Tag, Typography, Button, Form, Input, message } from "antd";
+import {
+  Avatar,
+  Divider,
+  Layout,
+  Menu,
+  Row,
+  Col,
+  Spin,
+  Tag,
+  Typography,
+  Button,
+  Form,
+  Input,
+  message,
+} from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -20,6 +34,7 @@ import type { EnrollmentDto } from "../../api/types/enrollment.ts";
 import type { FavoriteDto } from "../../api/types/favorite.ts";
 import CardCourse from "../../components/CardCourse";
 import { useUserStore, getAvatarUrl } from "../../stores/userStore.ts";
+import { clearUserCourseData } from "../../utils/storage.ts";
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -95,7 +110,7 @@ const UserProfilePage = () => {
           keysToDelete.push(key);
         }
       }
-      keysToDelete.forEach(k => localStorage.removeItem(k));
+      keysToDelete.forEach((k) => localStorage.removeItem(k));
     }
     navigate("/");
     window.location.reload();
@@ -115,7 +130,10 @@ const UserProfilePage = () => {
 
   const handleSaveProfile = async (values: { name: string; bio?: string }) => {
     setSavingProfile(true);
-    const ok = await userApi.updateProfile({ name: values.name, bio: values.bio ?? null });
+    const ok = await userApi.updateProfile({
+      name: values.name,
+      bio: values.bio ?? null,
+    });
     if (ok) {
       message.success("Профиль обновлён");
       await fetchUser();
@@ -128,7 +146,10 @@ const UserProfilePage = () => {
     setSavingProfile(false);
   };
 
-  const handleSavePassword = async (values: { oldPassword: string; newPassword: string }) => {
+  const handleSavePassword = async (values: {
+    oldPassword: string;
+    newPassword: string;
+  }) => {
     setSavingPassword(true);
     const ok = await userApi.changePassword({
       oldPassword: values.oldPassword,
@@ -152,300 +173,349 @@ const UserProfilePage = () => {
 
   if (loading)
     return (
-        <>
-          <Header />
-          <div style={{ display: "flex", justifyContent: "center", paddingTop: 80 }}>
-            <Spin size="large" />
-          </div>
-        </>
+      <>
+        <Header />
+        <div
+          style={{ display: "flex", justifyContent: "center", paddingTop: 80 }}
+        >
+          <Spin size="large" />
+        </div>
+      </>
     );
 
   return (
-      <>
-        <Header />
-        <Layout style={{ minHeight: "calc(100vh - 64px)" }}>
-          <Sider
-              width={260}
-              style={{ background: "#fff", borderRight: "1px solid #f0f0f0" }}
-              theme="light"
-          >
-            <input
-                type="file"
-                accept=".jpg,.jpeg,.png,.webp"
-                style={{ display: "none" }}
-                id="avatar-upload"
-                onChange={handleAvatarChange}
-            />
+    <>
+      <Header />
+      <Layout style={{ minHeight: "calc(100vh - 64px)" }}>
+        <Sider
+          width={260}
+          style={{ background: "#fff", borderRight: "1px solid #f0f0f0" }}
+          theme="light"
+        >
+          <input
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp"
+            style={{ display: "none" }}
+            id="avatar-upload"
+            onChange={handleAvatarChange}
+          />
 
-            <div
-                style={{
-                  padding: "32px 16px 16px",
-                  textAlign: "center",
-                  borderBottom: "1px solid #f0f0f0",
-                  cursor: "pointer",
-                }}
-                onClick={() => document.getElementById("avatar-upload")?.click()}
-                title="Нажмите чтобы изменить аватар"
-            >
-              <Avatar
-                  size={72}
-                  src={getAvatarUrl(userData?.avatarUrl)}
-                  icon={!userData?.avatarUrl && <UserOutlined />}
-                  style={{
-                    background: userData?.avatarUrl
-                        ? undefined
-                        : "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
-                    marginBottom: 12,
-                  }}
-              />
-              {userData && (
-                  <div>
-                    <Text strong style={{ fontSize: 15 }}>{userData.name}</Text>
-                  </div>
-              )}
-              {me && (
-                  <Tag color="green" style={{ marginTop: 8 }}>
-                    {roleLabels[me.role] ?? me.role}
-                  </Tag>
-              )}
-              <div style={{ marginTop: 6 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  Нажмите для смены фото
+          <div
+            style={{
+              padding: "32px 16px 16px",
+              textAlign: "center",
+              borderBottom: "1px solid #f0f0f0",
+              cursor: "pointer",
+            }}
+            onClick={() => document.getElementById("avatar-upload")?.click()}
+            title="Нажмите чтобы изменить аватар"
+          >
+            <Avatar
+              size={72}
+              src={getAvatarUrl(userData?.avatarUrl)}
+              icon={!userData?.avatarUrl && <UserOutlined />}
+              style={{
+                background: userData?.avatarUrl
+                  ? undefined
+                  : "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
+                marginBottom: 12,
+              }}
+            />
+            {userData && (
+              <div>
+                <Text strong style={{ fontSize: 15 }}>
+                  {userData.name}
                 </Text>
               </div>
+            )}
+            {me && (
+              <Tag color="green" style={{ marginTop: 8 }}>
+                {roleLabels[me.role] ?? me.role}
+              </Tag>
+            )}
+            <div style={{ marginTop: 6 }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Нажмите для смены фото
+              </Text>
             </div>
+          </div>
 
-            <Menu
-                mode="inline"
-                selectedKeys={[activeSection]}
-                style={{ borderRight: 0, paddingTop: 8 }}
-                items={menuItems}
-                onClick={({ key }) => setActiveSection(key as Section)}
-            />
+          <Menu
+            mode="inline"
+            selectedKeys={[activeSection]}
+            style={{ borderRight: 0, paddingTop: 8 }}
+            items={menuItems}
+            onClick={({ key }) => setActiveSection(key as Section)}
+          />
 
-            <div style={{ padding: "16px", position: "absolute", bottom: 0, width: "100%" }}>
-              <Button danger block icon={<LogoutOutlined />} onClick={handleLogout}>
-                Выйти
-              </Button>
-            </div>
-          </Sider>
+          <div
+            style={{
+              padding: "16px",
+              position: "absolute",
+              bottom: 0,
+              width: "100%",
+            }}
+          >
+            <Button
+              danger
+              block
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+            >
+              Выйти
+            </Button>
+          </div>
+        </Sider>
 
-          <Content style={{ padding: "40px 60px", background: "#fafafa" }}>
-            {activeSection === "profile" && me && (
-                <div style={{ maxWidth: 600 }}>
-                  <Title level={3}>Мои данные</Title>
+        <Content style={{ padding: "40px 60px", background: "#fafafa" }}>
+          {activeSection === "profile" && me && (
+            <div style={{ maxWidth: 600 }}>
+              <Title level={3}>Мои данные</Title>
+              <Divider />
+
+              {/* Просмотр / редактирование профиля */}
+              {!editingProfile ? (
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 16 }}
+                >
+                  <div>
+                    <Text type="secondary">Имя</Text>
+                    <div>
+                      <Text strong>{me.name}</Text>
+                    </div>
+                  </div>
+                  <div>
+                    <Text type="secondary">Email</Text>
+                    <div>
+                      <Text strong>{me.email}</Text>
+                    </div>
+                  </div>
+                  <div>
+                    <Text type="secondary">О себе</Text>
+                    <div>
+                      <Text>
+                        {me.bio ?? (
+                          <Text type="secondary" italic>
+                            Не указано
+                          </Text>
+                        )}
+                      </Text>
+                    </div>
+                  </div>
+                  <div>
+                    <Text type="secondary">Роль</Text>
+                    <div>
+                      <Tag color="green">{roleLabels[me.role] ?? me.role}</Tag>
+                    </div>
+                  </div>
+                  <div>
+                    <Text type="secondary">Дата регистрации</Text>
+                    <div>
+                      <Text>
+                        {new Date(me.createdAt).toLocaleDateString("ru-RU", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </Text>
+                    </div>
+                  </div>
+                  {/*<div>*/}
+                  {/*  <Text type="secondary">Email подтверждён</Text>*/}
+                  {/*  <div>*/}
+                  {/*    <Tag color={me.isEmailVerified ? "green" : "orange"}>*/}
+                  {/*      {me.isEmailVerified ? "Да" : "Нет"}*/}
+                  {/*    </Tag>*/}
+                  {/*  </div>*/}
+                  {/*</div>*/}
+                  <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                    <Button
+                      icon={<EditOutlined />}
+                      onClick={() => {
+                        profileForm.setFieldsValue({
+                          name: me.name,
+                          bio: me.bio ?? "",
+                        });
+                        setEditingProfile(true);
+                        setEditingPassword(false);
+                      }}
+                    >
+                      Редактировать профиль
+                    </Button>
+                    <Button
+                      icon={<LockOutlined />}
+                      onClick={() => {
+                        setEditingPassword(true);
+                        setEditingProfile(false);
+                      }}
+                    >
+                      Сменить пароль
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                /* Форма редактирования профиля */
+                <Form
+                  form={profileForm}
+                  layout="vertical"
+                  onFinish={handleSaveProfile}
+                  requiredMark={false}
+                >
+                  <Form.Item
+                    label="Имя"
+                    name="name"
+                    rules={[
+                      { required: true, message: "Введите имя" },
+                      { min: 2, message: "Минимум 2 символа" },
+                      { max: 100, message: "Максимум 100 символов" },
+                    ]}
+                  >
+                    <Input size="large" />
+                  </Form.Item>
+                  <Form.Item
+                    label="О себе"
+                    name="bio"
+                    rules={[{ max: 500, message: "Максимум 500 символов" }]}
+                  >
+                    <Input.TextArea
+                      rows={4}
+                      placeholder="Расскажите о себе..."
+                    />
+                  </Form.Item>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={savingProfile}
+                      style={{ background: "rgba(0,100,0,0.8)" }}
+                    >
+                      Сохранить
+                    </Button>
+                    <Button onClick={() => setEditingProfile(false)}>
+                      Отмена
+                    </Button>
+                  </div>
+                </Form>
+              )}
+
+              {/* Форма смены пароля */}
+              {editingPassword && !editingProfile && (
+                <>
                   <Divider />
-
-                  {/* Просмотр / редактирование профиля */}
-                  {!editingProfile ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                        <div>
-                          <Text type="secondary">Имя</Text>
-                          <div><Text strong>{me.name}</Text></div>
-                        </div>
-                        <div>
-                          <Text type="secondary">Email</Text>
-                          <div><Text strong>{me.email}</Text></div>
-                        </div>
-                        <div>
-                          <Text type="secondary">О себе</Text>
-                          <div>
-                            <Text>{me.bio ?? <Text type="secondary" italic>Не указано</Text>}</Text>
-                          </div>
-                        </div>
-                        <div>
-                          <Text type="secondary">Роль</Text>
-                          <div>
-                            <Tag color="green">{roleLabels[me.role] ?? me.role}</Tag>
-                          </div>
-                        </div>
-                        <div>
-                          <Text type="secondary">Дата регистрации</Text>
-                          <div>
-                            <Text>
-                              {new Date(me.createdAt).toLocaleDateString("ru-RU", {
-                                day: "numeric",
-                                month: "long",
-                                year: "numeric",
-                              })}
-                            </Text>
-                          </div>
-                        </div>
-                        {/*<div>*/}
-                        {/*  <Text type="secondary">Email подтверждён</Text>*/}
-                        {/*  <div>*/}
-                        {/*    <Tag color={me.isEmailVerified ? "green" : "orange"}>*/}
-                        {/*      {me.isEmailVerified ? "Да" : "Нет"}*/}
-                        {/*    </Tag>*/}
-                        {/*  </div>*/}
-                        {/*</div>*/}
-                        <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
-                          <Button
-                              icon={<EditOutlined />}
-                              onClick={() => {
-                                profileForm.setFieldsValue({ name: me.name, bio: me.bio ?? "" });
-                                setEditingProfile(true);
-                                setEditingPassword(false);
-                              }}
-                          >
-                            Редактировать профиль
-                          </Button>
-                          <Button
-                              icon={<LockOutlined />}
-                              onClick={() => {
-                                setEditingPassword(true);
-                                setEditingProfile(false);
-                              }}
-                          >
-                            Сменить пароль
-                          </Button>
-                        </div>
-                      </div>
-                  ) : (
-                      /* Форма редактирования профиля */
-                      <Form
-                          form={profileForm}
-                          layout="vertical"
-                          onFinish={handleSaveProfile}
-                          requiredMark={false}
+                  <Title level={4}>Смена пароля</Title>
+                  <Form
+                    form={passwordForm}
+                    layout="vertical"
+                    onFinish={handleSavePassword}
+                    requiredMark={false}
+                  >
+                    <Form.Item
+                      label="Текущий пароль"
+                      name="oldPassword"
+                      rules={[
+                        { required: true, message: "Введите текущий пароль" },
+                      ]}
+                    >
+                      <Input.Password size="large" />
+                    </Form.Item>
+                    <Form.Item
+                      label="Новый пароль"
+                      name="newPassword"
+                      rules={[
+                        { required: true, message: "Введите новый пароль" },
+                        { min: 8, message: "Минимум 8 символов" },
+                      ]}
+                    >
+                      <Input.Password size="large" />
+                    </Form.Item>
+                    <Form.Item
+                      label="Повторите новый пароль"
+                      name="confirmPassword"
+                      dependencies={["newPassword"]}
+                      rules={[
+                        { required: true, message: "Повторите пароль" },
+                        ({ getFieldValue }) => ({
+                          validator(_, value) {
+                            if (
+                              !value ||
+                              getFieldValue("newPassword") === value
+                            )
+                              return Promise.resolve();
+                            return Promise.reject(
+                              new Error("Пароли не совпадают"),
+                            );
+                          },
+                        }),
+                      ]}
+                    >
+                      <Input.Password size="large" />
+                    </Form.Item>
+                    <div style={{ display: "flex", gap: 12 }}>
+                      <Button
+                        type="primary"
+                        htmlType="submit"
+                        loading={savingPassword}
+                        style={{ background: "rgba(0,100,0,0.8)" }}
                       >
-                        <Form.Item
-                            label="Имя"
-                            name="name"
-                            rules={[
-                              { required: true, message: "Введите имя" },
-                              { min: 2, message: "Минимум 2 символа" },
-                              { max: 100, message: "Максимум 100 символов" },
-                            ]}
-                        >
-                          <Input size="large" />
-                        </Form.Item>
-                        <Form.Item
-                            label="О себе"
-                            name="bio"
-                            rules={[{ max: 500, message: "Максимум 500 символов" }]}
-                        >
-                          <Input.TextArea rows={4} placeholder="Расскажите о себе..." />
-                        </Form.Item>
-                        <div style={{ display: "flex", gap: 12 }}>
-                          <Button
-                              type="primary"
-                              htmlType="submit"
-                              loading={savingProfile}
-                              style={{ background: "rgba(0,100,0,0.8)" }}
-                          >
-                            Сохранить
-                          </Button>
-                          <Button onClick={() => setEditingProfile(false)}>
-                            Отмена
-                          </Button>
-                        </div>
-                      </Form>
-                  )}
+                        Сохранить
+                      </Button>
+                      <Button onClick={() => setEditingPassword(false)}>
+                        Отмена
+                      </Button>
+                    </div>
+                  </Form>
+                </>
+              )}
+            </div>
+          )}
 
-                  {/* Форма смены пароля */}
-                  {editingPassword && !editingProfile && (
-                      <>
-                        <Divider />
-                        <Title level={4}>Смена пароля</Title>
-                        <Form
-                            form={passwordForm}
-                            layout="vertical"
-                            onFinish={handleSavePassword}
-                            requiredMark={false}
-                        >
-                          <Form.Item
-                              label="Текущий пароль"
-                              name="oldPassword"
-                              rules={[{ required: true, message: "Введите текущий пароль" }]}
-                          >
-                            <Input.Password size="large" />
-                          </Form.Item>
-                          <Form.Item
-                              label="Новый пароль"
-                              name="newPassword"
-                              rules={[
-                                { required: true, message: "Введите новый пароль" },
-                                { min: 8, message: "Минимум 8 символов" },
-                              ]}
-                          >
-                            <Input.Password size="large" />
-                          </Form.Item>
-                          <Form.Item
-                              label="Повторите новый пароль"
-                              name="confirmPassword"
-                              dependencies={["newPassword"]}
-                              rules={[
-                                { required: true, message: "Повторите пароль" },
-                                ({ getFieldValue }) => ({
-                                  validator(_, value) {
-                                    if (!value || getFieldValue("newPassword") === value)
-                                      return Promise.resolve();
-                                    return Promise.reject(new Error("Пароли не совпадают"));
-                                  },
-                                }),
-                              ]}
-                          >
-                            <Input.Password size="large" />
-                          </Form.Item>
-                          <div style={{ display: "flex", gap: 12 }}>
-                            <Button
-                                type="primary"
-                                htmlType="submit"
-                                loading={savingPassword}
-                                style={{ background: "rgba(0,100,0,0.8)" }}
-                            >
-                              Сохранить
-                            </Button>
-                            <Button onClick={() => setEditingPassword(false)}>
-                              Отмена
-                            </Button>
-                          </div>
-                        </Form>
-                      </>
+          {activeSection === "courses" && (
+            <div>
+              <Title level={3}>Мои курсы</Title>
+              <Divider />
+              {enrollments.length === 0 ? (
+                <Text type="secondary">Вы ещё не записаны ни на один курс</Text>
+              ) : (
+                <Row gutter={[24, 24]}>
+                  {enrollments.map(
+                    (e) =>
+                      e.course && (
+                        <Col key={e.id} xs={24} sm={12} lg={8}>
+                          <CardCourse course={e.course} />
+                        </Col>
+                      ),
                   )}
-                </div>
-            )}
+                </Row>
+              )}
+            </div>
+          )}
 
-            {activeSection === "courses" && (
-                <div>
-                  <Title level={3}>Мои курсы</Title>
-                  <Divider />
-                  {enrollments.length === 0 ? (
-                      <Text type="secondary">Вы ещё не записаны ни на один курс</Text>
-                  ) : (
-                      <Row gutter={[24, 24]}>
-                        {enrollments.map(e => e.course && (
-                            <Col key={e.id} xs={24} sm={12} lg={8}>
-                              <CardCourse course={e.course} />
-                            </Col>
-                        ))}
-                      </Row>
+          {activeSection === "favorites" && (
+            <div>
+              <Title level={3}>Избранное</Title>
+              <Divider />
+              {favorites.length === 0 ? (
+                <Text type="secondary">
+                  Вы ещё не добавили курсы в избранное
+                </Text>
+              ) : (
+                <Row gutter={[24, 24]}>
+                  {favorites.map(
+                    (f) =>
+                      f.course && (
+                        <Col key={f.id} xs={24} sm={12} lg={8}>
+                          <CardCourse course={f.course} isFavorite={true} />
+                        </Col>
+                      ),
                   )}
-                </div>
-            )}
-
-            {activeSection === "favorites" && (
-                <div>
-                  <Title level={3}>Избранное</Title>
-                  <Divider />
-                  {favorites.length === 0 ? (
-                      <Text type="secondary">Вы ещё не добавили курсы в избранное</Text>
-                  ) : (
-                      <Row gutter={[24, 24]}>
-                        {favorites.map(f => f.course && (
-                            <Col key={f.id} xs={24} sm={12} lg={8}>
-                              <CardCourse course={f.course} isFavorite={true} />
-                            </Col>
-                        ))}
-                      </Row>
-                  )}
-                </div>
-            )}
-          </Content>
-        </Layout>
-        <Footer />
-      </>
+                </Row>
+              )}
+            </div>
+          )}
+        </Content>
+      </Layout>
+      <Footer />
+    </>
   );
 };
 
