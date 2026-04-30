@@ -12,6 +12,7 @@ import {
   Spin,
   Tag,
   Typography,
+  message,
 } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -36,6 +37,10 @@ import {
 import ReactMarkdown from "react-markdown";
 import Header from "../../components/Header.tsx";
 import Footer from "../../components/Footer.tsx";
+import leoProfanity from "leo-profanity";
+
+// подключаем русский словарь для фильтрации нецензурных слов
+leoProfanity.loadDictionary("ru");
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -415,6 +420,64 @@ const CourseLearningPage = () => {
   const [newQuestion, setNewQuestion] = useState("");
   const [submittingQuestion, setSubmittingQuestion] = useState(false);
 
+  const fetchLesson = async (lessonId: string) => {
+    setLoadingLesson(true);
+    setTasks([]);
+    setSubmissions({});
+    setAnswers({});
+    setQuestions([]);
+    setSelectedLessonId(lessonId);
+    localStorage.setItem(LAST_LESSON_KEY, lessonId);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    try {
+      const [lessonRes, tasksRes] = await Promise.all([
+        fetch(`${API_URL}/Lessons/${lessonId}`, {
+          headers: authStorage.getAuthHeaders(),
+        }),
+        fetch(`${API_URL}/lessons/${lessonId}/tasks`, {
+          headers: authStorage.getAuthHeaders(),
+        }),
+      ]);
+      if (!lessonRes.ok) return;
+      setSelectedLesson(await lessonRes.json());
+
+      const tasksData: TaskStudentDto[] = tasksRes.ok
+        ? await tasksRes.json()
+        : [];
+      setTasks(tasksData);
+
+      if (tasksData.length > 0) {
+        const submissionsMap: Record<string, TaskSubmissionDto[]> = {};
+        await Promise.all(
+          tasksData.map(async (task) => {
+            try {
+              const subRes = await fetch(
+                `${API_URL}/tasks/${task.id}/my-submission`,
+                {
+                  headers: authStorage.getAuthHeaders(),
+                },
+              );
+              if (subRes.ok) {
+                const sub: TaskSubmissionDto = await subRes.json();
+                submissionsMap[task.id] = [sub];
+              }
+            } catch {
+              // нет submission
+            }
+          }),
+        );
+        setSubmissions(submissionsMap);
+      }
+
+      const qs = await questionApi.getLessonQuestions(lessonId);
+      setQuestions(qs);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingLesson(false);
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -502,64 +565,6 @@ const CourseLearningPage = () => {
     }
   };
 
-  const fetchLesson = async (lessonId: string) => {
-    setLoadingLesson(true);
-    setTasks([]);
-    setSubmissions({});
-    setAnswers({});
-    setQuestions([]);
-    setSelectedLessonId(lessonId);
-    localStorage.setItem(LAST_LESSON_KEY, lessonId);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    try {
-      const [lessonRes, tasksRes] = await Promise.all([
-        fetch(`${API_URL}/Lessons/${lessonId}`, {
-          headers: authStorage.getAuthHeaders(),
-        }),
-        fetch(`${API_URL}/lessons/${lessonId}/tasks`, {
-          headers: authStorage.getAuthHeaders(),
-        }),
-      ]);
-      if (!lessonRes.ok) return;
-      setSelectedLesson(await lessonRes.json());
-
-      const tasksData: TaskStudentDto[] = tasksRes.ok
-        ? await tasksRes.json()
-        : [];
-      setTasks(tasksData);
-
-      if (tasksData.length > 0) {
-        const submissionsMap: Record<string, TaskSubmissionDto[]> = {};
-        await Promise.all(
-          tasksData.map(async (task) => {
-            try {
-              const subRes = await fetch(
-                `${API_URL}/tasks/${task.id}/my-submission`,
-                {
-                  headers: authStorage.getAuthHeaders(),
-                },
-              );
-              if (subRes.ok) {
-                const sub: TaskSubmissionDto = await subRes.json();
-                submissionsMap[task.id] = [sub];
-              }
-            } catch {
-              // нет submission
-            }
-          }),
-        );
-        setSubmissions(submissionsMap);
-      }
-
-      const qs = await questionApi.getLessonQuestions(lessonId);
-      setQuestions(qs);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoadingLesson(false);
-    }
-  };
-
   const completeCurrentLesson = async () => {
     if (!selectedLessonId || completedLessons.has(selectedLessonId)) return;
     try {
@@ -614,6 +619,15 @@ const CourseLearningPage = () => {
 
   const handleAskQuestion = async () => {
     if (!newQuestion.trim() || !selectedLessonId) return;
+
+    // проверка на нецензурные слова
+    if (leoProfanity.check(newQuestion.trim())) {
+      message.error(
+        "Вопрос содержит недопустимые слова. Пожалуйста, используйте корректные выражения.",
+      );
+      return;
+    }
+
     setSubmittingQuestion(true);
     const result = await questionApi.createQuestion(selectedLessonId, {
       text: newQuestion,
@@ -621,11 +635,20 @@ const CourseLearningPage = () => {
     if (result) {
       setQuestions((prev) => [result, ...prev]);
       setNewQuestion("");
+      message.success("Вопрос отправлен!");
     }
     setSubmittingQuestion(false);
   };
 
   const handleAnswerQuestion = async (questionId: string, text: string) => {
+    // проверка на нецензурные слова
+    if (leoProfanity.check(text.trim())) {
+      message.error(
+        "Ответ содержит недопустимые слова. Пожалуйста, используйте корректные выражения.",
+      );
+      return;
+    }
+
     const result = await questionApi.answerQuestion(questionId, {
       answerText: text,
     });
