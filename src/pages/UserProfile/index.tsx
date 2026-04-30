@@ -34,7 +34,7 @@ import type { EnrollmentDto } from "../../api/types/enrollment.ts";
 import type { FavoriteDto } from "../../api/types/favorite.ts";
 import CardCourse from "../../components/CardCourse";
 import { useUserStore, getAvatarUrl } from "../../stores/userStore.ts";
-import { clearUserCourseData } from "../../utils/storage.ts";
+
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
