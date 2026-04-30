@@ -109,7 +109,7 @@ jobs:
         id: upload
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-${{ github.sha }}
           path: |
@@ -157,7 +157,7 @@ jobs:
       - name: Upload build artifact
         id: upload_build
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-${{ github.sha }}
           path: dist/
