@@ -15,6 +15,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/logo.jpg";
 import { authStorage } from "../services/auth-storage.service";
 import { useUserStore, getAvatarUrl } from "../stores/userStore";
+import { clearUserCourseData } from "../utils/storage.ts";
 
 const { Title } = Typography;
 
@@ -46,16 +47,7 @@ const Header = () => {
     const userId = authStorage.getUserData<string>();
     authStorage.clearAllAuthData();
     useUserStore.getState().clear();
-    if (userId) {
-      const keysToDelete: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(`voxfox_${userId}_`)) {
-          keysToDelete.push(key);
-        }
-      }
-      keysToDelete.forEach(k => localStorage.removeItem(k));
-    }
+    if (userId) clearUserCourseData(userId);
     navigate("/");
     window.location.reload();
   };

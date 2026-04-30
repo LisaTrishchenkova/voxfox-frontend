@@ -20,6 +20,7 @@ import type { EnrollmentDto } from "../../api/types/enrollment.ts";
 import type { FavoriteDto } from "../../api/types/favorite.ts";
 import CardCourse from "../../components/CardCourse";
 import { useUserStore, getAvatarUrl } from "../../stores/userStore.ts";
+import { clearUserCourseData } from "../../utils/storage.ts";
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -86,17 +87,7 @@ const UserProfilePage = () => {
     const userId = authStorage.getUserData<string>();
     authStorage.clearAllAuthData();
     useUserStore.getState().clear();
-    // чистим все данные пользователя из localStorage
-    if (userId) {
-      const keysToDelete: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(`voxfox_${userId}_`)) {
-          keysToDelete.push(key);
-        }
-      }
-      keysToDelete.forEach(k => localStorage.removeItem(k));
-    }
+    if (userId) clearUserCourseData(userId);
     navigate("/");
     window.location.reload();
   };

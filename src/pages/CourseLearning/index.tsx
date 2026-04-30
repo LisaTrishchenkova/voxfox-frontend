@@ -12,6 +12,7 @@ import ReactMarkdown from "react-markdown";
 import Header from "../../components/Header.tsx";
 import Footer from "../../components/Footer.tsx";
 
+
 const {Sider, Content} = Layout;
 const {Title, Text} = Typography;
 
@@ -223,17 +224,7 @@ const QuestionCard = ({
     );
 };
 
-// утилита для очистки всех данных пользователя из localStorage
-// export const clearUserCourseData = (userId: string) => {
-//     const keysToDelete: string[] = [];
-//     for (let i = 0; i < localStorage.length; i++) {
-//         const key = localStorage.key(i);
-//         if (key && key.startsWith(`voxfox_${userId}_`)) {
-//             keysToDelete.push(key);
-//         }
-//     }
-//     keysToDelete.forEach(k => localStorage.removeItem(k));
-// };
+//утилита для очистки всех данных пользователя из localStorage
 
 const CourseLearningPage = () => {
     const {id} = useParams<{id: string}>();
