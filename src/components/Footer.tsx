@@ -65,7 +65,7 @@ const Footer = () => {
                 Готовы начать свой путь?
               </Title>
               <Text style={{ color: "#595959", fontSize: 16 }}>
-                Присоединяйтесь к 50,000+ учащимся, которые уже развивают свои
+                Присоединяйтесь к учащимся, которые уже развивают свои
                 навыки на VoxFox
               </Text>
             </Col>
@@ -126,36 +126,9 @@ const Footer = () => {
               </div>
 
               <Text style={{ color: "#595959", lineHeight: 1.6 }}>
-                Образовательная платформа нового поколения. Развивайте навыки
+                Образовательная платформа. Развивайте навыки
                 через практику и сообщество.
               </Text>
-
-              <Space size="middle">
-                <Button
-                  type="text"
-                  shape="circle"
-                  icon={<FacebookOutlined style={{ color: "#52c41a" }} />}
-                  style={{ width: 40, height: 40, border: "1px solid #e8f5e9" }}
-                />
-                <Button
-                  type="text"
-                  shape="circle"
-                  icon={<TwitterOutlined style={{ color: "#52c41a" }} />}
-                  style={{ width: 40, height: 40, border: "1px solid #e8f5e9" }}
-                />
-                <Button
-                  type="text"
-                  shape="circle"
-                  icon={<InstagramOutlined style={{ color: "#52c41a" }} />}
-                  style={{ width: 40, height: 40, border: "1px solid #e8f5e9" }}
-                />
-                <Button
-                  type="text"
-                  shape="circle"
-                  icon={<GithubOutlined style={{ color: "#52c41a" }} />}
-                  style={{ width: 40, height: 40, border: "1px solid #e8f5e9" }}
-                />
-              </Space>
             </Space>
           </Col>
 
@@ -243,7 +216,7 @@ const Footer = () => {
                 {
                   icon: <MailOutlined />,
                   label: "Email",
-                  value: "support@voxfox.com",
+                  value: "voxfox@gmail.com",
                 },
                 {
                   icon: <PhoneOutlined />,
@@ -253,7 +226,7 @@ const Footer = () => {
                 {
                   icon: <EnvironmentOutlined />,
                   label: "Адрес",
-                  value: "Москва, ул. Примерная, 123",
+                  value: "Смоленск, ул. Генерала Паскевича, 7",
                 },
               ].map((item, idx) => (
                 <Space key={idx}>
