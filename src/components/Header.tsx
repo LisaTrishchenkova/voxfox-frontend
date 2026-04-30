@@ -52,16 +52,7 @@ const Header = () => {
     const userId = authStorage.getUserData<string>();
     authStorage.clearAllAuthData();
     useUserStore.getState().clear();
-    if (userId) {
-      const keysToDelete: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(`voxfox_${userId}_`)) {
-          keysToDelete.push(key);
-        }
-      }
-      keysToDelete.forEach((k) => localStorage.removeItem(k));
-    }
+    if (userId) clearUserCourseData(userId);
     navigate("/");
     window.location.reload();
   };

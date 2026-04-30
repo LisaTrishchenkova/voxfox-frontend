@@ -24,6 +24,7 @@
     "antd": "^6.1.0",
     "antd-dayjs-webpack-plugin": "^1.0.6",
     "axios": "^1.13.5",
+    "leo-profanity": "^1.9.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.4",
     "react-markdown": "^10.1.0",
