@@ -22,7 +22,8 @@ export const notificationApi = {
             });
             if (!res.ok) return 0;
             const data = await res.json();
-            return data.count ?? 0;
+            // бэк возвращает просто int, не { count }
+            return typeof data === "number" ? data : (data.count ?? 0);
         } catch {
             return 0;
         }

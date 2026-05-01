@@ -14,8 +14,8 @@ import {
   Typography,
   message,
 } from "antd";
-import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 import type { LessonDto, SectionDto } from "../../api/types/course.ts";
 import type {
   TaskStudentDto,
@@ -39,20 +39,19 @@ import Header from "../../components/Header.tsx";
 import Footer from "../../components/Footer.tsx";
 import leoProfanity from "leo-profanity";
 
-// подключаем русский словарь для фильтрации нецензурных слов
 leoProfanity.loadDictionary("ru");
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
 const TaskCard = ({
-  task,
-  answer,
-  submissions,
-  submitting,
-  onAnswerChange,
-  onSubmit,
-}: {
+                    task,
+                    answer,
+                    submissions,
+                    submitting,
+                    onAnswerChange,
+                    onSubmit,
+                  }: {
   task: TaskStudentDto;
   answer?: SubmitTaskRequest;
   submissions: TaskSubmissionDto[];
@@ -71,20 +70,20 @@ const TaskCard = ({
   const displayAnswer = (): string | null => {
     if (!isCorrect || !correctSubmission) return null;
     if (
-      task.type === "SingleChoice" &&
-      correctSubmission.answerIndex != null &&
-      task.options
+        task.type === "SingleChoice" &&
+        correctSubmission.answerIndex != null &&
+        task.options
     ) {
       return task.options[correctSubmission.answerIndex] ?? null;
     }
     if (
-      task.type === "MultiChoice" &&
-      correctSubmission.answerIndexes &&
-      task.options
+        task.type === "MultiChoice" &&
+        correctSubmission.answerIndexes &&
+        task.options
     ) {
       return correctSubmission.answerIndexes
-        .map((i) => task.options![i])
-        .join(", ");
+          .map((i) => task.options![i])
+          .join(", ");
     }
     if (task.type === "TextInput") {
       return correctSubmission.answerText ?? null;
@@ -95,157 +94,159 @@ const TaskCard = ({
   const userAnswer = displayAnswer();
 
   return (
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 12,
-        padding: 24,
-        marginTop: 16,
-        border: "1px solid #f0f0f0",
-      }}
-    >
       <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 4,
-        }}
+          style={{
+            background: "#fff",
+            borderRadius: 12,
+            padding: 24,
+            marginTop: 16,
+            border: "1px solid #f0f0f0",
+          }}
       >
-        {isCorrect ? (
-          <CheckCircleFilled style={{ color: "#52c41a", fontSize: 16 }} />
-        ) : (
-          <CheckCircleOutlined style={{ color: "#d9d9d9", fontSize: 16 }} />
+        <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 4,
+            }}
+        >
+          {isCorrect ? (
+              <CheckCircleFilled style={{ color: "#52c41a", fontSize: 16 }} />
+          ) : (
+              <CheckCircleOutlined style={{ color: "#d9d9d9", fontSize: 16 }} />
+          )}
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            {task.isRequired ? "Обязательное" : "Необязательное"} · {task.points}{" "}
+            очков
+          </Text>
+        </div>
+        <Title level={5} style={{ marginTop: 8, marginBottom: 16 }}>
+          {task.question}
+        </Title>
+
+        {task.type === "SingleChoice" && task.options && (
+            <Radio.Group
+                disabled={isCorrect}
+                value={
+                  isCorrect ? correctSubmission?.answerIndex : answer?.answerIndex
+                }
+                onChange={(e) => onAnswerChange({ answerIndex: e.target.value })}
+                style={{ width: "100%" }}
+            >
+              <Space direction="vertical" style={{ width: "100%" }}>
+                {task.options.map((opt, i) => (
+                    <Radio key={i} value={i}>
+                      {opt}
+                    </Radio>
+                ))}
+              </Space>
+            </Radio.Group>
         )}
-        <Text type="secondary" style={{ fontSize: 13 }}>
-          {task.isRequired ? "Обязательное" : "Необязательное"} · {task.points}{" "}
-          очков
-        </Text>
+        {task.type === "MultiChoice" && task.options && (
+            <Checkbox.Group
+                disabled={isCorrect}
+                value={
+                  isCorrect
+                      ? (correctSubmission?.answerIndexes ?? [])
+                      : (answer?.answerIndexes ?? [])
+                }
+                onChange={(vals) =>
+                    onAnswerChange({ answerIndexes: vals as number[] })
+                }
+                style={{ width: "100%" }}
+            >
+              <Space direction="vertical" style={{ width: "100%" }}>
+                {task.options.map((opt, i) => (
+                    <Checkbox key={i} value={i}>
+                      {opt}
+                    </Checkbox>
+                ))}
+              </Space>
+            </Checkbox.Group>
+        )}
+        {task.type === "TextInput" && (
+            <Input.TextArea
+                disabled={isCorrect}
+                rows={3}
+                value={
+                  isCorrect
+                      ? (correctSubmission?.answerText ?? "")
+                      : (answer?.answerText ?? "")
+                }
+                onChange={(e) => onAnswerChange({ answerText: e.target.value })}
+                placeholder="Введите ваш ответ..."
+                style={{ width: "100%" }}
+            />
+        )}
+
+        {visibleHints.map((hint, i) => (
+            <Alert
+                key={i}
+                icon={<BulbOutlined />}
+                showIcon
+                type="warning"
+                message={`Подсказка ${i + 1}`}
+                description={hint}
+                style={{ marginTop: 12 }}
+            />
+        ))}
+
+        {isCorrect && (
+            <Alert
+                style={{ marginTop: 12 }}
+                type="success"
+                message={
+                  <div>
+                    <div>Верно! +{correctSubmission?.score ?? 0} очков</div>
+                    {userAnswer && (
+                        <div style={{ marginTop: 4, fontSize: 12, color: "#555" }}>
+                          Ваш ответ: <strong>{userAnswer}</strong>
+                        </div>
+                    )}
+                  </div>
+                }
+            />
+        )}
+
+        {!isCorrect && lastSubmission && (
+            <Alert
+                style={{ marginTop: 12 }}
+                type="error"
+                message={
+                  allHintsShown
+                      ? "Все подсказки исчерпаны. Изучите материал ещё раз."
+                      : "Неверно. Попробуйте ещё раз."
+                }
+            />
+        )}
+
+        {!isCorrect && (
+            <Button
+                type="primary"
+                style={{ marginTop: 16, background: "rgba(0,100,0,0.8)" }}
+                loading={submitting}
+                onClick={onSubmit}
+            >
+              Ответить
+            </Button>
+        )}
       </div>
-      <Title level={5} style={{ marginTop: 8, marginBottom: 16 }}>
-        {task.question}
-      </Title>
-
-      {task.type === "SingleChoice" && task.options && (
-        <Radio.Group
-          disabled={isCorrect}
-          value={
-            isCorrect ? correctSubmission?.answerIndex : answer?.answerIndex
-          }
-          onChange={(e) => onAnswerChange({ answerIndex: e.target.value })}
-          style={{ width: "100%" }}
-        >
-          <Space direction="vertical" style={{ width: "100%" }}>
-            {task.options.map((opt, i) => (
-              <Radio key={i} value={i}>
-                {opt}
-              </Radio>
-            ))}
-          </Space>
-        </Radio.Group>
-      )}
-      {task.type === "MultiChoice" && task.options && (
-        <Checkbox.Group
-          disabled={isCorrect}
-          value={
-            isCorrect
-              ? (correctSubmission?.answerIndexes ?? [])
-              : (answer?.answerIndexes ?? [])
-          }
-          onChange={(vals) =>
-            onAnswerChange({ answerIndexes: vals as number[] })
-          }
-          style={{ width: "100%" }}
-        >
-          <Space direction="vertical" style={{ width: "100%" }}>
-            {task.options.map((opt, i) => (
-              <Checkbox key={i} value={i}>
-                {opt}
-              </Checkbox>
-            ))}
-          </Space>
-        </Checkbox.Group>
-      )}
-      {task.type === "TextInput" && (
-        <Input.TextArea
-          disabled={isCorrect}
-          rows={3}
-          value={
-            isCorrect
-              ? (correctSubmission?.answerText ?? "")
-              : (answer?.answerText ?? "")
-          }
-          onChange={(e) => onAnswerChange({ answerText: e.target.value })}
-          placeholder="Введите ваш ответ..."
-          style={{ width: "100%" }}
-        />
-      )}
-
-      {visibleHints.map((hint, i) => (
-        <Alert
-          key={i}
-          icon={<BulbOutlined />}
-          showIcon
-          type="warning"
-          message={`Подсказка ${i + 1}`}
-          description={hint}
-          style={{ marginTop: 12 }}
-        />
-      ))}
-
-      {isCorrect && (
-        <Alert
-          style={{ marginTop: 12 }}
-          type="success"
-          message={
-            <div>
-              <div>Верно! +{correctSubmission?.score ?? 0} очков</div>
-              {userAnswer && (
-                <div style={{ marginTop: 4, fontSize: 12, color: "#555" }}>
-                  Ваш ответ: <strong>{userAnswer}</strong>
-                </div>
-              )}
-            </div>
-          }
-        />
-      )}
-
-      {!isCorrect && lastSubmission && (
-        <Alert
-          style={{ marginTop: 12 }}
-          type="error"
-          message={
-            allHintsShown
-              ? "Все подсказки исчерпаны. Изучите материал ещё раз."
-              : "Неверно. Попробуйте ещё раз."
-          }
-        />
-      )}
-
-      {!isCorrect && (
-        <Button
-          type="primary"
-          style={{ marginTop: 16, background: "rgba(0,100,0,0.8)" }}
-          loading={submitting}
-          onClick={onSubmit}
-        >
-          Ответить
-        </Button>
-      )}
-    </div>
   );
 };
 
 const QuestionCard = ({
-  question,
-  onAnswer,
-  onDelete,
-  currentUserId,
-}: {
+                        question,
+                        onAnswer,
+                        onDelete,
+                        currentUserId,
+                        highlighted,
+                      }: {
   question: QuestionDto;
   onAnswer: (questionId: string, text: string) => Promise<void>;
   onDelete: (questionId: string) => Promise<void>;
   currentUserId: string | null;
+  highlighted?: boolean;
 }) => {
   const [answerText, setAnswerText] = useState("");
   const [showAnswerForm, setShowAnswerForm] = useState(false);
@@ -271,140 +272,144 @@ const QuestionCard = ({
   };
 
   return (
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 12,
-        padding: 20,
-        marginTop: 12,
-        border: "1px solid #f0f0f0",
-      }}
-    >
       <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: 8,
-        }}
-      >
-        <div>
-          <Text strong style={{ fontSize: 13 }}>
-            {question.authorName ?? "Аноним"}
-          </Text>
-          <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
-            {new Date(question.createdAt).toLocaleDateString("ru-RU")}
-          </Text>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {question.isAnswered ? (
-            <Tag color="green">Отвечено</Tag>
-          ) : (
-            <Tag color="orange">Без ответа</Tag>
-          )}
-          {isOwnQuestion && (
-            <Button
-              size="small"
-              danger
-              loading={deleting}
-              onClick={handleDelete}
-            >
-              Удалить
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <Text style={{ fontSize: 14 }}>{question.text}</Text>
-
-      {question.isAnswered && question.answerText && (
-        <div
           style={{
+            background: "#fff",
+            borderRadius: 12,
+            padding: 20,
             marginTop: 12,
-            padding: "12px 16px",
-            background: "rgba(0,100,0,0.05)",
-            borderRadius: 8,
-            borderLeft: "3px solid #52c41a",
+            border: highlighted ? "2px solid #52c41a" : "1px solid #f0f0f0",
+            transition: "border 0.3s",
           }}
+      >
+        <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              marginBottom: 8,
+            }}
         >
-          <Text
-            type="secondary"
-            style={{ fontSize: 12, display: "block", marginBottom: 4 }}
-          >
-            Ответ от {question.answeredByName ?? "преподавателя"}
-            {question.answeredAt &&
-              ` · ${new Date(question.answeredAt).toLocaleDateString("ru-RU")}`}
-          </Text>
-          <Text style={{ fontSize: 14 }}>{question.answerText}</Text>
-        </div>
-      )}
-
-      {canAnswer && (
-        <div style={{ marginTop: 12 }}>
-          {!showAnswerForm ? (
-            <Button size="small" onClick={() => setShowAnswerForm(true)}>
-              Ответить
-            </Button>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <Input.TextArea
-                rows={3}
-                value={answerText}
-                onChange={(e) => setAnswerText(e.target.value)}
-                placeholder="Введите ответ..."
-              />
-              <div style={{ display: "flex", gap: 8 }}>
+          <div>
+            <Text strong style={{ fontSize: 13 }}>
+              {question.authorName ?? "Аноним"}
+            </Text>
+            <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
+              {new Date(question.createdAt).toLocaleDateString("ru-RU")}
+            </Text>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {question.isAnswered ? (
+                <Tag color="green">Отвечено</Tag>
+            ) : (
+                <Tag color="orange">Без ответа</Tag>
+            )}
+            {isOwnQuestion && (
                 <Button
-                  type="primary"
-                  size="small"
-                  loading={submitting}
-                  icon={<SendOutlined />}
-                  style={{ background: "rgba(0,100,0,0.8)" }}
-                  onClick={handleAnswer}
+                    size="small"
+                    danger
+                    loading={deleting}
+                    onClick={handleDelete}
                 >
-                  Отправить
+                  Удалить
                 </Button>
-                <Button size="small" onClick={() => setShowAnswerForm(false)}>
-                  Отмена
-                </Button>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      )}
 
-      {isOwnQuestion && !question.isAnswered && (
-        <Text
-          type="secondary"
-          style={{ fontSize: 12, display: "block", marginTop: 8 }}
-        >
-          Это ваш вопрос — ожидайте ответа от преподавателя
-        </Text>
-      )}
-    </div>
+        <Text style={{ fontSize: 14 }}>{question.text}</Text>
+
+        {question.isAnswered && question.answerText && (
+            <div
+                style={{
+                  marginTop: 12,
+                  padding: "12px 16px",
+                  background: "rgba(0,100,0,0.05)",
+                  borderRadius: 8,
+                  borderLeft: "3px solid #52c41a",
+                }}
+            >
+              <Text
+                  type="secondary"
+                  style={{ fontSize: 12, display: "block", marginBottom: 4 }}
+              >
+                Ответ от {question.answeredByName ?? "преподавателя"}
+                {question.answeredAt &&
+                    ` · ${new Date(question.answeredAt).toLocaleDateString("ru-RU")}`}
+              </Text>
+              <Text style={{ fontSize: 14 }}>{question.answerText}</Text>
+            </div>
+        )}
+
+        {canAnswer && (
+            <div style={{ marginTop: 12 }}>
+              {!showAnswerForm ? (
+                  <Button size="small" onClick={() => setShowAnswerForm(true)}>
+                    Ответить
+                  </Button>
+              ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <Input.TextArea
+                        rows={3}
+                        value={answerText}
+                        onChange={(e) => setAnswerText(e.target.value)}
+                        placeholder="Введите ответ..."
+                    />
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <Button
+                          type="primary"
+                          size="small"
+                          loading={submitting}
+                          icon={<SendOutlined />}
+                          style={{ background: "rgba(0,100,0,0.8)" }}
+                          onClick={handleAnswer}
+                      >
+                        Отправить
+                      </Button>
+                      <Button size="small" onClick={() => setShowAnswerForm(false)}>
+                        Отмена
+                      </Button>
+                    </div>
+                  </div>
+              )}
+            </div>
+        )}
+
+        {isOwnQuestion && !question.isAnswered && (
+            <Text
+                type="secondary"
+                style={{ fontSize: 12, display: "block", marginTop: 8 }}
+            >
+              Это ваш вопрос — ожидайте ответа от преподавателя
+            </Text>
+        )}
+      </div>
   );
 };
 
 const CourseLearningPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // questionId из URL — для навигации из уведомлений
+  const targetQuestionId = new URLSearchParams(location.search).get("questionId");
 
   const currentUserId = authStorage.getUserData<string>();
 
-  // ключи привязаны к userId чтобы разные пользователи не видели данные друг друга
   const LAST_LESSON_KEY = `voxfox_${currentUserId}_last_lesson_${id}`;
   const COMPLETED_KEY = `voxfox_${currentUserId}_completed_${id}`;
 
   const [courseName, setCourseName] = useState("");
   const [sections, setSections] = useState<SectionDto[]>([]);
   const [lessonsBySection, setLessonsBySection] = useState<
-    Record<string, LessonDto[]>
+      Record<string, LessonDto[]>
   >({});
   const [selectedLesson, setSelectedLesson] = useState<LessonDto | null>(null);
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
   const [tasks, setTasks] = useState<TaskStudentDto[]>([]);
   const [submissions, setSubmissions] = useState<
-    Record<string, TaskSubmissionDto[]>
+      Record<string, TaskSubmissionDto[]>
   >({});
   const [answers, setAnswers] = useState<Record<string, SubmitTaskRequest>>({});
   const [submitting, setSubmitting] = useState<Record<string, boolean>>({});
@@ -413,12 +418,37 @@ const CourseLearningPage = () => {
   const [loading, setLoading] = useState(true);
   const [progressPercent, setProgressPercent] = useState(0);
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(
-    new Set(),
+      new Set()
   );
   const [navigating, setNavigating] = useState(false);
   const [questions, setQuestions] = useState<QuestionDto[]>([]);
   const [newQuestion, setNewQuestion] = useState("");
   const [submittingQuestion, setSubmittingQuestion] = useState(false);
+
+  // реф для отслеживания уже обработанного targetQuestionId
+  const scrolledRef = useRef<string | null>(null);
+
+  // скролл к вопросу после загрузки вопросов
+  useEffect(() => {
+    if (!targetQuestionId) return;
+    if (questions.length === 0) return;
+    if (scrolledRef.current === targetQuestionId) return;
+
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`question-${targetQuestionId}`);
+      if (el) {
+        scrolledRef.current = targetQuestionId;
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.style.transition = "box-shadow 0.4s";
+        el.style.boxShadow = "0 0 0 3px #52c41a";
+        setTimeout(() => {
+          el.style.boxShadow = "";
+        }, 2500);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [targetQuestionId, questions]);
 
   const fetchLesson = async (lessonId: string) => {
     setLoadingLesson(true);
@@ -426,6 +456,7 @@ const CourseLearningPage = () => {
     setSubmissions({});
     setAnswers({});
     setQuestions([]);
+    scrolledRef.current = null; // сбрасываем при смене урока
     setSelectedLessonId(lessonId);
     localStorage.setItem(LAST_LESSON_KEY, lessonId);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -442,29 +473,27 @@ const CourseLearningPage = () => {
       setSelectedLesson(await lessonRes.json());
 
       const tasksData: TaskStudentDto[] = tasksRes.ok
-        ? await tasksRes.json()
-        : [];
+          ? await tasksRes.json()
+          : [];
       setTasks(tasksData);
 
       if (tasksData.length > 0) {
         const submissionsMap: Record<string, TaskSubmissionDto[]> = {};
         await Promise.all(
-          tasksData.map(async (task) => {
-            try {
-              const subRes = await fetch(
-                `${API_URL}/tasks/${task.id}/my-submission`,
-                {
-                  headers: authStorage.getAuthHeaders(),
-                },
-              );
-              if (subRes.ok) {
-                const sub: TaskSubmissionDto = await subRes.json();
-                submissionsMap[task.id] = [sub];
+            tasksData.map(async (task) => {
+              try {
+                const subRes = await fetch(
+                    `${API_URL}/tasks/${task.id}/my-submission`,
+                    { headers: authStorage.getAuthHeaders() }
+                );
+                if (subRes.ok) {
+                  const sub: TaskSubmissionDto = await subRes.json();
+                  submissionsMap[task.id] = [sub];
+                }
+              } catch {
+                // нет submission
               }
-            } catch {
-              // нет submission
-            }
-          }),
+            })
         );
         setSubmissions(submissionsMap);
       }
@@ -504,26 +533,24 @@ const CourseLearningPage = () => {
         if (enrollmentRes.ok) {
           const enrollments = await enrollmentRes.json();
           const enrollment = enrollments.find(
-            (e: { courseId: string; progressPercent: number }) =>
-              e.courseId === id,
+              (e: { courseId: string; progressPercent: number }) =>
+                  e.courseId === id
           );
           if (enrollment) setProgressPercent(enrollment.progressPercent);
         }
 
-        // загружаем все секции
         const allLessonsData: Record<string, LessonDto[]> = {};
         await Promise.all(
-          fetchedSections.map(async (section) => {
-            const res = await fetch(
-              `${API_URL}/Sections/${section.id}/lessons`,
-              { headers: authStorage.getAuthHeaders() },
-            );
-            if (res.ok) allLessonsData[section.id] = await res.json();
-          }),
+            fetchedSections.map(async (section) => {
+              const res = await fetch(
+                  `${API_URL}/Sections/${section.id}/lessons`,
+                  { headers: authStorage.getAuthHeaders() }
+              );
+              if (res.ok) allLessonsData[section.id] = await res.json();
+            })
         );
         setLessonsBySection(allLessonsData);
 
-        // восстанавливаем завершённые уроки из localStorage (привязано к userId)
         try {
           const saved = localStorage.getItem(COMPLETED_KEY);
           if (saved) {
@@ -534,12 +561,11 @@ const CourseLearningPage = () => {
           // ignore
         }
 
-        // восстанавливаем последний урок
         const savedLessonId = localStorage.getItem(LAST_LESSON_KEY);
         if (savedLessonId) {
           const lessonExists = Object.values(allLessonsData)
-            .flat()
-            .some((l) => l.id === savedLessonId);
+              .flat()
+              .some((l) => l.id === savedLessonId);
           if (lessonExists) await fetchLesson(savedLessonId);
         }
       } catch (e) {
@@ -569,11 +595,11 @@ const CourseLearningPage = () => {
     if (!selectedLessonId || completedLessons.has(selectedLessonId)) return;
     try {
       const res = await fetch(
-        `${API_URL}/Lessons/${selectedLessonId}/complete`,
-        {
-          method: "POST",
-          headers: authStorage.getAuthHeaders(),
-        },
+          `${API_URL}/Lessons/${selectedLessonId}/complete`,
+          {
+            method: "POST",
+            headers: authStorage.getAuthHeaders(),
+          }
       );
       if (res.ok) {
         const data = await res.json();
@@ -619,15 +645,12 @@ const CourseLearningPage = () => {
 
   const handleAskQuestion = async () => {
     if (!newQuestion.trim() || !selectedLessonId) return;
-
-    // проверка на нецензурные слова
     if (leoProfanity.check(newQuestion.trim())) {
       message.error(
-        "Вопрос содержит недопустимые слова. Пожалуйста, используйте корректные выражения.",
+          "Вопрос содержит недопустимые слова. Пожалуйста, используйте корректные выражения."
       );
       return;
     }
-
     setSubmittingQuestion(true);
     const result = await questionApi.createQuestion(selectedLessonId, {
       text: newQuestion,
@@ -641,20 +664,18 @@ const CourseLearningPage = () => {
   };
 
   const handleAnswerQuestion = async (questionId: string, text: string) => {
-    // проверка на нецензурные слова
     if (leoProfanity.check(text.trim())) {
       message.error(
-        "Ответ содержит недопустимые слова. Пожалуйста, используйте корректные выражения.",
+          "Ответ содержит недопустимые слова. Пожалуйста, используйте корректные выражения."
       );
       return;
     }
-
     const result = await questionApi.answerQuestion(questionId, {
       answerText: text,
     });
     if (result)
       setQuestions((prev) =>
-        prev.map((q) => (q.id === questionId ? result : q)),
+          prev.map((q) => (q.id === questionId ? result : q))
       );
   };
 
@@ -670,7 +691,6 @@ const CourseLearningPage = () => {
       setNavigating(false);
       return;
     }
-
     for (let si = 0; si < sections.length; si++) {
       const sectionLessons = lessonsBySection[sections[si].id] ?? [];
       const idx = sectionLessons.findIndex((l) => l.id === selectedLessonId);
@@ -715,268 +735,270 @@ const CourseLearningPage = () => {
     children: (lessonsBySection[section.id] ?? []).map((lesson) => ({
       key: lesson.id,
       label: (
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {completedLessons.has(lesson.id) ? (
-            <CheckCircleFilled
-              style={{ color: "#52c41a", fontSize: 13, flexShrink: 0 }}
-            />
-          ) : (
-            <CheckCircleOutlined
-              style={{ color: "#d9d9d9", fontSize: 13, flexShrink: 0 }}
-            />
-          )}
-          <span>{lesson.title}</span>
-        </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {completedLessons.has(lesson.id) ? (
+                <CheckCircleFilled
+                    style={{ color: "#52c41a", fontSize: 13, flexShrink: 0 }}
+                />
+            ) : (
+                <CheckCircleOutlined
+                    style={{ color: "#d9d9d9", fontSize: 13, flexShrink: 0 }}
+                />
+            )}
+            <span>{lesson.title}</span>
+          </div>
       ),
     })),
   }));
 
   return (
-    <>
-      <Header />
-      <Layout style={{ minHeight: "calc(100vh - 64px)" }}>
-        <Sider
-          collapsible
-          collapsed={collapsed}
-          onCollapse={setCollapsed}
-          width={300}
-          style={{ background: "#fff", borderRight: "1px solid #f0f0f0" }}
-          theme="light"
-        >
-          {!collapsed && (
-            <div
-              style={{
-                padding: "16px 16px 12px",
-                borderBottom: "1px solid #f0f0f0",
-              }}
-            >
-              {courseName && (
-                <Text
-                  strong
-                  style={{
-                    fontSize: 14,
-                    color: "#333",
-                    display: "block",
-                    marginBottom: 12,
-                  }}
-                >
-                  {courseName}
-                </Text>
-              )}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 6,
-                }}
-              >
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  Прогресс курса
-                </Text>
-                <Text strong style={{ fontSize: 12, color: "#389e0d" }}>
-                  {progressPercent}%
-                </Text>
-              </div>
-              <Progress
-                percent={progressPercent}
-                showInfo={false}
-                strokeColor="#52c41a"
-                trailColor="#f0f0f0"
-                size="small"
-              />
-            </div>
-          )}
-
-          {loading ? (
-            <div style={{ padding: 24, textAlign: "center" }}>
-              <Spin />
-            </div>
-          ) : (
-            <Menu
-              selectedKeys={selectedLessonId ? [selectedLessonId] : []}
-              defaultOpenKeys={sections.map((s) => s.id)}
-              mode="inline"
-              style={{
-                height: "calc(100% - 110px)",
-                borderRight: 0,
-                paddingTop: 8,
-                overflowY: "auto",
-              }}
-              items={menuItems}
-              onOpenChange={(openKeys) => {
-                openKeys.forEach((key) => {
-                  if (sections.some((s) => s.id === key))
-                    fetchLessonsForSection(key);
-                });
-              }}
-              onClick={({ key }) => {
-                const isLesson = Object.values(lessonsBySection)
-                  .flat()
-                  .some((l) => l.id === key);
-                if (isLesson) fetchLesson(key);
-              }}
-            />
-          )}
-        </Sider>
-
-        <Content style={{ padding: "40px 60px", background: "#fafafa" }}>
-          {loadingLesson ? (
-            <div style={{ textAlign: "center", paddingTop: 80 }}>
-              <Spin size="large" />
-            </div>
-          ) : selectedLesson ? (
-            <div>
-              <Title level={2}>{selectedLesson.title}</Title>
-              <Text type="secondary">{selectedLesson.description}</Text>
-              <Divider />
-
-              {selectedLesson.content && (
-                <div style={{ fontSize: 15, lineHeight: 1.8 }}>
-                  <ReactMarkdown>{selectedLesson.content}</ReactMarkdown>
-                </div>
-              )}
-
-              {tasks.length > 0 && (
-                <div style={{ marginTop: 40 }}>
-                  <Divider />
-                  <Title level={4}>Задания</Title>
-                  {tasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      answer={answers[task.id]}
-                      submissions={submissions[task.id] ?? []}
-                      submitting={submitting[task.id] ?? false}
-                      onAnswerChange={(val) =>
-                        setAnswers((prev) => ({ ...prev, [task.id]: val }))
-                      }
-                      onSubmit={() => submitTask(task.id)}
-                    />
-                  ))}
-                </div>
-              )}
-
-              <div
-                style={{
-                  marginTop: 48,
-                  display: "flex",
-                  justifyContent: "flex-end",
-                }}
-              >
-                {isLastLesson() ? (
-                  <Button
-                    type="primary"
-                    size="large"
-                    loading={navigating}
-                    style={{ background: "rgba(0,100,0,0.8)", minWidth: 200 }}
-                    onClick={handleFinishCourse}
-                  >
-                    🎉 Завершить курс
-                  </Button>
-                ) : (
-                  <Button
-                    type="primary"
-                    size="large"
-                    loading={navigating}
-                    style={{ background: "rgba(0,100,0,0.8)", minWidth: 200 }}
-                    onClick={handleNextLesson}
-                  >
-                    Следующий урок →
-                  </Button>
-                )}
-              </div>
-
-              <Divider style={{ marginTop: 48 }} />
-              <div
-                style={{
-                  marginBottom: 24,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <MessageOutlined style={{ fontSize: 18, color: "#389e0d" }} />
-                <Title level={4} style={{ margin: 0 }}>
-                  Вопросы к уроку
-                </Title>
-                <Tag color="green">{questions.length}</Tag>
-              </div>
-
-              <div
-                style={{
-                  background: "#fff",
-                  borderRadius: 12,
-                  padding: 20,
-                  border: "1px solid #f0f0f0",
-                  marginBottom: 16,
-                }}
-              >
-                <Text strong style={{ display: "block", marginBottom: 8 }}>
-                  Задать вопрос
-                </Text>
-                <Input.TextArea
-                  rows={3}
-                  value={newQuestion}
-                  onChange={(e) => setNewQuestion(e.target.value)}
-                  placeholder="Введите ваш вопрос по материалу урока..."
-                  style={{ marginBottom: 8 }}
-                />
-                <Button
-                  type="primary"
-                  icon={<SendOutlined />}
-                  loading={submittingQuestion}
-                  disabled={!newQuestion.trim()}
-                  style={{ background: "rgba(0,100,0,0.8)" }}
-                  onClick={handleAskQuestion}
-                >
-                  Отправить вопрос
-                </Button>
-              </div>
-
-              {questions.length === 0 ? (
+      <>
+        <Header />
+        <Layout style={{ minHeight: "calc(100vh - 64px)" }}>
+          <Sider
+              collapsible
+              collapsed={collapsed}
+              onCollapse={setCollapsed}
+              width={300}
+              style={{ background: "#fff", borderRight: "1px solid #f0f0f0" }}
+              theme="light"
+          >
+            {!collapsed && (
                 <div
-                  style={{
-                    textAlign: "center",
-                    padding: "32px 0",
-                    color: "#bbb",
-                  }}
+                    style={{
+                      padding: "16px 16px 12px",
+                      borderBottom: "1px solid #f0f0f0",
+                    }}
                 >
-                  <MessageOutlined style={{ fontSize: 32, marginBottom: 8 }} />
-                  <div>Вопросов пока нет. Будьте первым!</div>
-                </div>
-              ) : (
-                questions.map((q) => (
-                  <QuestionCard
-                    key={q.id + String(q.isAnswered)}
-                    question={q}
-                    onAnswer={handleAnswerQuestion}
-                    onDelete={handleDeleteQuestion}
-                    currentUserId={currentUserId}
+                  {courseName && (
+                      <Text
+                          strong
+                          style={{
+                            fontSize: 14,
+                            color: "#333",
+                            display: "block",
+                            marginBottom: 12,
+                          }}
+                      >
+                        {courseName}
+                      </Text>
+                  )}
+                  <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: 6,
+                      }}
+                  >
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Прогресс курса
+                    </Text>
+                    <Text strong style={{ fontSize: 12, color: "#389e0d" }}>
+                      {progressPercent}%
+                    </Text>
+                  </div>
+                  <Progress
+                      percent={progressPercent}
+                      showInfo={false}
+                      strokeColor="#52c41a"
+                      trailColor="#f0f0f0"
+                      size="small"
                   />
-                ))
-              )}
-            </div>
-          ) : (
-            <div
-              style={{
-                textAlign: "center",
-                paddingTop: 120,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 16,
-              }}
-            >
-              <BookOutlined style={{ fontSize: 56, color: "#bbb" }} />
-              <Text style={{ fontSize: 16, color: "#bbb" }}>
-                Выберите урок из меню слева
-              </Text>
-            </div>
-          )}
-        </Content>
-      </Layout>
-      <Footer />
-    </>
+                </div>
+            )}
+
+            {loading ? (
+                <div style={{ padding: 24, textAlign: "center" }}>
+                  <Spin />
+                </div>
+            ) : (
+                <Menu
+                    selectedKeys={selectedLessonId ? [selectedLessonId] : []}
+                    defaultOpenKeys={sections.map((s) => s.id)}
+                    mode="inline"
+                    style={{
+                      height: "calc(100% - 110px)",
+                      borderRight: 0,
+                      paddingTop: 8,
+                      overflowY: "auto",
+                    }}
+                    items={menuItems}
+                    onOpenChange={(openKeys) => {
+                      openKeys.forEach((key) => {
+                        if (sections.some((s) => s.id === key))
+                          fetchLessonsForSection(key);
+                      });
+                    }}
+                    onClick={({ key }) => {
+                      const isLesson = Object.values(lessonsBySection)
+                          .flat()
+                          .some((l) => l.id === key);
+                      if (isLesson) fetchLesson(key);
+                    }}
+                />
+            )}
+          </Sider>
+
+          <Content style={{ padding: "40px 60px", background: "#fafafa" }}>
+            {loadingLesson ? (
+                <div style={{ textAlign: "center", paddingTop: 80 }}>
+                  <Spin size="large" />
+                </div>
+            ) : selectedLesson ? (
+                <div>
+                  <Title level={2}>{selectedLesson.title}</Title>
+                  <Text type="secondary">{selectedLesson.description}</Text>
+                  <Divider />
+
+                  {selectedLesson.content && (
+                      <div style={{ fontSize: 15, lineHeight: 1.8 }}>
+                        <ReactMarkdown>{selectedLesson.content}</ReactMarkdown>
+                      </div>
+                  )}
+
+                  {tasks.length > 0 && (
+                      <div style={{ marginTop: 40 }}>
+                        <Divider />
+                        <Title level={4}>Задания</Title>
+                        {tasks.map((task) => (
+                            <TaskCard
+                                key={task.id}
+                                task={task}
+                                answer={answers[task.id]}
+                                submissions={submissions[task.id] ?? []}
+                                submitting={submitting[task.id] ?? false}
+                                onAnswerChange={(val) =>
+                                    setAnswers((prev) => ({ ...prev, [task.id]: val }))
+                                }
+                                onSubmit={() => submitTask(task.id)}
+                            />
+                        ))}
+                      </div>
+                  )}
+
+                  <div
+                      style={{
+                        marginTop: 48,
+                        display: "flex",
+                        justifyContent: "flex-end",
+                      }}
+                  >
+                    {isLastLesson() ? (
+                        <Button
+                            type="primary"
+                            size="large"
+                            loading={navigating}
+                            style={{ background: "rgba(0,100,0,0.8)", minWidth: 200 }}
+                            onClick={handleFinishCourse}
+                        >
+                           Завершить курс
+                        </Button>
+                    ) : (
+                        <Button
+                            type="primary"
+                            size="large"
+                            loading={navigating}
+                            style={{ background: "rgba(0,100,0,0.8)", minWidth: 200 }}
+                            onClick={handleNextLesson}
+                        >
+                          Следующий урок →
+                        </Button>
+                    )}
+                  </div>
+
+                  <Divider style={{ marginTop: 48 }} />
+                  <div
+                      style={{
+                        marginBottom: 24,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                  >
+                    <MessageOutlined style={{ fontSize: 18, color: "#389e0d" }} />
+                    <Title level={4} style={{ margin: 0 }}>
+                      Вопросы к уроку
+                    </Title>
+                    <Tag color="green">{questions.length}</Tag>
+                  </div>
+
+                  <div
+                      style={{
+                        background: "#fff",
+                        borderRadius: 12,
+                        padding: 20,
+                        border: "1px solid #f0f0f0",
+                        marginBottom: 16,
+                      }}
+                  >
+                    <Text strong style={{ display: "block", marginBottom: 8 }}>
+                      Задать вопрос
+                    </Text>
+                    <Input.TextArea
+                        rows={3}
+                        value={newQuestion}
+                        onChange={(e) => setNewQuestion(e.target.value)}
+                        placeholder="Введите ваш вопрос по материалу урока..."
+                        style={{ marginBottom: 8 }}
+                    />
+                    <Button
+                        type="primary"
+                        icon={<SendOutlined />}
+                        loading={submittingQuestion}
+                        disabled={!newQuestion.trim()}
+                        style={{ background: "rgba(0,100,0,0.8)" }}
+                        onClick={handleAskQuestion}
+                    >
+                      Отправить вопрос
+                    </Button>
+                  </div>
+
+                  {questions.length === 0 ? (
+                      <div
+                          style={{
+                            textAlign: "center",
+                            padding: "32px 0",
+                            color: "#bbb",
+                          }}
+                      >
+                        <MessageOutlined style={{ fontSize: 32, marginBottom: 8 }} />
+                        <div>Вопросов пока нет. Будьте первым!</div>
+                      </div>
+                  ) : (
+                      questions.map((q) => (
+                          <div id={`question-${q.id}`} key={q.id + String(q.isAnswered)}>
+                            <QuestionCard
+                                question={q}
+                                onAnswer={handleAnswerQuestion}
+                                onDelete={handleDeleteQuestion}
+                                currentUserId={currentUserId}
+                                highlighted={q.id === targetQuestionId}
+                            />
+                          </div>
+                      ))
+                  )}
+                </div>
+            ) : (
+                <div
+                    style={{
+                      textAlign: "center",
+                      paddingTop: 120,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 16,
+                    }}
+                >
+                  <BookOutlined style={{ fontSize: 56, color: "#bbb" }} />
+                  <Text style={{ fontSize: 16, color: "#bbb" }}>
+                    Выберите урок из меню слева
+                  </Text>
+                </div>
+            )}
+          </Content>
+        </Layout>
+        <Footer />
+      </>
   );
 };
 

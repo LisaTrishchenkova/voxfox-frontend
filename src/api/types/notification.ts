@@ -11,5 +11,6 @@ export interface NotificationDto {
     type: NotificationType;
     isRead: boolean;
     relatedEntityId: string | null;
+    relatedCourseId: string | null;
     createdAt: string;
 }
