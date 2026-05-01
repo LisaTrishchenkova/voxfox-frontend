@@ -76,7 +76,8 @@ const CertificateCard = ({ cert }: { cert: CertificateDto }) => {
               transition: "box-shadow 0.2s",
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(82,196,26,0.2)";
+              (e.currentTarget as HTMLElement).style.boxShadow =
+                  "0 4px 16px rgba(82,196,26,0.2)";
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLElement).style.boxShadow = "none";
@@ -111,7 +112,13 @@ const CertificateCard = ({ cert }: { cert: CertificateDto }) => {
                 >
                   Скачать PDF
                 </Button>
-                <Button size="small" onClick={(e) => { e.stopPropagation(); setPreviewOpen(true); }}>
+                <Button
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewOpen(true);
+                    }}
+                >
                   Просмотр
                 </Button>
               </div>
@@ -141,8 +148,9 @@ const UserProfilePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // activeSection вычисляется из URL — никакого useState/useEffect
   const tabFromUrl = new URLSearchParams(location.search).get("tab") as Section | null;
-  const [activeSection, setActiveSection] = useState<Section>(tabFromUrl ?? "profile");
+  const activeSection: Section = tabFromUrl ?? "profile";
 
   const [me, setMe] = useState<MeResponse | null>(null);
   const [enrollments, setEnrollments] = useState<EnrollmentDto[]>([]);
@@ -195,13 +203,6 @@ const UserProfilePage = () => {
     fetchSectionData();
   }, [activeSection]);
 
-  useEffect(() => {
-    if (tabFromUrl && tabFromUrl !== activeSection) {
-      setActiveSection(tabFromUrl);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tabFromUrl]);
-
   const handleLogout = () => {
     const userId = authStorage.getUserData<string>();
     authStorage.clearAllAuthData();
@@ -232,7 +233,10 @@ const UserProfilePage = () => {
 
   const handleSaveProfile = async (values: { name: string; bio?: string }) => {
     setSavingProfile(true);
-    const ok = await userApi.updateProfile({ name: values.name, bio: values.bio ?? null });
+    const ok = await userApi.updateProfile({
+      name: values.name,
+      bio: values.bio ?? null,
+    });
     if (ok) {
       message.success("Профиль обновлён");
       await fetchUser();
@@ -245,7 +249,10 @@ const UserProfilePage = () => {
     setSavingProfile(false);
   };
 
-  const handleSavePassword = async (values: { oldPassword: string; newPassword: string }) => {
+  const handleSavePassword = async (values: {
+    oldPassword: string;
+    newPassword: string;
+  }) => {
     setSavingPassword(true);
     const ok = await userApi.changePassword({
       oldPassword: values.oldPassword,
@@ -282,15 +289,26 @@ const UserProfilePage = () => {
       <>
         <Header />
         <Layout style={{ minHeight: "calc(100vh - 64px)" }}>
-          <Sider width={260} style={{ background: "#fff", borderRight: "1px solid #f0f0f0" }} theme="light">
+          <Sider
+              width={260}
+              style={{ background: "#fff", borderRight: "1px solid #f0f0f0" }}
+              theme="light"
+          >
             <input
-                type="file" accept=".jpg,.jpeg,.png,.webp"
-                style={{ display: "none" }} id="avatar-upload"
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp"
+                style={{ display: "none" }}
+                id="avatar-upload"
                 onChange={handleAvatarChange}
             />
 
             <div
-                style={{ padding: "32px 16px 16px", textAlign: "center", borderBottom: "1px solid #f0f0f0", cursor: "pointer" }}
+                style={{
+                  padding: "32px 16px 16px",
+                  textAlign: "center",
+                  borderBottom: "1px solid #f0f0f0",
+                  cursor: "pointer",
+                }}
                 onClick={() => document.getElementById("avatar-upload")?.click()}
                 title="Нажмите чтобы изменить аватар"
             >
@@ -299,14 +317,28 @@ const UserProfilePage = () => {
                   src={getAvatarUrl(userData?.avatarUrl)}
                   icon={!userData?.avatarUrl && <UserOutlined />}
                   style={{
-                    background: userData?.avatarUrl ? undefined : "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
+                    background: userData?.avatarUrl
+                        ? undefined
+                        : "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
                     marginBottom: 12,
                   }}
               />
-              {userData && <div><Text strong style={{ fontSize: 15 }}>{userData.name}</Text></div>}
-              {me && <Tag color="green" style={{ marginTop: 8 }}>{roleLabels[me.role] ?? me.role}</Tag>}
+              {userData && (
+                  <div>
+                    <Text strong style={{ fontSize: 15 }}>
+                      {userData.name}
+                    </Text>
+                  </div>
+              )}
+              {me && (
+                  <Tag color="green" style={{ marginTop: 8 }}>
+                    {roleLabels[me.role] ?? me.role}
+                  </Tag>
+              )}
               <div style={{ marginTop: 6 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>Нажмите для смены фото</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Нажмите для смены фото
+                </Text>
               </div>
             </div>
 
@@ -315,11 +347,13 @@ const UserProfilePage = () => {
                 selectedKeys={[activeSection]}
                 style={{ borderRight: 0, paddingTop: 8 }}
                 items={menuItems}
-                onClick={({ key }) => setActiveSection(key as Section)}
+                onClick={({ key }) => navigate(`/profile?tab=${key}`)}
             />
 
             <div style={{ padding: 16, position: "absolute", bottom: 0, width: "100%" }}>
-              <Button danger block icon={<LogoutOutlined />} onClick={handleLogout}>Выйти</Button>
+              <Button danger block icon={<LogoutOutlined />} onClick={handleLogout}>
+                Выйти
+              </Button>
             </div>
           </Sider>
 
@@ -343,53 +377,84 @@ const UserProfilePage = () => {
                         <div>
                           <Text type="secondary">О себе</Text>
                           <div>
-                            {me.bio ? <Text>{me.bio}</Text> : <Text type="secondary" italic>Не указано</Text>}
+                            {me.bio ? (
+                                <Text>{me.bio}</Text>
+                            ) : (
+                                <Text type="secondary" italic>Не указано</Text>
+                            )}
                           </div>
                         </div>
                         <div>
                           <Text type="secondary">Роль</Text>
-                          <div><Tag color="green">{roleLabels[me.role] ?? me.role}</Tag></div>
+                          <div>
+                            <Tag color="green">{roleLabels[me.role] ?? me.role}</Tag>
+                          </div>
                         </div>
                         <div>
                           <Text type="secondary">Дата регистрации</Text>
                           <div>
                             <Text>
                               {new Date(me.createdAt).toLocaleDateString("ru-RU", {
-                                day: "numeric", month: "long", year: "numeric",
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
                               })}
                             </Text>
                           </div>
                         </div>
                         <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
-                          <Button icon={<EditOutlined />} onClick={() => {
-                            profileForm.setFieldsValue({ name: me.name, bio: me.bio ?? "" });
-                            setEditingProfile(true);
-                            setEditingPassword(false);
-                          }}>
+                          <Button
+                              icon={<EditOutlined />}
+                              onClick={() => {
+                                profileForm.setFieldsValue({
+                                  name: me.name,
+                                  bio: me.bio ?? "",
+                                });
+                                setEditingProfile(true);
+                                setEditingPassword(false);
+                              }}
+                          >
                             Редактировать профиль
                           </Button>
-                          <Button icon={<LockOutlined />} onClick={() => {
-                            setEditingPassword(true);
-                            setEditingProfile(false);
-                          }}>
+                          <Button
+                              icon={<LockOutlined />}
+                              onClick={() => {
+                                setEditingPassword(true);
+                                setEditingProfile(false);
+                              }}
+                          >
                             Сменить пароль
                           </Button>
                         </div>
                       </div>
                   ) : (
-                      <Form form={profileForm} layout="vertical" onFinish={handleSaveProfile} requiredMark={false}>
-                        <Form.Item label="Имя" name="name" rules={[
-                          { required: true, message: "Введите имя" },
-                          { min: 2, message: "Минимум 2 символа" },
-                          { max: 100, message: "Максимум 100 символов" },
-                        ]}>
+                      <Form
+                          form={profileForm}
+                          layout="vertical"
+                          onFinish={handleSaveProfile}
+                          requiredMark={false}
+                      >
+                        <Form.Item
+                            label="Имя" name="name"
+                            rules={[
+                              { required: true, message: "Введите имя" },
+                              { min: 2, message: "Минимум 2 символа" },
+                              { max: 100, message: "Максимум 100 символов" },
+                            ]}
+                        >
                           <Input size="large" />
                         </Form.Item>
-                        <Form.Item label="О себе" name="bio" rules={[{ max: 500, message: "Максимум 500 символов" }]}>
+                        <Form.Item
+                            label="О себе" name="bio"
+                            rules={[{ max: 500, message: "Максимум 500 символов" }]}
+                        >
                           <Input.TextArea rows={4} placeholder="Расскажите о себе..." />
                         </Form.Item>
                         <div style={{ display: "flex", gap: 12 }}>
-                          <Button type="primary" htmlType="submit" loading={savingProfile} style={{ background: "rgba(0,100,0,0.8)" }}>
+                          <Button
+                              type="primary" htmlType="submit" loading={savingProfile}
+                              style={{ background: "rgba(0,100,0,0.8)" }}
+                          >
                             Сохранить
                           </Button>
                           <Button onClick={() => setEditingProfile(false)}>Отмена</Button>
@@ -401,14 +466,25 @@ const UserProfilePage = () => {
                       <>
                         <Divider />
                         <Title level={4}>Смена пароля</Title>
-                        <Form form={passwordForm} layout="vertical" onFinish={handleSavePassword} requiredMark={false}>
-                          <Form.Item label="Текущий пароль" name="oldPassword" rules={[{ required: true, message: "Введите текущий пароль" }]}>
+                        <Form
+                            form={passwordForm}
+                            layout="vertical"
+                            onFinish={handleSavePassword}
+                            requiredMark={false}
+                        >
+                          <Form.Item
+                              label="Текущий пароль" name="oldPassword"
+                              rules={[{ required: true, message: "Введите текущий пароль" }]}
+                          >
                             <Input.Password size="large" />
                           </Form.Item>
-                          <Form.Item label="Новый пароль" name="newPassword" rules={[
-                            { required: true, message: "Введите новый пароль" },
-                            { min: 8, message: "Минимум 8 символов" },
-                          ]}>
+                          <Form.Item
+                              label="Новый пароль" name="newPassword"
+                              rules={[
+                                { required: true, message: "Введите новый пароль" },
+                                { min: 8, message: "Минимум 8 символов" },
+                              ]}
+                          >
                             <Input.Password size="large" />
                           </Form.Item>
                           <Form.Item
@@ -418,7 +494,8 @@ const UserProfilePage = () => {
                                 { required: true, message: "Повторите пароль" },
                                 ({ getFieldValue }) => ({
                                   validator(_, value) {
-                                    if (!value || getFieldValue("newPassword") === value) return Promise.resolve();
+                                    if (!value || getFieldValue("newPassword") === value)
+                                      return Promise.resolve();
                                     return Promise.reject(new Error("Пароли не совпадают"));
                                   },
                                 }),
@@ -427,7 +504,10 @@ const UserProfilePage = () => {
                             <Input.Password size="large" />
                           </Form.Item>
                           <div style={{ display: "flex", gap: 12 }}>
-                            <Button type="primary" htmlType="submit" loading={savingPassword} style={{ background: "rgba(0,100,0,0.8)" }}>
+                            <Button
+                                type="primary" htmlType="submit" loading={savingPassword}
+                                style={{ background: "rgba(0,100,0,0.8)" }}
+                            >
                               Сохранить
                             </Button>
                             <Button onClick={() => setEditingPassword(false)}>Отмена</Button>
@@ -447,11 +527,13 @@ const UserProfilePage = () => {
                       <Text type="secondary">Вы ещё не записаны ни на один курс</Text>
                   ) : (
                       <Row gutter={[24, 24]}>
-                        {enrollments.map((e) => e.course && (
-                            <Col key={e.id} xs={24} sm={12} lg={8}>
-                              <CardCourse course={e.course} />
-                            </Col>
-                        ))}
+                        {enrollments.map(
+                            (e) => e.course && (
+                                <Col key={e.id} xs={24} sm={12} lg={8}>
+                                  <CardCourse course={e.course} />
+                                </Col>
+                            )
+                        )}
                       </Row>
                   )}
                 </div>
@@ -466,11 +548,13 @@ const UserProfilePage = () => {
                       <Text type="secondary">Вы ещё не добавили курсы в избранное</Text>
                   ) : (
                       <Row gutter={[24, 24]}>
-                        {favorites.map((f) => f.course && (
-                            <Col key={f.id} xs={24} sm={12} lg={8}>
-                              <CardCourse course={f.course} isFavorite={true} />
-                            </Col>
-                        ))}
+                        {favorites.map(
+                            (f) => f.course && (
+                                <Col key={f.id} xs={24} sm={12} lg={8}>
+                                  <CardCourse course={f.course} isFavorite={true} />
+                                </Col>
+                            )
+                        )}
                       </Row>
                   )}
                 </div>
@@ -483,7 +567,11 @@ const UserProfilePage = () => {
                   <Divider />
                   {certificates.length === 0 ? (
                       <Empty
-                          image={<SafetyCertificateOutlined style={{ fontSize: 64, color: "#d9d9d9" }} />}
+                          image={
+                            <SafetyCertificateOutlined
+                                style={{ fontSize: 64, color: "#d9d9d9" }}
+                            />
+                          }
                           description={
                             <Text type="secondary">
                               У вас пока нет сертификатов. Завершите курс чтобы получить первый!
