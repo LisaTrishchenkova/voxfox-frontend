@@ -3,6 +3,18 @@ import { API_URL } from "../config";
 import type { CertificateDto } from "./types/certificate";
 
 export const certificateApi = {
+    getMyCertificates: async (): Promise<CertificateDto[]> => {
+        try {
+            const res = await fetch(`${API_URL}/Users/certificates`, {
+                headers: authStorage.getAuthHeaders(),
+            });
+            if (!res.ok) return [];
+            return res.json();
+        } catch {
+            return [];
+        }
+    },
+
     getCertificateById: async (id: string): Promise<CertificateDto | null> => {
         try {
             const res = await fetch(`${API_URL}/certificates/${id}`, {
@@ -15,7 +27,7 @@ export const certificateApi = {
         }
     },
 
-    downloadPdf: async (id: string): Promise<void> => {
+    downloadPdf: async (id: string, courseTitle?: string): Promise<void> => {
         try {
             const res = await fetch(`${API_URL}/certificates/${id}/download`, {
                 headers: authStorage.getAuthHeaders(),
@@ -25,7 +37,9 @@ export const certificateApi = {
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = `certificate-${id}.pdf`;
+            a.download = courseTitle
+                ? `certificate-${courseTitle.replace(/\s+/g, "_")}.pdf`
+                : `certificate-${id}.pdf`;
             a.click();
             URL.revokeObjectURL(url);
         } catch {

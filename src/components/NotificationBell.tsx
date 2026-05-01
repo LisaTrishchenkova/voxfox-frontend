@@ -41,6 +41,9 @@ function getNavigationPath(
             const qs = relatedEntityId ? `?questionId=${relatedEntityId}` : "";
             return `/course/${relatedCourseId}/learn${qs}`;
         }
+        case "CertificateIssued":
+            // переходим в профиль на вкладку сертификатов
+            return "/profile?tab=certificates";
         default:
             return null;
     }
@@ -48,10 +51,11 @@ function getNavigationPath(
 
 function getTypeTag(type: NotificationType) {
     const map: Record<NotificationType, { color: string; label: string }> = {
-        CourseApproved:   { color: "green",  label: "Курс одобрен" },
-        CourseRejected:   { color: "red",    label: "Курс отклонён" },
-        NewQuestion:      { color: "blue",   label: "Вопрос" },
-        QuestionAnswered: { color: "purple", label: "Ответ" },
+        CourseApproved:    { color: "green",  label: "Курс одобрен" },
+        CourseRejected:    { color: "red",    label: "Курс отклонён" },
+        NewQuestion:       { color: "blue",   label: "Вопрос" },
+        QuestionAnswered:  { color: "purple", label: "Ответ" },
+        CertificateIssued: { color: "gold",   label: "Сертификат" },
     };
     const cfg = map[type] ?? { color: "default", label: type };
     return (
@@ -93,23 +97,15 @@ const NotificationBell = () => {
     }, []);
 
     useEffect(() => {
-        const init = async () => {
-            await fetchCount();
-        };
+        const init = async () => { await fetchCount(); };
         void init();
-        pollRef.current = setInterval(() => {
-            void fetchCount();
-        }, POLL_INTERVAL);
-        return () => {
-            if (pollRef.current) clearInterval(pollRef.current);
-        };
+        pollRef.current = setInterval(() => { void fetchCount(); }, POLL_INTERVAL);
+        return () => { if (pollRef.current) clearInterval(pollRef.current); };
     }, [fetchCount]);
 
     useEffect(() => {
         if (!open) return;
-        const load = async () => {
-            await fetchAll();
-        };
+        const load = async () => { await fetchAll(); };
         void load();
     }, [open, fetchAll]);
 
@@ -132,9 +128,7 @@ const NotificationBell = () => {
         if (!notification.isRead) {
             await notificationApi.markAsRead(notification.id);
             setNotifications((prev) =>
-                prev.map((n) =>
-                    n.id === notification.id ? { ...n, isRead: true } : n
-                )
+                prev.map((n) => n.id === notification.id ? { ...n, isRead: true } : n)
             );
             setUnreadCount((c) => Math.max(0, c - 1));
         }
@@ -161,9 +155,7 @@ const NotificationBell = () => {
                     marginBottom: 4,
                 }}
             >
-                <Text strong style={{ fontSize: 15 }}>
-                    Уведомления
-                </Text>
+                <Text strong style={{ fontSize: 15 }}>Уведомления</Text>
                 {unreadCount > 0 && (
                     <Tooltip title="Отметить все прочитанными">
                         <Button
@@ -200,7 +192,7 @@ const NotificationBell = () => {
                             item.relatedCourseId
                         );
                         const bgDefault = item.isRead ? "transparent" : "#f6ffed";
-                        const bgHover = item.isRead ? "#fafafa" : "#d9f7be";
+                        const bgHover   = item.isRead ? "#fafafa"     : "#d9f7be";
 
                         return (
                             <List.Item
@@ -226,13 +218,7 @@ const NotificationBell = () => {
                             >
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     {getTypeTag(item.type)}
-                                    <div
-                                        style={{
-                                            fontWeight: item.isRead ? 400 : 600,
-                                            fontSize: 13,
-                                            marginBottom: 2,
-                                        }}
-                                    >
+                                    <div style={{ fontWeight: item.isRead ? 400 : 600, fontSize: 13, marginBottom: 2 }}>
                                         {item.title}
                                     </div>
                                     <Text type="secondary" style={{ fontSize: 12 }}>
@@ -243,19 +229,12 @@ const NotificationBell = () => {
                                             {timeAgo(item.createdAt)}
                                         </Text>
                                         {navigable && (
-                                            <Text
-                                                style={{
-                                                    fontSize: 11,
-                                                    color: "#52c41a",
-                                                    marginLeft: 8,
-                                                }}
-                                            >
+                                            <Text style={{ fontSize: 11, color: "#52c41a", marginLeft: 8 }}>
                                                 Перейти →
                                             </Text>
                                         )}
                                     </div>
                                 </div>
-
                                 {!item.isRead && (
                                     <Tooltip title="Отметить прочитанным">
                                         <Button
@@ -263,11 +242,7 @@ const NotificationBell = () => {
                                             type="text"
                                             icon={<CloseOutlined style={{ fontSize: 10 }} />}
                                             onClick={(e) => handleMarkRead(item.id, e)}
-                                            style={{
-                                                color: "#bfbfbf",
-                                                flexShrink: 0,
-                                                marginTop: 2,
-                                            }}
+                                            style={{ color: "#bfbfbf", flexShrink: 0, marginTop: 2 }}
                                         />
                                     </Tooltip>
                                 )}
@@ -300,11 +275,7 @@ const NotificationBell = () => {
                             }}
                         />
                     }
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                    }}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
                 />
             </Badge>
         </Popover>
