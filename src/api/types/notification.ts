@@ -2,7 +2,8 @@ export type NotificationType =
     | "CourseApproved"
     | "CourseRejected"
     | "NewQuestion"
-    | "QuestionAnswered";
+    | "QuestionAnswered"
+    | "CertificateIssued";
 
 export interface NotificationDto {
     id: string;
