@@ -38,10 +38,12 @@ import {
   SendOutlined,
 } from "@ant-design/icons";
 import ReactMarkdown from "react-markdown";
+import { markdownComponents } from "../../components/markdownComponents";
 import Header from "../../components/Header.tsx";
 import Footer from "../../components/Footer.tsx";
 import leoProfanity from "leo-profanity";
 import CertificateView from "../../components/CertificateView.tsx";
+import remarkGfm from "remark-gfm";
 
 leoProfanity.loadDictionary("ru");
 
@@ -612,7 +614,9 @@ const CourseLearningPage = () => {
 
                   {selectedLesson.content && (
                       <div style={{ fontSize: 15, lineHeight: 1.8 }}>
-                        <ReactMarkdown>{selectedLesson.content}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                          {selectedLesson.content}
+                        </ReactMarkdown>
                       </div>
                   )}
 
