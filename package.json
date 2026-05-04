@@ -23,7 +23,7 @@
     "@ant-design/icons": "^6.1.0",
     "antd": "^6.1.0",
     "antd-dayjs-webpack-plugin": "^1.0.6",
-    "axios": "^1.13.5",
+    "axios": "^1.16.0",
     "leo-profanity": "^1.9.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.4",
