@@ -105,7 +105,7 @@ const Header = () => {
                       <Menu.Item
                           key="learn"
                           style={{ fontWeight: 600, color: "#389e0d" }}
-                          onClick={() => navigate("/cource")}
+                          onClick={() => navigate("/teacher")}
                       >
                         Преподавание
                       </Menu.Item>
