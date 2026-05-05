@@ -1,14 +1,6 @@
 import { ConfigProvider, Spin } from "antd";
 import React, { createContext } from "react";
 import { Route, Routes } from "react-router-dom";
-// import Course from "./pages/OLD/Cource";
-// import CourseCreationPage from "./pages/OLD/CourseCreationPage/index-old";
-// import CourseLessonsPage from "./pages/OLD/CourseLessonsPage";
-// import HomePage from "./pages/OLD/HomePage";
-// import LogPage from "./pages/OLD/LogPage";
-// import RegPage from "./pages/OLD/RegPage";
-// import Test from "./pages/OLD/Test";
-// import UserProfile from "./pages/OLD/UserProfile";
 import { API_URL, APP_VERSION, BUILD_DATE, COMMIT_HASH } from "./config";
 import HomePage from "./pages/home";
 import { customTheme } from "./theme";
@@ -18,8 +10,8 @@ import OldLogPage from "./pages/OldLogPage";
 import CourseLearningPage from "./pages/CourseLearning";
 import UserProfilePage from "./pages/UserProfile";
 import TeacherPage from "./pages/TeacherPage";
-
-// const Home = React.lazy(() => import("./pages/Home"));
+import ModeratorPage from "./pages/ModeratorPage";
+import AdminPage from "./pages/AdminPage";
 
 const ThemeContext = createContext(true);
 
@@ -50,6 +42,8 @@ function App() {
             <Route path="/course/:id/learn" element={<CourseLearningPage />} />
               <Route path="/teacher" element={<TeacherPage />} />
               <Route path="/profile" element={<UserProfilePage />} />
+              <Route path="/moderator" element={<ModeratorPage />} />
+              <Route path="/admin" element={<AdminPage />} />
             <Route
               path="/debug"
               element={

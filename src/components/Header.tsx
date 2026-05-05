@@ -31,7 +31,8 @@ const Header = () => {
   const isAuth = authStorage.isAuthenticated();
   const { userData, fetchUser } = useUserStore();
 
-  // Вычисляем напрямую из location — никакого useState/useEffect для поиска
+  const role = userData?.role ?? "";
+
   const searchValue =
       location.pathname === "/"
           ? (new URLSearchParams(location.search).get("search") ?? "")
@@ -93,23 +94,40 @@ const Header = () => {
                   >
                     Главная
                   </Menu.Item>
-                  {isAuth && (
+
+                  {/* Преподавание — только для Teacher и Admin */}
+                  {isAuth && (role === "Teacher" || role === "Admin") && (
                       <Menu.Item
-                          key="projects"
-                          style={{ fontWeight: 600, color: "#389e0d" }}
-                      >
-                        Проекты
-                      </Menu.Item>
-                  )}
-                  {isAuth && (
-                      <Menu.Item
-                          key="learn"
+                          key="teacher"
                           style={{ fontWeight: 600, color: "#389e0d" }}
                           onClick={() => navigate("/teacher")}
                       >
                         Преподавание
                       </Menu.Item>
                   )}
+
+                  {/* Модерация — только для Moderator и Admin */}
+                  {isAuth && (role === "Moderator" || role === "Admin") && (
+                      <Menu.Item
+                          key="moderator"
+                          style={{ fontWeight: 600, color: "#389e0d" }}
+                          onClick={() => navigate("/moderator")}
+                      >
+                        Модерация
+                      </Menu.Item>
+                  )}
+
+                  {/* Администрирование — только для Admin */}
+                  {isAuth && role === "Admin" && (
+                      <Menu.Item
+                          key="admin"
+                          style={{ fontWeight: 600, color: "#cf1322" }}
+                          onClick={() => navigate("/admin")}
+                      >
+                        Администрирование
+                      </Menu.Item>
+                  )}
+
                   <Menu.Item
                       key="community"
                       style={{ fontWeight: 600, color: "#389e0d" }}
