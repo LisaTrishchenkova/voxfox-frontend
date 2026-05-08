@@ -10,11 +10,13 @@ import {
     Pagination,
     Row,
     Spin,
+    Statistic,
     Tag,
     Typography,
     message,
 } from "antd";
 import {
+    BarChartOutlined,
     CheckOutlined,
     CloseOutlined,
     EyeOutlined,
@@ -24,11 +26,13 @@ import { useNavigate } from "react-router-dom";
 import Header from "../../components/Header.tsx";
 import Footer from "../../components/Footer.tsx";
 import { courseApi } from "../../api/courseApi.ts";
+import { moderationApi } from "../../api/moderationApi.ts";
 import { useUserStore } from "../../stores/userStore.ts";
 import type { CourseDto } from "../../api/types/course.ts";
+import type { ModeratorStatsDto } from "../../api/moderationApi.ts";
 
 const { Content } = Layout;
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 const levelLabel: Record<string, string> = {
     Beginner: "Начинающий",
@@ -50,7 +54,9 @@ const ModeratorPage = () => {
     const [rejectingCourse, setRejectingCourse] = useState<CourseDto | null>(null);
     const [rejectReason, setRejectReason] = useState("");
     const [actionLoading, setActionLoading] = useState<string | null>(null);
-    const [previewCourse, setPreviewCourse] = useState<CourseDto | null>(null);
+
+    const [stats, setStats] = useState<ModeratorStatsDto | null>(null);
+    const [statsOpen, setStatsOpen] = useState(false);
 
     useEffect(() => {
         if (userData && userData.role !== "Moderator" && userData.role !== "Admin") {
@@ -73,6 +79,7 @@ const ModeratorPage = () => {
 
     const handleApprove = async (course: CourseDto) => {
         setActionLoading(course.id);
+        await moderationApi.releaseCourse(course.id);
         const ok = await courseApi.approveCourse(course.id);
         if (ok) {
             message.success(`Курс «${course.title}» одобрен и опубликован`);
@@ -93,6 +100,7 @@ const ModeratorPage = () => {
     const handleReject = async () => {
         if (!rejectingCourse) return;
         setActionLoading(rejectingCourse.id);
+        await moderationApi.releaseCourse(rejectingCourse.id);
         const ok = await courseApi.rejectCourse(rejectingCourse.id, rejectReason);
         if (ok) {
             message.success(`Курс «${rejectingCourse.title}» отклонён`);
@@ -103,6 +111,12 @@ const ModeratorPage = () => {
             message.error("Ошибка при отклонении");
         }
         setActionLoading(null);
+    };
+
+    const handleOpenStats = async () => {
+        const data = await moderationApi.getMyStats();
+        setStats(data);
+        setStatsOpen(true);
     };
 
     if (!userData) {
@@ -123,11 +137,16 @@ const ModeratorPage = () => {
             <Header />
             <Layout style={{ minHeight: "calc(100vh - 64px)", background: "#fafafa" }}>
                 <Content style={{ padding: "40px 60px" }}>
-                    <div style={{ marginBottom: 24 }}>
-                        <Title level={2} style={{ margin: 0 }}>Панель модератора</Title>
-                        <Text type="secondary">
-                            Курсы ожидающие проверки: <strong>{total}</strong>
-                        </Text>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+                        <div>
+                            <Title level={2} style={{ margin: 0 }}>Панель модератора</Title>
+                            <Text type="secondary">
+                                Курсов ожидают проверки: <strong>{total}</strong>
+                            </Text>
+                        </div>
+                        <Button icon={<BarChartOutlined />} onClick={handleOpenStats}>
+                            Моя статистика
+                        </Button>
                     </div>
 
                     <Divider />
@@ -135,10 +154,7 @@ const ModeratorPage = () => {
                     {loading ? (
                         <div style={{ textAlign: "center", paddingTop: 60 }}><Spin size="large" /></div>
                     ) : courses.length === 0 ? (
-                        <Empty
-                            image={Empty.PRESENTED_IMAGE_SIMPLE}
-                            description="Нет курсов на проверке — всё проверено!"
-                        />
+                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Нет курсов на проверке — всё проверено!" />
                     ) : (
                         <>
                             <Row gutter={[24, 24]}>
@@ -148,11 +164,8 @@ const ModeratorPage = () => {
                                             style={{ borderRadius: 12, height: "100%" }}
                                             styles={{ body: { padding: 20 } }}
                                             cover={course.coverImageUrl ? (
-                                                <img
-                                                    src={course.coverImageUrl}
-                                                    alt={course.title}
-                                                    style={{ height: 140, objectFit: "cover", borderRadius: "12px 12px 0 0" }}
-                                                />
+                                                <img src={course.coverImageUrl} alt={course.title}
+                                                     style={{ height: 140, objectFit: "cover", borderRadius: "12px 12px 0 0" }} />
                                             ) : undefined}
                                         >
                                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -181,20 +194,18 @@ const ModeratorPage = () => {
 
                                             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                                 <Button size="small" icon={<EyeOutlined />}
-                                                        onClick={() => setPreviewCourse(course)}>
-                                                    Подробнее
+                                                        onClick={() => navigate(`/moderator/review/${course.id}`)}>
+                                                    Проверить
                                                 </Button>
-                                                <Button
-                                                    size="small" type="primary" icon={<CheckOutlined />}
-                                                    loading={actionLoading === course.id}
-                                                    style={{ background: "rgba(0,100,0,0.8)" }}
-                                                    onClick={() => handleApprove(course)}>
+                                                <Button size="small" type="primary" icon={<CheckOutlined />}
+                                                        loading={actionLoading === course.id}
+                                                        style={{ background: "rgba(0,100,0,0.8)" }}
+                                                        onClick={() => handleApprove(course)}>
                                                     Одобрить
                                                 </Button>
-                                                <Button
-                                                    size="small" danger icon={<CloseOutlined />}
-                                                    loading={actionLoading === course.id}
-                                                    onClick={() => handleOpenReject(course)}>
+                                                <Button size="small" danger icon={<CloseOutlined />}
+                                                        loading={actionLoading === course.id}
+                                                        onClick={() => handleOpenReject(course)}>
                                                     Отклонить
                                                 </Button>
                                             </div>
@@ -205,13 +216,8 @@ const ModeratorPage = () => {
 
                             {total > pageSize && (
                                 <div style={{ textAlign: "center", marginTop: 32 }}>
-                                    <Pagination
-                                        current={page}
-                                        pageSize={pageSize}
-                                        total={total}
-                                        onChange={setPage}
-                                        showSizeChanger={false}
-                                    />
+                                    <Pagination current={page} pageSize={pageSize} total={total}
+                                                onChange={setPage} showSizeChanger={false} />
                                 </div>
                             )}
                         </>
@@ -220,72 +226,13 @@ const ModeratorPage = () => {
             </Layout>
             <Footer />
 
-            {/* Подробности курса */}
-            <Modal
-                open={!!previewCourse}
-                onCancel={() => setPreviewCourse(null)}
-                footer={
-                    previewCourse ? (
-                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                            <Button onClick={() => setPreviewCourse(null)}>Закрыть</Button>
-                            <Button danger icon={<CloseOutlined />}
-                                    onClick={() => { setPreviewCourse(null); handleOpenReject(previewCourse); }}>
-                                Отклонить
-                            </Button>
-                            <Button type="primary" icon={<CheckOutlined />}
-                                    style={{ background: "rgba(0,100,0,0.8)" }}
-                                    loading={actionLoading === previewCourse.id}
-                                    onClick={() => { handleApprove(previewCourse); setPreviewCourse(null); }}>
-                                Одобрить
-                            </Button>
-                        </div>
-                    ) : null
-                }
-                title={previewCourse?.title}
-                width={640}
-                centered
-            >
-                {previewCourse && (
-                    <div>
-                        {previewCourse.coverImageUrl && (
-                            <img src={previewCourse.coverImageUrl} alt=""
-                                 style={{ width: "100%", height: 200, objectFit: "cover", borderRadius: 8, marginBottom: 16 }} />
-                        )}
-                        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-                            <Tag>{levelLabel[previewCourse.level]}</Tag>
-                            <Tag>{previewCourse.price === 0 ? "Бесплатно" : `${previewCourse.price} ₽`}</Tag>
-                            {previewCourse.certificateEnabled && <Tag color="gold">Сертификат</Tag>}
-                        </div>
-                        <Text strong style={{ display: "block", marginBottom: 4 }}>Автор</Text>
-                        <Text style={{ display: "block", marginBottom: 12 }}>{previewCourse.author?.name}</Text>
-                        <Text strong style={{ display: "block", marginBottom: 4 }}>Краткое описание</Text>
-                        <Paragraph style={{ marginBottom: 12 }}>{previewCourse.description}</Paragraph>
-                        {previewCourse.fullDescription && (
-                            <>
-                                <Text strong style={{ display: "block", marginBottom: 4 }}>Полное описание</Text>
-                                <Paragraph>{previewCourse.fullDescription}</Paragraph>
-                            </>
-                        )}
-                        {previewCourse.tags && previewCourse.tags.length > 0 && (
-                            <>
-                                <Text strong style={{ display: "block", marginBottom: 6 }}>Теги</Text>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                                    {previewCourse.tags.map((t) => <Tag key={t.name}>{t.name}</Tag>)}
-                                </div>
-                            </>
-                        )}
-                    </div>
-                )}
-            </Modal>
-
-            {/* Причина отклонения */}
+            {/* Отклонение */}
             <Modal
                 open={rejectModalOpen}
                 title={`Отклонить курс «${rejectingCourse?.title}»`}
                 onCancel={() => setRejectModalOpen(false)}
                 onOk={handleReject}
-                okText="Отклонить"
-                cancelText="Отмена"
+                okText="Отклонить" cancelText="Отмена"
                 okButtonProps={{ danger: true, loading: actionLoading === rejectingCourse?.id }}
                 centered
             >
@@ -293,13 +240,26 @@ const ModeratorPage = () => {
                     <Text style={{ display: "block", marginBottom: 8 }}>
                         Укажите причину отклонения (необязательно):
                     </Text>
-                    <Input.TextArea
-                        rows={4}
-                        value={rejectReason}
-                        onChange={(e) => setRejectReason(e.target.value)}
-                        placeholder="Например: недостаточно материала, некорректное описание..."
-                    />
+                    <Input.TextArea rows={4} value={rejectReason}
+                                    onChange={(e) => setRejectReason(e.target.value)}
+                                    placeholder="Например: недостаточно материала, некорректное описание..." />
                 </div>
+            </Modal>
+
+            {/* Статистика */}
+            <Modal open={statsOpen} onCancel={() => setStatsOpen(false)}
+                   footer={<Button onClick={() => setStatsOpen(false)}>Закрыть</Button>}
+                   title="Моя статистика" centered width={480}>
+                {stats ? (
+                    <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+                        <Col span={12}><Statistic title="Проверяю сейчас" value={stats.currentlyReviewing} /></Col>
+                        <Col span={12}><Statistic title="Всего проверено" value={stats.totalReviewed} /></Col>
+                        <Col span={12}><Statistic title="Одобрено" value={stats.totalApproved} valueStyle={{ color: "#52c41a" }} /></Col>
+                        <Col span={12}><Statistic title="Отклонено" value={stats.totalRejected} valueStyle={{ color: "#ff4d4f" }} /></Col>
+                    </Row>
+                ) : (
+                    <div style={{ textAlign: "center", padding: 32 }}><Spin /></div>
+                )}
             </Modal>
         </>
     );
