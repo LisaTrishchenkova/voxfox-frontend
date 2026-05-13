@@ -11,6 +11,7 @@ import {
     InputNumber,
     Layout,
     Modal,
+    Pagination,
     Popconfirm,
     Radio,
     Row,
@@ -32,9 +33,10 @@ import {
     FileTextOutlined,
     PlusOutlined,
     QuestionCircleOutlined,
+    SearchOutlined,
     SendOutlined,
 } from "@ant-design/icons";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../../components/Header.tsx";
 import Footer from "../../components/Footer.tsx";
@@ -48,6 +50,7 @@ import { API_URL } from "../../config.ts";
 import { authStorage } from "../../services/auth-storage.service.ts";
 import type {
     CourseDto,
+    CourseStatus,
     SectionDto,
     LessonDto,
     CourseLevel,
@@ -84,6 +87,8 @@ const taskTypeLabel: Record<TaskType, string> = {
     TextInput: "Текстовый ответ",
 };
 
+const PAGE_SIZE = 9;
+
 interface CourseFormValues {
     title: string;
     description: string;
@@ -94,17 +99,8 @@ interface CourseFormValues {
     categoryId?: string;
     coverImageUrl?: string;
 }
-
-interface SectionFormValues {
-    title: string;
-    description: string;
-}
-
-interface LessonFormValues {
-    title: string;
-    description: string;
-}
-
+interface SectionFormValues { title: string; description: string; }
+interface LessonFormValues { title: string; description: string; }
 interface TaskFormValues {
     question: string;
     correctIndex?: number;
@@ -115,17 +111,9 @@ interface TaskFormValues {
     isRequired?: boolean;
 }
 
-// ─────────────────────────────────────────────
-// CourseForm
-// ─────────────────────────────────────────────
+// ─── CourseForm ─────────────────────────────────────────────
 const CourseForm = ({
-                        form,
-                        categories,
-                        initialTags = [],
-                        onFinish,
-                        onCancel,
-                        submitLabel,
-                        loading,
+                        form, categories, initialTags = [], onFinish, onCancel, submitLabel, loading,
                     }: {
     form: ReturnType<typeof Form.useForm<CourseFormValues>>[0];
     categories: CategoryDto[];
@@ -143,7 +131,6 @@ const CourseForm = ({
         if (t && !tags.includes(t)) setTags((p) => [...p, t]);
         setTagInput("");
     };
-    const removeTag = (t: string) => setTags((p) => p.filter((x) => x !== t));
 
     return (
         <Form form={form} layout="vertical" onFinish={(values) => onFinish(values, tags)}>
@@ -164,16 +151,13 @@ const CourseForm = ({
                     </Form.Item>
                 </Col>
             </Row>
-
             <Form.Item label="Краткое описание" name="description"
                        rules={[{ required: true, message: "Введите описание" }, { min: 10 }, { max: 500 }]}>
                 <Input.TextArea rows={2} placeholder="До 500 символов" />
             </Form.Item>
-
             <Form.Item label="Полное описание" name="fullDescription">
                 <Input.TextArea rows={4} placeholder="Подробно: что узнают студенты, требования, программа..." />
             </Form.Item>
-
             <Row gutter={16}>
                 <Col span={12}>
                     <Form.Item label="Категория" name="categoryId">
@@ -190,18 +174,16 @@ const CourseForm = ({
                     </Form.Item>
                 </Col>
             </Row>
-
             <Form.Item label="Ссылка на обложку" name="coverImageUrl"
                        extra="Прямая ссылка на изображение (jpg, png, webp)">
                 <Input placeholder="https://..." />
             </Form.Item>
-
             <Form.Item label="Теги">
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                     {tags.length === 0
                         ? <Text type="secondary" style={{ fontSize: 12 }}>Теги не добавлены</Text>
                         : tags.map((t) => (
-                            <Tag key={t} closable onClose={() => removeTag(t)} color="green">{t}</Tag>
+                            <Tag key={t} closable onClose={() => setTags((p) => p.filter((x) => x !== t))} color="green">{t}</Tag>
                         ))}
                 </div>
                 <Space>
@@ -212,12 +194,10 @@ const CourseForm = ({
                     <Button size="small" icon={<PlusOutlined />} onClick={addTag}>Добавить</Button>
                 </Space>
             </Form.Item>
-
             <Form.Item label="Выдавать сертификат по завершении"
                        name="certificateEnabled" valuePropName="checked" initialValue={false}>
                 <Switch />
             </Form.Item>
-
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <Button onClick={onCancel}>Отмена</Button>
                 <Button type="primary" htmlType="submit" loading={loading}
@@ -229,12 +209,8 @@ const CourseForm = ({
     );
 };
 
-// ─────────────────────────────────────────────
-// TaskForm
-// ─────────────────────────────────────────────
-const TaskForm = ({
-                      lessonId, onCreated, onCancel,
-                  }: {
+// ─── TaskForm ────────────────────────────────────────────────
+const TaskForm = ({ lessonId, onCreated, onCancel }: {
     lessonId: string;
     onCreated: (task: TaskTeacherDto) => void;
     onCancel: () => void;
@@ -243,10 +219,6 @@ const TaskForm = ({
     const [taskType, setTaskType] = useState<TaskType>("SingleChoice");
     const [options, setOptions] = useState<string[]>(["", ""]);
     const [saving, setSaving] = useState(false);
-
-    const addOption = () => setOptions((p) => [...p, ""]);
-    const removeOption = (i: number) => setOptions((p) => p.filter((_, idx) => idx !== i));
-    const setOption = (i: number, val: string) => setOptions((p) => p.map((o, idx) => idx === i ? val : o));
 
     const handleSubmit = async (values: TaskFormValues) => {
         setSaving(true);
@@ -294,14 +266,17 @@ const TaskForm = ({
                         <Space direction="vertical" style={{ width: "100%" }}>
                             {options.map((opt, i) => (
                                 <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                    <Input value={opt} onChange={(e) => setOption(i, e.target.value)}
+                                    <Input value={opt} onChange={(e) => setOptions((p) => p.map((o, idx) => idx === i ? e.target.value : o))}
                                            placeholder={`Вариант ${i + 1}`} style={{ flex: 1 }} />
                                     {options.length > 2 && (
-                                        <Button size="small" danger icon={<DeleteOutlined />} onClick={() => removeOption(i)} />
+                                        <Button size="small" danger icon={<DeleteOutlined />}
+                                                onClick={() => setOptions((p) => p.filter((_, idx) => idx !== i))} />
                                     )}
                                 </div>
                             ))}
-                            <Button size="small" icon={<PlusOutlined />} onClick={addOption}>Добавить вариант</Button>
+                            <Button size="small" icon={<PlusOutlined />} onClick={() => setOptions((p) => [...p, ""])}>
+                                Добавить вариант
+                            </Button>
                         </Space>
                     </Form.Item>
                 )}
@@ -355,28 +330,18 @@ const TaskForm = ({
     );
 };
 
-// ─────────────────────────────────────────────
-// LessonEditor — inline, без useEffect
-// key на компоненте обеспечивает сброс state при смене урока
-// ─────────────────────────────────────────────
-const LessonEditor = ({
-                          lesson, sectionId, onSaved, onCancel,
-                      }: {
+// ─── LessonEditor ────────────────────────────────────────────
+const LessonEditor = ({ lesson, sectionId, onSaved, onCancel }: {
     lesson: LessonDto | null;
     sectionId: string;
     onSaved: (lesson: LessonDto, isNew: boolean) => void;
     onCancel: () => void;
 }) => {
     const [form] = Form.useForm<LessonFormValues>();
-    // Инициализируем из пропов напрямую — никаких useEffect с setState
     const [content, setContent] = useState(lesson?.content ?? "");
     const [saving, setSaving] = useState(false);
 
-    // form.setFieldsValue — не setState React, вызывать в теле компонента безопасно
-    form.setFieldsValue({
-        title: lesson?.title ?? "",
-        description: lesson?.description ?? "",
-    });
+    form.setFieldsValue({ title: lesson?.title ?? "", description: lesson?.description ?? "" });
 
     const handleSave = async (values: LessonFormValues) => {
         setSaving(true);
@@ -399,9 +364,7 @@ const LessonEditor = ({
                 <Text strong style={{ fontSize: 15, color: "#389e0d" }}>
                     {lesson ? `✏️ Редактирование: ${lesson.title}` : "➕ Новый урок"}
                 </Text>
-                <Button size="small" icon={<CloseOutlined />} onClick={onCancel} type="text" danger>
-                    Отмена
-                </Button>
+                <Button size="small" icon={<CloseOutlined />} onClick={onCancel} type="text" danger>Отмена</Button>
             </div>
             <Form form={form} layout="vertical" onFinish={handleSave}>
                 <Row gutter={16}>
@@ -433,12 +396,8 @@ const LessonEditor = ({
     );
 };
 
-// ─────────────────────────────────────────────
-// LessonPanel
-// ─────────────────────────────────────────────
-const LessonPanel = ({
-                         lesson, sectionId, onDelete, onUpdated,
-                     }: {
+// ─── LessonPanel ─────────────────────────────────────────────
+const LessonPanel = ({ lesson, sectionId, onDelete, onUpdated }: {
     lesson: LessonDto;
     sectionId: string;
     onDelete: (id: string) => void;
@@ -450,33 +409,22 @@ const LessonPanel = ({
     const [expanded, setExpanded] = useState(false);
     const [editing, setEditing] = useState(false);
 
-    const loadTasks = async () => {
-        setLoadingTasks(true);
-        const data = await taskTeacherApi.getLessonTasks(lesson.id);
-        setTasks(data);
-        setLoadingTasks(false);
-    };
-
     const handleExpand = () => {
-        if (!expanded) loadTasks();
+        if (!expanded) {
+            setLoadingTasks(true);
+            void taskTeacherApi.getLessonTasks(lesson.id).then((data) => {
+                setTasks(data);
+                setLoadingTasks(false);
+            });
+        }
         setExpanded((p) => !p);
-    };
-
-    const handleDeleteTask = async (taskId: string) => {
-        const ok = await taskTeacherApi.deleteTask(taskId);
-        if (ok) { setTasks((p) => p.filter((t) => t.id !== taskId)); message.success("Задание удалено"); }
     };
 
     if (editing) {
         return (
-            // key={lesson.id} — React пересоздаёт компонент, state инициализируется заново из пропов
-            <LessonEditor
-                key={lesson.id}
-                lesson={lesson}
-                sectionId={sectionId}
-                onSaved={(updated) => { onUpdated(updated); setEditing(false); }}
-                onCancel={() => setEditing(false)}
-            />
+            <LessonEditor key={lesson.id} lesson={lesson} sectionId={sectionId}
+                          onSaved={(updated) => { onUpdated(updated); setEditing(false); }}
+                          onCancel={() => setEditing(false)} />
         );
     }
 
@@ -526,7 +474,10 @@ const LessonPanel = ({
                                             </div>
                                         </div>
                                         <Popconfirm title="Удалить задание?"
-                                                    onConfirm={() => handleDeleteTask(task.id)}
+                                                    onConfirm={async () => {
+                                                        const ok = await taskTeacherApi.deleteTask(task.id);
+                                                        if (ok) { setTasks((p) => p.filter((t) => t.id !== task.id)); message.success("Задание удалено"); }
+                                                    }}
                                                     okText="Удалить" cancelText="Отмена" okButtonProps={{ danger: true }}>
                                             <Button size="small" danger icon={<DeleteOutlined />} />
                                         </Popconfirm>
@@ -550,12 +501,8 @@ const LessonPanel = ({
     );
 };
 
-// ─────────────────────────────────────────────
-// CourseEditor
-// ─────────────────────────────────────────────
-const CourseEditor = ({
-                          course, categories, onBack, onUpdated,
-                      }: {
+// ─── CourseEditor ─────────────────────────────────────────────
+const CourseEditor = ({ course, categories, onBack, onUpdated }: {
     course: CourseDto;
     categories: CategoryDto[];
     onBack: () => void;
@@ -569,7 +516,6 @@ const CourseEditor = ({
     const [sectionModalOpen, setSectionModalOpen] = useState(false);
     const [editingSection, setEditingSection] = useState<SectionDto | null>(null);
     const [sectionForm] = Form.useForm<SectionFormValues>();
-
     const [inlineLesson, setInlineLesson] = useState<{ sectionId: string } | null>(null);
 
     const [editCourseOpen, setEditCourseOpen] = useState(false);
@@ -590,19 +536,9 @@ const CourseEditor = ({
             setLessonsBySection(lessonsMap);
             setLoading(false);
         };
-        load();
+        void load();
     }, [course.id]);
 
-    const openCreateSection = () => {
-        setEditingSection(null);
-        sectionForm.resetFields();
-        setSectionModalOpen(true);
-    };
-    const openEditSection = (s: SectionDto) => {
-        setEditingSection(s);
-        sectionForm.setFieldsValue({ title: s.title, description: s.description });
-        setSectionModalOpen(true);
-    };
     const handleSaveSection = async (values: SectionFormValues) => {
         if (editingSection) {
             const ok = await sectionApi.updateSection(editingSection.id, values);
@@ -618,6 +554,7 @@ const CourseEditor = ({
         }
         setSectionModalOpen(false);
     };
+
     const handleDeleteSection = async (id: string) => {
         const ok = await sectionApi.deleteSection(id);
         if (ok) { setSections((p) => p.filter((s) => s.id !== id)); message.success("Раздел удалён"); }
@@ -629,12 +566,11 @@ const CourseEditor = ({
         const sid = inlineLesson.sectionId;
         setLessonsBySection((p) => ({
             ...p,
-            [sid]: isNew
-                ? [...(p[sid] ?? []), lesson]
-                : (p[sid] ?? []).map((l) => l.id === lesson.id ? lesson : l),
+            [sid]: isNew ? [...(p[sid] ?? []), lesson] : (p[sid] ?? []).map((l) => l.id === lesson.id ? lesson : l),
         }));
         setInlineLesson(null);
     };
+
     const handleDeleteLesson = async (lessonId: string) => {
         const ok = await lessonApi.deleteLesson(lessonId);
         if (ok) {
@@ -653,23 +589,6 @@ const CourseEditor = ({
         if (ok) { message.success("Курс отправлен на модерацию"); onUpdated({ ...course, status: "UnderReview" }); }
         else { message.error("Ошибка при отправке на модерацию"); }
         setSubmitting(false);
-    };
-
-    const handleOpenEditCourse = () => {
-        const currentTags = course.tags?.map((t) => t.name) ?? [];
-        setEditCourseTags(currentTags);
-        setEditCourseKey((k) => k + 1); // пересоздаём CourseForm чтобы теги обновились
-        courseForm.setFieldsValue({
-            title: course.title,
-            description: course.description,
-            fullDescription: course.fullDescription ?? undefined,
-            price: course.price,
-            level: course.level,
-            certificateEnabled: course.certificateEnabled,
-            categoryId: course.categoryId ?? undefined,
-            coverImageUrl: course.coverImageUrl ?? undefined,
-        });
-        setEditCourseOpen(true);
     };
 
     const handleSaveCourse = async (values: CourseFormValues, tags: string[]) => {
@@ -699,7 +618,21 @@ const CourseEditor = ({
             )}
 
             <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
-                <Button icon={<EditOutlined />} onClick={handleOpenEditCourse}>Редактировать курс</Button>
+                <Button icon={<EditOutlined />} onClick={() => {
+                    setEditCourseTags(course.tags?.map((t) => t.name) ?? []);
+                    setEditCourseKey((k) => k + 1);
+                    courseForm.setFieldsValue({
+                        title: course.title, description: course.description,
+                        fullDescription: course.fullDescription ?? undefined,
+                        price: course.price, level: course.level,
+                        certificateEnabled: course.certificateEnabled,
+                        categoryId: course.categoryId ?? undefined,
+                        coverImageUrl: course.coverImageUrl ?? undefined,
+                    });
+                    setEditCourseOpen(true);
+                }}>
+                    Редактировать курс
+                </Button>
                 {(course.status === "Draft" || course.status === "RejectedByModerator") && (
                     <Button type="primary" icon={<SendOutlined />} loading={submitting}
                             style={{ background: "rgba(0,100,0,0.8)" }} onClick={handleSubmitModeration}>
@@ -718,7 +651,11 @@ const CourseEditor = ({
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <Title level={4} style={{ margin: 0 }}>Разделы курса</Title>
-                <Button icon={<PlusOutlined />} onClick={openCreateSection}>Добавить раздел</Button>
+                <Button icon={<PlusOutlined />} onClick={() => {
+                    setEditingSection(null);
+                    sectionForm.resetFields();
+                    setSectionModalOpen(true);
+                }}>Добавить раздел</Button>
             </div>
 
             {loading ? <Spin /> : sections.length === 0 ? (
@@ -734,7 +671,11 @@ const CourseEditor = ({
                                     <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>{section.description}</Text>
                                 </span>
                                 <Space onClick={(e) => e.stopPropagation()}>
-                                    <Button size="small" icon={<EditOutlined />} onClick={() => openEditSection(section)} />
+                                    <Button size="small" icon={<EditOutlined />} onClick={() => {
+                                        setEditingSection(section);
+                                        sectionForm.setFieldsValue({ title: section.title, description: section.description });
+                                        setSectionModalOpen(true);
+                                    }} />
                                     <Popconfirm title="Удалить раздел?" description="Все уроки раздела тоже будут удалены"
                                                 onConfirm={() => handleDeleteSection(section.id)}
                                                 okText="Удалить" cancelText="Отмена" okButtonProps={{ danger: true }}>
@@ -753,15 +694,9 @@ const CourseEditor = ({
                                                  }));
                                              }} />
                             ))}
-
                             {inlineLesson?.sectionId === section.id ? (
-                                <LessonEditor
-                                    key={`new-${section.id}`}
-                                    lesson={null}
-                                    sectionId={section.id}
-                                    onSaved={handleLessonSaved}
-                                    onCancel={() => setInlineLesson(null)}
-                                />
+                                <LessonEditor key={`new-${section.id}`} lesson={null} sectionId={section.id}
+                                              onSaved={handleLessonSaved} onCancel={() => setInlineLesson(null)} />
                             ) : (
                                 <Button icon={<PlusOutlined />} size="small" style={{ marginTop: 8 }}
                                         onClick={() => setInlineLesson({ sectionId: section.id })}>
@@ -773,8 +708,7 @@ const CourseEditor = ({
                 </Collapse>
             )}
 
-            <Modal open={sectionModalOpen}
-                   title={editingSection ? "Редактировать раздел" : "Новый раздел"}
+            <Modal open={sectionModalOpen} title={editingSection ? "Редактировать раздел" : "Новый раздел"}
                    onCancel={() => setSectionModalOpen(false)} footer={null} centered>
                 <Form form={sectionForm} layout="vertical" onFinish={handleSaveSection}>
                     <Form.Item label="Название" name="title" rules={[{ required: true }, { min: 2 }]}>
@@ -793,39 +727,35 @@ const CourseEditor = ({
                 </Form>
             </Modal>
 
-            <Modal open={editCourseOpen} title="Редактировать курс"
-                   onCancel={() => setEditCourseOpen(false)}
-                   footer={null} centered width={700}
-                   styles={{ body: { padding: "16px 24px 24px" } }}>
-                <CourseForm
-                    key={editCourseKey}
-                    form={courseForm}
-                    categories={categories}
-                    initialTags={editCourseTags}
-                    onFinish={handleSaveCourse}
-                    onCancel={() => setEditCourseOpen(false)}
-                    submitLabel="Сохранить"
-                    loading={savingCourse}
-                />
+            <Modal open={editCourseOpen} title="Редактировать курс" onCancel={() => setEditCourseOpen(false)}
+                   footer={null} centered width={700} styles={{ body: { padding: "16px 24px 24px" } }}>
+                <CourseForm key={editCourseKey} form={courseForm} categories={categories}
+                            initialTags={editCourseTags} onFinish={handleSaveCourse}
+                            onCancel={() => setEditCourseOpen(false)} submitLabel="Сохранить" loading={savingCourse} />
             </Modal>
         </div>
     );
 };
 
-// ─────────────────────────────────────────────
-// TeacherPage
-// ─────────────────────────────────────────────
+// ─── TeacherPage ─────────────────────────────────────────────
 const TeacherPage = () => {
     const navigate = useNavigate();
     const { userData } = useUserStore();
 
-    const [courses, setCourses] = useState<CourseDto[]>([]);
+    const [allCourses, setAllCourses] = useState<CourseDto[]>([]);
     const [categories, setCategories] = useState<CategoryDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCourse, setSelectedCourse] = useState<CourseDto | null>(null);
+
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [createForm] = Form.useForm<CourseFormValues>();
     const [creating, setCreating] = useState(false);
+
+    // Фильтры и поиск
+    const [searchInput, setSearchInput] = useState("");
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState<CourseStatus | "">("");
+    const [page, setPage] = useState(1);
 
     useEffect(() => {
         if (userData && userData.role !== "Teacher" && userData.role !== "Admin") {
@@ -839,29 +769,50 @@ const TeacherPage = () => {
                 courseApi.getMyCourses(),
                 fetch(`${API_URL}/Categories`, { headers: authStorage.getAuthHeaders() }),
             ]);
-            setCourses(coursesData);
+            setAllCourses(coursesData);
             if (catsRes.ok) setCategories(await catsRes.json());
             setLoading(false);
         };
-        load();
+        void load();
     }, []);
+
+    // Фильтрация и поиск на фронте
+    const filteredCourses = useMemo(() => {
+        let result = allCourses;
+        if (statusFilter) result = result.filter((c) => c.status === statusFilter);
+        if (search) result = result.filter((c) =>
+            c.title.toLowerCase().includes(search.toLowerCase()) ||
+            c.description.toLowerCase().includes(search.toLowerCase())
+        );
+        return result;
+    }, [allCourses, statusFilter, search]);
+
+    const paginatedCourses = useMemo(() => {
+        const start = (page - 1) * PAGE_SIZE;
+        return filteredCourses.slice(start, start + PAGE_SIZE);
+    }, [filteredCourses, page]);
+
+    const handleSearch = () => {
+        setSearch(searchInput.trim());
+        setPage(1);
+    };
+
+    const handleStatusFilter = (val: CourseStatus | "") => {
+        setStatusFilter(val);
+        setPage(1);
+    };
 
     const handleCreateCourse = async (values: CourseFormValues, tags: string[]) => {
         setCreating(true);
         const tagsDto: TagsDto[] = tags.map((name) => ({ name }));
         const created = await courseApi.createCourse({
-            title: values.title,
-            description: values.description,
-            fullDescription: values.fullDescription,
-            price: values.price ?? 0,
-            level: values.level ?? "Beginner",
-            certificateEnabled: values.certificateEnabled ?? false,
-            categoryId: values.categoryId,
-            coverImageUrl: values.coverImageUrl,
-            tags: tagsDto,
+            title: values.title, description: values.description,
+            fullDescription: values.fullDescription, price: values.price ?? 0,
+            level: values.level ?? "Beginner", certificateEnabled: values.certificateEnabled ?? false,
+            categoryId: values.categoryId, coverImageUrl: values.coverImageUrl, tags: tagsDto,
         });
         if (created) {
-            setCourses((p) => [created, ...p]);
+            setAllCourses((p) => [created, ...p]);
             message.success("Курс создан");
             setCreateModalOpen(false);
             createForm.resetFields();
@@ -872,7 +823,6 @@ const TeacherPage = () => {
         setCreating(false);
     };
 
-    // Пока userData не загружен — показываем спиннер
     if (!userData) {
         return (
             <>
@@ -884,10 +834,16 @@ const TeacherPage = () => {
         );
     }
 
-    // Не учитель и не админ — редирект уже запущен в useEffect, рендерим null
-    if (userData.role !== "Teacher" && userData.role !== "Admin") {
-        return null;
-    }
+    if (userData.role !== "Teacher" && userData.role !== "Admin") return null;
+
+    // Счётчики по статусам
+    const counts: Record<string, number> = {
+        "": allCourses.length,
+        Draft: allCourses.filter((c) => c.status === "Draft").length,
+        UnderReview: allCourses.filter((c) => c.status === "UnderReview").length,
+        RejectedByModerator: allCourses.filter((c) => c.status === "RejectedByModerator").length,
+        Published: allCourses.filter((c) => c.status === "Published").length,
+    };
 
     return (
         <>
@@ -895,15 +851,21 @@ const TeacherPage = () => {
             <Layout style={{ minHeight: "calc(100vh - 64px)", background: "#fafafa" }}>
                 <Content style={{ padding: "40px 60px" }}>
                     {selectedCourse ? (
-                        <CourseEditor course={selectedCourse} categories={categories}
-                                      onBack={() => setSelectedCourse(null)}
-                                      onUpdated={(c) => { setSelectedCourse(c); setCourses((p) => p.map((x) => x.id === c.id ? c : x)); }} />
+                        <CourseEditor
+                            course={selectedCourse}
+                            categories={categories}
+                            onBack={() => setSelectedCourse(null)}
+                            onUpdated={(c) => {
+                                setSelectedCourse(c);
+                                setAllCourses((p) => p.map((x) => x.id === c.id ? c : x));
+                            }}
+                        />
                     ) : (
                         <>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
                                 <div>
-                                    <Title level={2} style={{ margin: 0 }}>Панель преподавателя</Title>
-                                    <Text type="secondary">Управляйте своими курсами</Text>
+                                    <Title level={2} style={{ margin: 0 }}>Мои курсы</Title>
+                                    <Text type="secondary">Всего курсов: <strong>{allCourses.length}</strong></Text>
                                 </div>
                                 <Button type="primary" icon={<PlusOutlined />} size="large"
                                         style={{ background: "rgba(0,100,0,0.8)" }}
@@ -912,64 +874,138 @@ const TeacherPage = () => {
                                 </Button>
                             </div>
 
-                            <Divider />
+                            {/* Фильтры */}
+                            <div style={{ marginBottom: 20 }}>
+                                {/* Фильтр по статусу — кнопки */}
+                                <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                                    {([
+                                        { value: "", label: "Все" },
+                                        { value: "Draft", label: "Черновики" },
+                                        { value: "UnderReview", label: "На проверке" },
+                                        { value: "RejectedByModerator", label: "Отклонённые" },
+                                        { value: "Published", label: "Опубликованные" },
+                                    ] as { value: CourseStatus | ""; label: string }[]).map((btn) => (
+                                        <Button
+                                            key={btn.value}
+                                            type={statusFilter === btn.value ? "primary" : "default"}
+                                            onClick={() => handleStatusFilter(btn.value)}
+                                            style={statusFilter === btn.value ? { background: "rgba(0,100,0,0.8)" } : {}}
+                                        >
+                                            {btn.label}
+                                            {counts[btn.value] > 0 && (
+                                                <span style={{
+                                                    marginLeft: 6,
+                                                    background: statusFilter === btn.value ? "rgba(255,255,255,0.25)" : "#f0f0f0",
+                                                    color: statusFilter === btn.value ? "#fff" : "#666",
+                                                    borderRadius: 10, padding: "0 6px",
+                                                    fontSize: 11, fontWeight: 600,
+                                                }}>
+                                                    {counts[btn.value]}
+                                                </span>
+                                            )}
+                                        </Button>
+                                    ))}
+                                </div>
+
+                                {/* Поиск */}
+                                <Row gutter={8}>
+                                    <Col flex="auto">
+                                        <Input
+                                            placeholder="Поиск по названию или описанию..."
+                                            prefix={<SearchOutlined />}
+                                            value={searchInput}
+                                            onChange={(e) => setSearchInput(e.target.value)}
+                                            onPressEnter={handleSearch}
+                                            allowClear
+                                            onClear={() => { setSearchInput(""); setSearch(""); setPage(1); }}
+                                        />
+                                    </Col>
+                                    <Col>
+                                        <Button icon={<SearchOutlined />} onClick={handleSearch}>Найти</Button>
+                                    </Col>
+                                </Row>
+                            </div>
+
+                            <Divider style={{ margin: "0 0 24px" }} />
 
                             {loading ? (
                                 <div style={{ textAlign: "center", paddingTop: 60 }}><Spin size="large" /></div>
-                            ) : courses.length === 0 ? (
-                                <Empty description="У вас пока нет курсов" image={Empty.PRESENTED_IMAGE_SIMPLE}>
-                                    <Button type="primary" style={{ background: "rgba(0,100,0,0.8)" }}
-                                            onClick={() => setCreateModalOpen(true)}>
-                                        Создать первый курс
-                                    </Button>
+                            ) : filteredCourses.length === 0 ? (
+                                <Empty
+                                    description={search || statusFilter ? "Ничего не найдено" : "У вас пока нет курсов"}
+                                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                >
+                                    {!search && !statusFilter && (
+                                        <Button type="primary" style={{ background: "rgba(0,100,0,0.8)" }}
+                                                onClick={() => setCreateModalOpen(true)}>
+                                            Создать первый курс
+                                        </Button>
+                                    )}
                                 </Empty>
                             ) : (
-                                <Row gutter={[24, 24]}>
-                                    {courses.map((course) => (
-                                        <Col key={course.id} xs={24} sm={12} lg={8}>
-                                            <div onClick={() => setSelectedCourse(course)}
-                                                 style={{
-                                                     background: "#fff", borderRadius: 12,
-                                                     border: "1px solid #f0f0f0", padding: 20,
-                                                     cursor: "pointer", transition: "box-shadow 0.2s",
-                                                 }}
-                                                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.1)"; }}
-                                                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}>
-                                                {course.coverImageUrl && (
-                                                    <img src={course.coverImageUrl} alt={course.title}
-                                                         style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 8, marginBottom: 12 }} />
-                                                )}
-                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                                                    <Tag color={statusColor[course.status]}>{statusLabel[course.status]}</Tag>
-                                                    <Tag>{levelLabel[course.level]}</Tag>
-                                                </div>
-                                                <Text strong style={{ fontSize: 15, display: "block", marginBottom: 6 }}>{course.title}</Text>
-                                                <Text type="secondary" style={{ fontSize: 13 }}>
-                                                    {course.description.length > 80 ? course.description.slice(0, 80) + "..." : course.description}
-                                                </Text>
-                                                <Divider style={{ margin: "12px 0" }} />
-                                                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                                    <Text type="secondary" style={{ fontSize: 12 }}>{course.enrollmentCount} студентов</Text>
-                                                    <Text type="secondary" style={{ fontSize: 12 }}>
-                                                        {course.price === 0 ? "Бесплатно" : `${course.price} ₽`}
+                                <>
+                                    <Row gutter={[24, 24]}>
+                                        {paginatedCourses.map((course) => (
+                                            <Col key={course.id} xs={24} sm={12} lg={8}>
+                                                <div
+                                                    onClick={() => setSelectedCourse(course)}
+                                                    style={{
+                                                        background: "#fff", borderRadius: 12,
+                                                        border: "1px solid #f0f0f0", padding: 20,
+                                                        cursor: "pointer", transition: "box-shadow 0.2s",
+                                                    }}
+                                                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.1)"; }}
+                                                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+                                                >
+                                                    {course.coverImageUrl && (
+                                                        <img src={course.coverImageUrl} alt={course.title}
+                                                             style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 8, marginBottom: 12 }} />
+                                                    )}
+                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                                                        <Tag color={statusColor[course.status]}>{statusLabel[course.status]}</Tag>
+                                                        <Tag>{levelLabel[course.level]}</Tag>
+                                                    </div>
+                                                    <Text strong style={{ fontSize: 15, display: "block", marginBottom: 6 }}>{course.title}</Text>
+                                                    <Text type="secondary" style={{ fontSize: 13 }}>
+                                                        {course.description.length > 80 ? course.description.slice(0, 80) + "..." : course.description}
                                                     </Text>
+                                                    <Divider style={{ margin: "12px 0" }} />
+                                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                                        <Text type="secondary" style={{ fontSize: 12 }}>{course.enrollmentCount} студентов</Text>
+                                                        <Text type="secondary" style={{ fontSize: 12 }}>
+                                                            {course.price === 0 ? "Бесплатно" : `${course.price} ₽`}
+                                                        </Text>
+                                                    </div>
+                                                    {course.tags && course.tags.length > 0 && (
+                                                        <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                                            {course.tags.slice(0, 3).map((t) => (
+                                                                <Tag key={t.name} style={{ fontSize: 11 }}>{t.name}</Tag>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {course.status === "RejectedByModerator" && (
+                                                        <div style={{ marginTop: 8 }}>
+                                                            <Tag color="error" icon={<QuestionCircleOutlined />}>Требует исправлений</Tag>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                {course.tags && course.tags.length > 0 && (
-                                                    <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
-                                                        {course.tags.slice(0, 3).map((t) => (
-                                                            <Tag key={t.name} style={{ fontSize: 11 }}>{t.name}</Tag>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {course.status === "RejectedByModerator" && (
-                                                    <div style={{ marginTop: 8 }}>
-                                                        <Tag color="error" icon={<QuestionCircleOutlined />}>Требует исправлений</Tag>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </Col>
-                                    ))}
-                                </Row>
+                                            </Col>
+                                        ))}
+                                    </Row>
+
+                                    {filteredCourses.length > PAGE_SIZE && (
+                                        <div style={{ textAlign: "center", marginTop: 32 }}>
+                                            <Pagination
+                                                current={page}
+                                                pageSize={PAGE_SIZE}
+                                                total={filteredCourses.length}
+                                                onChange={setPage}
+                                                showSizeChanger={false}
+                                                showTotal={(t) => `Всего: ${t}`}
+                                            />
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </>
                     )}
@@ -981,15 +1017,9 @@ const TeacherPage = () => {
                    onCancel={() => setCreateModalOpen(false)}
                    footer={null} centered width={700}
                    styles={{ body: { padding: "16px 24px 24px" } }}>
-                <CourseForm
-                    form={createForm}
-                    categories={categories}
-                    initialTags={[]}
-                    onFinish={handleCreateCourse}
-                    onCancel={() => setCreateModalOpen(false)}
-                    submitLabel="Создать курс"
-                    loading={creating}
-                />
+                <CourseForm form={createForm} categories={categories} initialTags={[]}
+                            onFinish={handleCreateCourse} onCancel={() => setCreateModalOpen(false)}
+                            submitLabel="Создать курс" loading={creating} />
             </Modal>
         </>
     );

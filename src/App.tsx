@@ -13,6 +13,7 @@ import TeacherPage from "./pages/TeacherPage";
 import ModeratorPage from "./pages/ModeratorPage";
 import AdminPage from "./pages/AdminPage";
 import CourseReviewPage from "./pages/CourseReview";
+import TeacherProfilePage from "./pages/TeacherProfilePage";
 
 const ThemeContext = createContext(true);
 
@@ -37,6 +38,7 @@ function App() {
                         <Route path="/teacher" element={<TeacherPage />} />
                         <Route path="/moderator" element={<ModeratorPage />} />
                         <Route path="/moderator/review/:courseId" element={<CourseReviewPage />} />
+                        <Route path="/teacher/:id" element={<TeacherProfilePage />} />
                         <Route path="/admin" element={<AdminPage />} />
                         <Route
                             path="/debug"
