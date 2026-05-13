@@ -178,7 +178,10 @@ const ModeratorPage = () => {
     };
 
     useEffect(() => {
-        void loadCourses(page);
+        const load = async () => {
+            await loadCourses(page);
+        };
+        void load();
     }, [page]);
 
     useEffect(() => {
