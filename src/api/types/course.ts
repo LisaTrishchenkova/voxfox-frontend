@@ -41,6 +41,10 @@ export interface CourseDto {
   categoryId?: string | null;
   publishedAt?: string | null;
   createdAt: string;
+  reviewerId?: string | null;
+  reviewerName?: string | null;
+  reviewStartedAt?: string | null;
+  reviewCount?: number;
   author: AuthorDto;
   tags?: TagsDto[] | null;
 }

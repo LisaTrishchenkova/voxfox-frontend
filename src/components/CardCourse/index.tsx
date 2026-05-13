@@ -122,7 +122,12 @@ const CardCourse = ({ course, isFavorite = false }: CardCourseProps) => {
                   WebkitBoxOrient: "vertical",
                   overflow: "hidden",
                 }}>
-                  Автор: {course.author.name}
+                 <span
+                     onClick={(e) => { e.stopPropagation(); navigate(`/teacher/${course.author.id}`); }}
+                     style={{ cursor: "pointer", color: "#1890ff" }}
+                 >
+                {course.author.name}
+                </span>
                 </Text>
             )}
           </Col>
