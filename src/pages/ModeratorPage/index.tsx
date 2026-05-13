@@ -10,16 +10,17 @@ import {
     Pagination,
     Row,
     Spin,
-    Statistic,
     Tag,
     Typography,
     message,
 } from "antd";
 import {
-    BarChartOutlined,
     CheckOutlined,
     CloseOutlined,
     EyeOutlined,
+    InboxOutlined,
+    LoadingOutlined,
+    UserOutlined,
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -34,17 +35,119 @@ import type { ModeratorStatsDto } from "../../api/moderationApi.ts";
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
+type ModTab = "free" | "inReview" | "my";
+
 const levelLabel: Record<string, string> = {
     Beginner: "Начинающий",
     Intermediate: "Средний",
     Advanced: "Продвинутый",
 };
 
+// ─── CourseCard ─────────────────────────────────────────────
+const CourseCard = ({
+                        course,
+                        currentUserId,
+                        actionLoading,
+                        onApprove,
+                        onReject,
+                    }: {
+    course: CourseDto;
+    currentUserId: string;
+    actionLoading: string | null;
+    onApprove: (course: CourseDto) => void;
+    onReject: (course: CourseDto) => void;
+}) => {
+    const navigate = useNavigate();
+    const isClaimedByMe = !!course.reviewerId && course.reviewerId === currentUserId;
+    const isClaimedByOther = !!course.reviewerId && course.reviewerId !== currentUserId;
+
+    return (
+        <Card
+            style={{
+                borderRadius: 12,
+                height: "100%",
+                borderColor: isClaimedByMe ? "#52c41a" : isClaimedByOther ? "#faad14" : undefined,
+            }}
+            styles={{ body: { padding: 20 } }}
+            cover={course.coverImageUrl ? (
+                <img src={course.coverImageUrl} alt={course.title}
+                     style={{ height: 140, objectFit: "cover", borderRadius: "12px 12px 0 0" }} />
+            ) : undefined}
+        >
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <Tag color="processing">На проверке</Tag>
+                <Tag>{levelLabel[course.level] ?? course.level}</Tag>
+            </div>
+
+            <Title level={5} style={{ margin: "0 0 6px" }}>{course.title}</Title>
+
+            <Text type="secondary" style={{ fontSize: 13 }}>
+                {course.description.length > 100
+                    ? course.description.slice(0, 100) + "..."
+                    : course.description}
+            </Text>
+
+            <Divider style={{ margin: "12px 0" }} />
+
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                    Автор: {course.author?.name ?? "—"}
+                </Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                    {course.price === 0 ? "Бесплатно" : `${course.price} ₽`}
+                </Text>
+            </div>
+
+            {isClaimedByOther && (
+                <div style={{ marginBottom: 10 }}>
+                    <Tag color="warning" style={{ fontSize: 11 }}>
+                        🔒 Проверяет: {course.reviewerName}
+                    </Tag>
+                </div>
+            )}
+            {isClaimedByMe && (
+                <div style={{ marginBottom: 10 }}>
+                    <Tag color="success" style={{ fontSize: 11 }}>✓ Вы проверяете</Tag>
+                </div>
+            )}
+            {!course.reviewerId && (
+                <div style={{ marginBottom: 10 }}>
+                    <Tag style={{ fontSize: 11, color: "#888" }}>Свободен</Tag>
+                </div>
+            )}
+
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Button size="small" icon={<EyeOutlined />}
+                        onClick={() => navigate(`/moderator/review/${course.id}`)}>
+                    Проверить
+                </Button>
+                {!isClaimedByOther && (
+                    <>
+                        <Button size="small" type="primary" icon={<CheckOutlined />}
+                                loading={actionLoading === course.id}
+                                style={{ background: "rgba(0,100,0,0.8)" }}
+                                onClick={() => onApprove(course)}>
+                            Одобрить
+                        </Button>
+                        <Button size="small" danger icon={<CloseOutlined />}
+                                loading={actionLoading === course.id}
+                                onClick={() => onReject(course)}>
+                            Отклонить
+                        </Button>
+                    </>
+                )}
+            </div>
+        </Card>
+    );
+};
+
+// ─── ModeratorPage ──────────────────────────────────────────
 const ModeratorPage = () => {
     const navigate = useNavigate();
     const { userData } = useUserStore();
 
-    const [courses, setCourses] = useState<CourseDto[]>([]);
+    const [activeTab, setActiveTab] = useState<ModTab>("free");
+    const [allCourses, setAllCourses] = useState<CourseDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
@@ -55,8 +158,8 @@ const ModeratorPage = () => {
     const [rejectReason, setRejectReason] = useState("");
     const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-    const [stats, setStats] = useState<ModeratorStatsDto | null>(null);
-    const [statsOpen, setStatsOpen] = useState(false);
+    const [stats, setStats] = useState<ModeratorStatsDto | null | undefined>(undefined);
+    const [statsLoading, setStatsLoading] = useState(false);
 
     useEffect(() => {
         if (userData && userData.role !== "Moderator" && userData.role !== "Admin") {
@@ -64,27 +167,48 @@ const ModeratorPage = () => {
         }
     }, [userData, navigate]);
 
+    const loadCourses = async (currentPage: number) => {
+        setLoading(true);
+        const data = await courseApi.getPendingCourses(currentPage, pageSize);
+        if (data) {
+            setAllCourses(data.items);
+            setTotal(data.totalCount);
+        }
+        setLoading(false);
+    };
+
     useEffect(() => {
+        void loadCourses(page);
+    }, [page]);
+
+    useEffect(() => {
+        if (activeTab !== "my" || stats != null) return;
         const load = async () => {
-            setLoading(true);
-            const data = await courseApi.getPendingCourses(page, pageSize);
-            if (data) {
-                setCourses(data.items);
-                setTotal(data.totalCount);
-            }
-            setLoading(false);
+            setStatsLoading(true);
+            const data = await moderationApi.getMyStats();
+            setStats(data ?? undefined);
+            setStatsLoading(false);
         };
         void load();
-    }, [page]);
+    }, [activeTab, stats]);
+
+    const handleTabChange = (tab: ModTab) => {
+        setActiveTab(tab);
+        void loadCourses(1);
+        setPage(1);
+        if (tab === "my") {
+            setStats(null);
+        }
+    };
 
     const handleApprove = async (course: CourseDto) => {
         setActionLoading(course.id);
-        await moderationApi.releaseCourse(course.id);
+        // Не вызываем release — бэк сам обнулит ReviewerId в ApproveCourseAsync
         const ok = await courseApi.approveCourse(course.id);
         if (ok) {
             message.success(`Курс «${course.title}» одобрен и опубликован`);
-            setCourses((p) => p.filter((c) => c.id !== course.id));
-            setTotal((t) => t - 1);
+            await loadCourses(page);
+            setStats(null);
         } else {
             message.error("Ошибка при одобрении");
         }
@@ -100,23 +224,17 @@ const ModeratorPage = () => {
     const handleReject = async () => {
         if (!rejectingCourse) return;
         setActionLoading(rejectingCourse.id);
-        await moderationApi.releaseCourse(rejectingCourse.id);
+        // Не вызываем release — бэк сам обнулит ReviewerId в RejectCourseAsync
         const ok = await courseApi.rejectCourse(rejectingCourse.id, rejectReason);
         if (ok) {
             message.success(`Курс «${rejectingCourse.title}» отклонён`);
-            setCourses((p) => p.filter((c) => c.id !== rejectingCourse.id));
-            setTotal((t) => t - 1);
             setRejectModalOpen(false);
+            await loadCourses(page);
+            setStats(null);
         } else {
             message.error("Ошибка при отклонении");
         }
         setActionLoading(null);
-    };
-
-    const handleOpenStats = async () => {
-        const data = await moderationApi.getMyStats();
-        setStats(data);
-        setStatsOpen(true);
     };
 
     if (!userData) {
@@ -132,89 +250,140 @@ const ModeratorPage = () => {
 
     if (userData.role !== "Moderator" && userData.role !== "Admin") return null;
 
+    const freeCourses = allCourses.filter((c) => !c.reviewerId);
+    const inReviewCourses = allCourses.filter((c) => !!c.reviewerId && c.reviewerId !== userData.id);
+    const myCourses = allCourses.filter((c) => c.reviewerId === userData.id);
+
+    const tabs: { key: ModTab; label: string; icon: React.ReactNode; count: number }[] = [
+        { key: "free", label: "Свободные", icon: <InboxOutlined />, count: freeCourses.length },
+        { key: "inReview", label: "На проверке", icon: <LoadingOutlined />, count: inReviewCourses.length },
+        { key: "my", label: "Мои курсы", icon: <UserOutlined />, count: myCourses.length },
+    ];
+
+    const visibleCourses =
+        activeTab === "free" ? freeCourses :
+            activeTab === "inReview" ? inReviewCourses :
+                myCourses;
+
     return (
         <>
             <Header />
             <Layout style={{ minHeight: "calc(100vh - 64px)", background: "#fafafa" }}>
                 <Content style={{ padding: "40px 60px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-                        <div>
-                            <Title level={2} style={{ margin: 0 }}>Панель модератора</Title>
-                            <Text type="secondary">
-                                Курсов ожидают проверки: <strong>{total}</strong>
-                            </Text>
-                        </div>
-                        <Button icon={<BarChartOutlined />} onClick={handleOpenStats}>
-                            Моя статистика
-                        </Button>
+                    <div style={{ marginBottom: 24 }}>
+                        <Title level={2} style={{ margin: 0 }}>Панель модератора</Title>
+                        <Text type="secondary">
+                            Всего на проверке: <strong>{total}</strong>
+                            {" · "}
+                            Свободных: <strong>{freeCourses.length}</strong>
+                            {" · "}
+                            Ваших: <strong>{myCourses.length}</strong>
+                        </Text>
                     </div>
 
-                    <Divider />
+                    <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+                        {tabs.map((tab) => (
+                            <Button
+                                key={tab.key}
+                                type={activeTab === tab.key ? "primary" : "default"}
+                                icon={tab.icon}
+                                onClick={() => handleTabChange(tab.key)}
+                                style={activeTab === tab.key ? { background: "rgba(0,100,0,0.8)" } : {}}
+                            >
+                                {tab.label}
+                                {tab.count > 0 && (
+                                    <span style={{
+                                        marginLeft: 6,
+                                        background: activeTab === tab.key ? "rgba(255,255,255,0.25)" : "#f0f0f0",
+                                        color: activeTab === tab.key ? "#fff" : "#666",
+                                        borderRadius: 10,
+                                        padding: "0 6px",
+                                        fontSize: 11,
+                                        fontWeight: 600,
+                                    }}>
+                                        {tab.count}
+                                    </span>
+                                )}
+                            </Button>
+                        ))}
+                    </div>
+
+                    <Divider style={{ margin: "0 0 24px" }} />
+
+                    {activeTab === "my" && (
+                        <>
+                            <div style={{
+                                background: "#fff", borderRadius: 10,
+                                border: "1px solid #f0f0f0", overflow: "hidden",
+                                marginBottom: 32,
+                            }}>
+                                <div style={{ padding: "12px 18px", borderBottom: "1px solid #f0f0f0", background: "#fafafa" }}>
+                                    <Text strong style={{ fontSize: 14 }}>Моя статистика</Text>
+                                </div>
+                                {statsLoading || stats === undefined ? (
+                                    <div style={{ padding: 32, textAlign: "center" }}><Spin /></div>
+                                ) : stats ? (
+                                    <Row gutter={0}>
+                                        {[
+                                            { label: "Проверяю сейчас", value: stats.currentlyReviewing, color: stats.currentlyReviewing > 0 ? "#faad14" : undefined },
+                                            { label: "Всего проверено", value: stats.totalReviewed, color: undefined },
+                                            { label: "Одобрено", value: stats.totalApproved, color: "#52c41a" },
+                                            { label: "Отклонено", value: stats.totalRejected, color: "#ff4d4f" },
+                                        ].map((s, i, arr) => (
+                                            <Col key={s.label} xs={12} sm={6} style={{
+                                                padding: "20px 24px",
+                                                borderRight: i < arr.length - 1 ? "1px solid #f0f0f0" : undefined,
+                                            }}>
+                                                <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 6 }}>
+                                                    {s.label}
+                                                </Text>
+                                                <Text strong style={{ fontSize: 28, color: s.color }}>
+                                                    {s.value}
+                                                </Text>
+                                            </Col>
+                                        ))}
+                                    </Row>
+                                ) : (
+                                    <div style={{ padding: 24, textAlign: "center" }}>
+                                        <Text type="secondary">Не удалось загрузить статистику</Text>
+                                    </div>
+                                )}
+                            </div>
+
+                            <Text strong style={{ fontSize: 14, display: "block", marginBottom: 16 }}>
+                                Курсы которые вы проверяете
+                            </Text>
+                        </>
+                    )}
 
                     {loading ? (
                         <div style={{ textAlign: "center", paddingTop: 60 }}><Spin size="large" /></div>
-                    ) : courses.length === 0 ? (
-                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Нет курсов на проверке — всё проверено!" />
+                    ) : visibleCourses.length === 0 ? (
+                        <Empty
+                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                            description={
+                                activeTab === "free" ? "Нет свободных курсов — все разобраны" :
+                                    activeTab === "inReview" ? "Нет курсов которые проверяют другие модераторы" :
+                                        "Вы не проверяете ни одного курса"
+                            }
+                        />
                     ) : (
                         <>
                             <Row gutter={[24, 24]}>
-                                {courses.map((course) => (
+                                {visibleCourses.map((course) => (
                                     <Col key={course.id} xs={24} sm={12} lg={8}>
-                                        <Card
-                                            style={{ borderRadius: 12, height: "100%" }}
-                                            styles={{ body: { padding: 20 } }}
-                                            cover={course.coverImageUrl ? (
-                                                <img src={course.coverImageUrl} alt={course.title}
-                                                     style={{ height: 140, objectFit: "cover", borderRadius: "12px 12px 0 0" }} />
-                                            ) : undefined}
-                                        >
-                                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                                                <Tag color="processing">На проверке</Tag>
-                                                <Tag>{levelLabel[course.level] ?? course.level}</Tag>
-                                            </div>
-
-                                            <Title level={5} style={{ margin: "0 0 6px" }}>{course.title}</Title>
-
-                                            <Text type="secondary" style={{ fontSize: 13 }}>
-                                                {course.description.length > 100
-                                                    ? course.description.slice(0, 100) + "..."
-                                                    : course.description}
-                                            </Text>
-
-                                            <Divider style={{ margin: "12px 0" }} />
-
-                                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                                                <Text type="secondary" style={{ fontSize: 12 }}>
-                                                    Автор: {course.author?.name ?? "—"}
-                                                </Text>
-                                                <Text type="secondary" style={{ fontSize: 12 }}>
-                                                    {course.price === 0 ? "Бесплатно" : `${course.price} ₽`}
-                                                </Text>
-                                            </div>
-
-                                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                                <Button size="small" icon={<EyeOutlined />}
-                                                        onClick={() => navigate(`/moderator/review/${course.id}`)}>
-                                                    Проверить
-                                                </Button>
-                                                <Button size="small" type="primary" icon={<CheckOutlined />}
-                                                        loading={actionLoading === course.id}
-                                                        style={{ background: "rgba(0,100,0,0.8)" }}
-                                                        onClick={() => handleApprove(course)}>
-                                                    Одобрить
-                                                </Button>
-                                                <Button size="small" danger icon={<CloseOutlined />}
-                                                        loading={actionLoading === course.id}
-                                                        onClick={() => handleOpenReject(course)}>
-                                                    Отклонить
-                                                </Button>
-                                            </div>
-                                        </Card>
+                                        <CourseCard
+                                            course={course}
+                                            currentUserId={userData.id}
+                                            actionLoading={actionLoading}
+                                            onApprove={handleApprove}
+                                            onReject={handleOpenReject}
+                                        />
                                     </Col>
                                 ))}
                             </Row>
 
-                            {total > pageSize && (
+                            {activeTab === "free" && total > pageSize && (
                                 <div style={{ textAlign: "center", marginTop: 32 }}>
                                     <Pagination current={page} pageSize={pageSize} total={total}
                                                 onChange={setPage} showSizeChanger={false} />
@@ -226,7 +395,6 @@ const ModeratorPage = () => {
             </Layout>
             <Footer />
 
-            {/* Отклонение */}
             <Modal
                 open={rejectModalOpen}
                 title={`Отклонить курс «${rejectingCourse?.title}»`}
@@ -244,22 +412,6 @@ const ModeratorPage = () => {
                                     onChange={(e) => setRejectReason(e.target.value)}
                                     placeholder="Например: недостаточно материала, некорректное описание..." />
                 </div>
-            </Modal>
-
-            {/* Статистика */}
-            <Modal open={statsOpen} onCancel={() => setStatsOpen(false)}
-                   footer={<Button onClick={() => setStatsOpen(false)}>Закрыть</Button>}
-                   title="Моя статистика" centered width={480}>
-                {stats ? (
-                    <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-                        <Col span={12}><Statistic title="Проверяю сейчас" value={stats.currentlyReviewing} /></Col>
-                        <Col span={12}><Statistic title="Всего проверено" value={stats.totalReviewed} /></Col>
-                        <Col span={12}><Statistic title="Одобрено" value={stats.totalApproved} valueStyle={{ color: "#52c41a" }} /></Col>
-                        <Col span={12}><Statistic title="Отклонено" value={stats.totalRejected} valueStyle={{ color: "#ff4d4f" }} /></Col>
-                    </Row>
-                ) : (
-                    <div style={{ textAlign: "center", padding: 32 }}><Spin /></div>
-                )}
             </Modal>
         </>
     );

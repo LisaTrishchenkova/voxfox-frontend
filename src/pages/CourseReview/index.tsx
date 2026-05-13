@@ -49,13 +49,7 @@ const taskTypeLabel: Record<string, string> = {
 };
 
 // ─── LessonContent ──────────────────────────────────────────
-const LessonContent = ({
-                           lesson,
-                           index,
-                       }: {
-    lesson: LessonDto;
-    index: string;
-}) => {
+const LessonContent = ({ lesson, index }: { lesson: LessonDto; index: string }) => {
     const [tasks, setTasks] = useState<TaskTeacherDto[]>([]);
     const [loadingTasks, setLoadingTasks] = useState(true);
 
@@ -109,11 +103,8 @@ const LessonContent = ({
                 ) : (
                     tasks.map((task, ti) => (
                         <div key={task.id} style={{
-                            border: "1px solid #f0f0f0",
-                            borderRadius: 8,
-                            padding: "16px 20px",
-                            marginBottom: 12,
-                            background: "#fff",
+                            border: "1px solid #f0f0f0", borderRadius: 8,
+                            padding: "16px 20px", marginBottom: 12, background: "#fff",
                         }}>
                             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
                                 <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, minWidth: 20 }}>
@@ -215,7 +206,6 @@ const CourseReviewPage = () => {
         const load = async () => {
             setLoading(true);
 
-            // Пытаемся захватить курс
             const claimRes = await fetch(
                 `${(await import("../../config")).API_URL}/moderation/courses/${courseId}/claim`,
                 { method: "POST", headers: (await import("../../services/auth-storage.service")).authStorage.getAuthHeaders() }
@@ -223,7 +213,6 @@ const CourseReviewPage = () => {
 
             if (!claimRes.ok) {
                 if (claimRes.status === 409) {
-                    // Курс занят — получаем инфо о кем
                     const reviewData = await moderationApi.getCourseForReview(courseId);
                     if (reviewData?.reviewerName) {
                         setClaimError(`Этот курс уже проверяется модератором ${reviewData.reviewerName}. Дождитесь завершения проверки.`);
@@ -251,7 +240,6 @@ const CourseReviewPage = () => {
             }));
             setLessonsBySection(lessonsMap);
 
-            // Выбираем первый урок по умолчанию
             const firstSection = sectionsData[0];
             if (firstSection) {
                 const firstLessons = lessonsMap[firstSection.id] ?? [];
@@ -265,6 +253,7 @@ const CourseReviewPage = () => {
         void load();
     }, [courseId]);
 
+    // При уходе со страницы через кнопку "К очереди" — release
     const handleBack = async () => {
         if (courseId && !claimError) await moderationApi.releaseCourse(courseId);
         navigate("/moderator");
@@ -273,7 +262,7 @@ const CourseReviewPage = () => {
     const handleApprove = async () => {
         if (!courseId || !course) return;
         setActionLoading(true);
-        await moderationApi.releaseCourse(courseId);
+        // Не вызываем release — бэк сам обнулит ReviewerId в ApproveCourseAsync
         const ok = await courseApi.approveCourse(courseId);
         if (ok) {
             message.success(`Курс «${course.title}» одобрен`);
@@ -287,7 +276,7 @@ const CourseReviewPage = () => {
     const handleReject = async () => {
         if (!courseId || !course) return;
         setActionLoading(true);
-        await moderationApi.releaseCourse(courseId);
+        // Не вызываем release — бэк сам обнулит ReviewerId в RejectCourseAsync
         const ok = await courseApi.rejectCourse(courseId, rejectReason);
         if (ok) {
             message.success(`Курс «${course.title}» отклонён`);
@@ -318,25 +307,13 @@ const CourseReviewPage = () => {
             ) : (
                 <Layout style={{ flex: 1, overflow: "hidden" }}>
                     {/* ── Sidebar ── */}
-                    <Sider
-                        width={300}
-                        style={{
-                            background: "#fff",
-                            borderRight: "1px solid #f0f0f0",
-                            overflow: "auto",
-                            display: "flex",
-                            flexDirection: "column",
-                        }}
-                    >
-                        {/* Шапка сайдбара */}
+                    <Sider width={300} style={{
+                        background: "#fff", borderRight: "1px solid #f0f0f0",
+                        overflow: "auto", display: "flex", flexDirection: "column",
+                    }}>
                         <div style={{ padding: "16px 16px 0" }}>
-                            <Button
-                                type="text"
-                                icon={<ArrowLeftOutlined />}
-                                onClick={handleBack}
-                                size="small"
-                                style={{ paddingLeft: 0, color: "#666", marginBottom: 12 }}
-                            >
+                            <Button type="text" icon={<ArrowLeftOutlined />} onClick={handleBack}
+                                    size="small" style={{ paddingLeft: 0, color: "#666", marginBottom: 12 }}>
                                 К очереди
                             </Button>
 
@@ -356,29 +333,23 @@ const CourseReviewPage = () => {
                                 </Text>
                             </div>
 
-                            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                            <div style={{ marginBottom: 12 }}>
                                 <Text type="secondary" style={{ fontSize: 12 }}>
                                     {sections.length} разд. · {totalLessons} уроков
                                 </Text>
                             </div>
 
-                            {/* Кнопки действий */}
                             {!claimError && (
                                 <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-                                    <Button
-                                        danger size="small" icon={<CloseOutlined />}
-                                        style={{ flex: 1 }}
-                                        onClick={() => { setRejectReason(""); setRejectModalOpen(true); }}
-                                        loading={actionLoading}
-                                    >
+                                    <Button danger size="small" icon={<CloseOutlined />}
+                                            style={{ flex: 1 }}
+                                            onClick={() => { setRejectReason(""); setRejectModalOpen(true); }}
+                                            loading={actionLoading}>
                                         Отклонить
                                     </Button>
-                                    <Button
-                                        type="primary" size="small" icon={<CheckOutlined />}
-                                        style={{ flex: 1, background: "rgba(0,100,0,0.8)" }}
-                                        onClick={handleApprove}
-                                        loading={actionLoading}
-                                    >
+                                    <Button type="primary" size="small" icon={<CheckOutlined />}
+                                            style={{ flex: 1, background: "rgba(0,100,0,0.8)" }}
+                                            onClick={handleApprove} loading={actionLoading}>
                                         Одобрить
                                     </Button>
                                 </div>
@@ -387,25 +358,18 @@ const CourseReviewPage = () => {
                             <Divider style={{ margin: "0 0 8px" }} />
                         </div>
 
-                        {/* Курс — инфо */}
                         <div style={{ padding: "0 16px 12px" }}>
-                            <div
-                                style={{
-                                    padding: "10px 12px",
-                                    borderRadius: 6,
-                                    cursor: "pointer",
-                                    background: !selectedLesson ? "#f0f5ff" : "transparent",
-                                    marginBottom: 4,
-                                }}
-                                onClick={() => setSelectedLesson(null)}
-                            >
+                            <div style={{
+                                padding: "10px 12px", borderRadius: 6, cursor: "pointer",
+                                background: !selectedLesson ? "#f0f5ff" : "transparent", marginBottom: 4,
+                            }}
+                                 onClick={() => setSelectedLesson(null)}>
                                 <Text strong style={{ fontSize: 13 }}>📋 Информация о курсе</Text>
                             </div>
                         </div>
 
                         <Divider style={{ margin: "0 0 4px" }} />
 
-                        {/* Разделы и уроки */}
                         <div style={{ padding: "4px 0 16px", overflow: "auto", flex: 1 }}>
                             {sections.map((section, si) => (
                                 <div key={section.id}>
@@ -419,18 +383,15 @@ const CourseReviewPage = () => {
                                         const index = `${si + 1}.${li + 1}`;
                                         const isActive = selectedLesson?.lesson.id === lesson.id;
                                         return (
-                                            <div
-                                                key={lesson.id}
-                                                onClick={() => setSelectedLesson({ lesson, index })}
-                                                style={{
-                                                    padding: "8px 16px 8px 28px",
-                                                    cursor: "pointer",
-                                                    background: isActive ? "#f0f5ff" : "transparent",
-                                                    borderLeft: isActive ? "3px solid #52c41a" : "3px solid transparent",
-                                                    display: "flex", alignItems: "center", gap: 8,
-                                                    transition: "background 0.15s",
-                                                }}
-                                            >
+                                            <div key={lesson.id}
+                                                 onClick={() => setSelectedLesson({ lesson, index })}
+                                                 style={{
+                                                     padding: "8px 16px 8px 28px", cursor: "pointer",
+                                                     background: isActive ? "#f0f5ff" : "transparent",
+                                                     borderLeft: isActive ? "3px solid #52c41a" : "3px solid transparent",
+                                                     display: "flex", alignItems: "center", gap: 8,
+                                                     transition: "background 0.15s",
+                                                 }}>
                                                 <FileTextOutlined style={{ fontSize: 12, color: isActive ? "#52c41a" : "#bbb", flexShrink: 0 }} />
                                                 <div style={{ minWidth: 0 }}>
                                                     <Text style={{
@@ -465,19 +426,13 @@ const CourseReviewPage = () => {
                     <Content style={{ overflow: "auto", background: "#fafafa" }}>
                         <div style={{ padding: "40px 56px", maxWidth: 860, margin: "0 auto" }}>
 
-                            {/* Предупреждение о захвате */}
                             {claimError && (
-                                <Alert
-                                    type="warning"
-                                    showIcon
-                                    icon={<LockOutlined />}
-                                    message="Курс недоступен для проверки"
-                                    description={claimError}
-                                    style={{ marginBottom: 24 }}
-                                />
+                                <Alert type="warning" showIcon icon={<LockOutlined />}
+                                       message="Курс недоступен для проверки"
+                                       description={claimError}
+                                       style={{ marginBottom: 24 }} />
                             )}
 
-                            {/* Информация о курсе */}
                             {!selectedLesson ? (
                                 <div>
                                     <Title level={2} style={{ margin: "0 0 8px" }}>{course.title}</Title>
@@ -542,16 +497,13 @@ const CourseReviewPage = () => {
                                                     {section.description}
                                                 </Text>
                                                 {(lessonsBySection[section.id] ?? []).map((lesson, li) => (
-                                                    <div
-                                                        key={lesson.id}
-                                                        style={{
-                                                            padding: "8px 12px", borderRadius: 6,
-                                                            background: "#fff", border: "1px solid #f0f0f0",
-                                                            marginBottom: 4, cursor: "pointer",
-                                                            display: "flex", alignItems: "center", gap: 8,
-                                                        }}
-                                                        onClick={() => setSelectedLesson({ lesson, index: `${si + 1}.${li + 1}` })}
-                                                    >
+                                                    <div key={lesson.id} style={{
+                                                        padding: "8px 12px", borderRadius: 6,
+                                                        background: "#fff", border: "1px solid #f0f0f0",
+                                                        marginBottom: 4, cursor: "pointer",
+                                                        display: "flex", alignItems: "center", gap: 8,
+                                                    }}
+                                                         onClick={() => setSelectedLesson({ lesson, index: `${si + 1}.${li + 1}` })}>
                                                         <FileTextOutlined style={{ color: "#bbb", fontSize: 12 }} />
                                                         <Text style={{ fontSize: 13 }}>{lesson.title}</Text>
                                                     </div>
@@ -590,16 +542,13 @@ const CourseReviewPage = () => {
                 </Layout>
             )}
 
-            {/* Модалка отклонения */}
-            <Modal
-                open={rejectModalOpen}
-                title={`Отклонить курс «${course?.title}»`}
-                onCancel={() => setRejectModalOpen(false)}
-                onOk={handleReject}
-                okText="Отклонить" cancelText="Отмена"
-                okButtonProps={{ danger: true, loading: actionLoading }}
-                centered
-            >
+            <Modal open={rejectModalOpen}
+                   title={`Отклонить курс «${course?.title}»`}
+                   onCancel={() => setRejectModalOpen(false)}
+                   onOk={handleReject}
+                   okText="Отклонить" cancelText="Отмена"
+                   okButtonProps={{ danger: true, loading: actionLoading }}
+                   centered>
                 <div style={{ marginTop: 8 }}>
                     <Text style={{ display: "block", marginBottom: 8 }}>
                         Укажите причину отклонения (необязательно):
