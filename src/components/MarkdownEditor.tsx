@@ -20,77 +20,19 @@ interface ToolbarItem {
 }
 
 const TOOLBAR: ToolbarItem[] = [
-    {
-        label: "B",
-        title: "Жирный",
-        action: (sel) => ({ text: `**${sel || "жирный текст"}**`, offset: sel ? 0 : 2 }),
-    },
-    {
-        label: "I",
-        title: "Курсив",
-        action: (sel) => ({ text: `*${sel || "курсив"}*`, offset: sel ? 0 : 1 }),
-    },
-    {
-        label: "S",
-        title: "Зачёркнутый",
-        action: (sel) => ({ text: `~~${sel || "зачёркнутый"}~~`, offset: sel ? 0 : 2 }),
-    },
-    {
-        label: "H1",
-        title: "Заголовок 1",
-        action: (sel) => ({ text: `# ${sel || "Заголовок"}`, offset: sel ? 0 : 2 }),
-    },
-    {
-        label: "H2",
-        title: "Заголовок 2",
-        action: (sel) => ({ text: `## ${sel || "Заголовок"}`, offset: sel ? 0 : 3 }),
-    },
-    {
-        label: "H3",
-        title: "Заголовок 3",
-        action: (sel) => ({ text: `### ${sel || "Заголовок"}`, offset: sel ? 0 : 4 }),
-    },
-    {
-        label: "—",
-        title: "Разделитель",
-        action: () => ({ text: "\n---\n", offset: 0 }),
-    },
-    {
-        label: "• Список",
-        title: "Маркированный список",
-        action: (sel) => ({
-            text: sel ? sel.split("\n").map((l) => `- ${l}`).join("\n") : "- Пункт 1\n- Пункт 2\n- Пункт 3",
-            offset: sel ? 0 : 2,
-        }),
-    },
-    {
-        label: "1. Список",
-        title: "Нумерованный список",
-        action: (sel) => ({
-            text: sel ? sel.split("\n").map((l, i) => `${i + 1}. ${l}`).join("\n") : "1. Пункт\n2. Пункт\n3. Пункт",
-            offset: sel ? 0 : 3,
-        }),
-    },
-    {
-        label: "> Цитата",
-        title: "Цитата",
-        action: (sel) => ({ text: `> ${sel || "цитата"}`, offset: sel ? 0 : 2 }),
-    },
-    {
-        label: "`код`",
-        title: "Inline код",
-        action: (sel) => ({ text: `\`${sel || "код"}\``, offset: sel ? 0 : 1 }),
-    },
-    {
-        label: "```блок```",
-        title: "Блок кода",
-        action: (sel) => ({ text: `\`\`\`\n${sel || "код"}\n\`\`\``, offset: sel ? 0 : 4 }),
-    },
-    {
-        label: "🔗 Ссылка",
-        title: "Ссылка",
-        action: (sel) => ({ text: `[${sel || "текст ссылки"}](url)`, offset: sel ? 0 : 1 }),
-    },
+    { label: "B",         title: "Жирный текст",               action: (sel) => ({ text: `**${sel || "жирный текст"}**`, offset: sel ? 0 : 2 }) },
+    { label: "I",         title: "Курсив",                     action: (sel) => ({ text: `*${sel || "курсив"}*`, offset: sel ? 0 : 1 }) },
+    { label: "S",         title: "Зачёркнутый текст",          action: (sel) => ({ text: `~~${sel || "зачёркнутый"}~~`, offset: sel ? 0 : 2 }) },
+    { label: "H1",        title: "Заголовок 1",                action: (sel) => ({ text: `# ${sel || "Заголовок"}`, offset: sel ? 0 : 2 }) },
+    { label: "H2",        title: "Заголовок 2",                action: (sel) => ({ text: `## ${sel || "Заголовок"}`, offset: sel ? 0 : 3 }) },
+    { label: "H3",        title: "Заголовок 3",                action: (sel) => ({ text: `### ${sel || "Заголовок"}`, offset: sel ? 0 : 4 }) },
+    { label: "—",         title: "Горизонтальный разделитель", action: () => ({ text: "\n---\n", offset: 0 }) },
+    { label: "• Список",  title: "Маркированный список",       action: (sel) => ({ text: sel ? sel.split("\n").map((l) => `- ${l}`).join("\n") : "- Пункт 1\n- Пункт 2\n- Пункт 3", offset: sel ? 0 : 2 }) },
+    { label: "1. Список", title: "Нумерованный список",        action: (sel) => ({ text: sel ? sel.split("\n").map((l, i) => `${i + 1}. ${l}`).join("\n") : "1. Пункт\n2. Пункт\n3. Пункт", offset: sel ? 0 : 3 }) },
+    { label: "> Цитата",  title: "Цитата",                     action: (sel) => ({ text: `> ${sel || "цитата"}`, offset: sel ? 0 : 2 }) },
+    { label: "`код`",     title: "Строчный код",               action: (sel) => ({ text: `\`${sel || "код"}\``, offset: sel ? 0 : 1 }) },
+    { label: "```блок```",title: "Блок кода",                  action: (sel) => ({ text: `\`\`\`\n${sel || "код"}\n\`\`\``, offset: sel ? 0 : 4 }) },
+    { label: "🔗 Ссылка", title: "Ссылка",                     action: (sel) => ({ text: `[${sel || "текст ссылки"}](url)`, offset: sel ? 0 : 1 }) },
 ];
 
 const MarkdownEditor = ({ value, onChange, minHeight = 320 }: MarkdownEditorProps) => {
@@ -153,6 +95,16 @@ const MarkdownEditor = ({ value, onChange, minHeight = 320 }: MarkdownEditorProp
         setVideoModalOpen(false);
     };
 
+    const detectPlatform = (url: string): string => {
+        if (url.includes("youtube.com") || url.includes("youtu.be")) return "YouTube";
+        if (url.includes("vimeo.com")) return "Vimeo";
+        if (url.includes("vkvideo.ru") || url.includes("vk.com")) return "ВКонтакте";
+        if (/\.(mp4|webm|ogg)/i.test(url)) return "Видео-файл";
+        return "";
+    };
+
+    const platform = detectPlatform(videoUrl.trim());
+
     return (
         <div style={{ border: "1px solid #d9d9d9", borderRadius: 8, overflow: "hidden" }}>
             {/* Тулбар */}
@@ -162,7 +114,7 @@ const MarkdownEditor = ({ value, onChange, minHeight = 320 }: MarkdownEditorProp
                 borderBottom: "1px solid #e8e8e8", alignItems: "center",
             }}>
                 {TOOLBAR.map((item, i) => (
-                    <Tooltip key={i} title={item.title} mouseEnterDelay={0.5}>
+                    <Tooltip key={i} title={item.title} mouseEnterDelay={0.4} color="#333333">
                         <Button
                             size="small"
                             type="text"
@@ -184,7 +136,7 @@ const MarkdownEditor = ({ value, onChange, minHeight = 320 }: MarkdownEditorProp
 
                 <div style={{ width: 1, height: 20, background: "#e8e8e8", margin: "0 4px" }} />
 
-                <Tooltip title="Вставить видео (YouTube, Vimeo, mp4)">
+                <Tooltip title="Вставить видео" mouseEnterDelay={0.4} color="#333333">
                     <Button
                         size="small"
                         type="text"
@@ -213,8 +165,17 @@ const MarkdownEditor = ({ value, onChange, minHeight = 320 }: MarkdownEditorProp
                             fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace",
                             fontSize: 13, lineHeight: 1.7, background: "#fff", color: "#1f1f1f",
                         }}
-                        placeholder={"# Заголовок урока\n\nНапишите содержимое...\n\n**Жирный**, *курсив*, `код`\n\nДля видео нажмите кнопку 🎬 Видео в тулбаре"}
-                        spellCheck={false}
+                        placeholder={
+                            "# Мой первый заголовок\n\n" +
+                            "Привет! Вот как пользоваться редактором:\n\n" +
+                            "## Быстрое форматирование, используйте кнопки на панели чтобы сделать разработку проще:\n" +
+                            "**жирный текст** | *курсив* | `код` | ~~зачёркнутый~~\n\n" +
+                            "## Списки:\n" +
+                            "- Маркированный список (кнопка • Список)\n" +
+                            "1. Нумерованный список (кнопка 1. Список)\n\n" +
+                            "## Ссылки (можете вставлять или напряму или использовать панель для вставки видео или ссылок)\n\n\n" +
+                            "💡 Совет: Выделите текст и нажмите нужную кнопку!"
+                        }                        spellCheck={false}
                     />
                 </div>
 
@@ -245,7 +206,7 @@ const MarkdownEditor = ({ value, onChange, minHeight = 320 }: MarkdownEditorProp
             <Modal
                 open={videoModalOpen}
                 title="Вставить видео"
-                onCancel={() => setVideoModalOpen(false)}
+                onCancel={() => { setVideoModalOpen(false); setVideoUrl(""); setVideoLabel(""); }}
                 onOk={handleInsertVideo}
                 okText="Вставить"
                 cancelText="Отмена"
@@ -256,15 +217,16 @@ const MarkdownEditor = ({ value, onChange, minHeight = 320 }: MarkdownEditorProp
                     <div>
                         <Text strong style={{ display: "block", marginBottom: 6 }}>Ссылка на видео</Text>
                         <Input
-                            placeholder="https://youtube.com/watch?v=... или https://youtu.be/... или .mp4"
+                            placeholder="https://youtu.be/... или https://vkvideo.ru/... или .mp4"
                             value={videoUrl}
                             onChange={(e) => setVideoUrl(e.target.value)}
                             onPressEnter={handleInsertVideo}
                         />
                         <Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: "block" }}>
-                            Поддерживаются: YouTube, Vimeo, прямые ссылки на mp4/webm
+                            Поддерживаются: YouTube, ВКонтакте, прямые ссылки на mp4/webm
                         </Text>
                     </div>
+
                     <div>
                         <Text strong style={{ display: "block", marginBottom: 6 }}>Подпись (необязательно)</Text>
                         <Input
@@ -273,13 +235,33 @@ const MarkdownEditor = ({ value, onChange, minHeight = 320 }: MarkdownEditorProp
                             onChange={(e) => setVideoLabel(e.target.value)}
                         />
                     </div>
+
                     {videoUrl.trim() && (
-                        <div style={{ background: "#f6ffed", border: "1px solid #b7eb8f", borderRadius: 6, padding: "8px 12px" }}>
+                        <div style={{
+                            background: "#f6ffed", border: "1px solid #b7eb8f",
+                            borderRadius: 6, padding: "10px 12px",
+                        }}>
+                            {platform && (
+                                <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 4 }}>
+                                    Определено: <strong>{platform}</strong>
+                                </Text>
+                            )}
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                                В тексте появится: <code>[{videoLabel || "Видео"}]({videoUrl})</code>
-                                <br />
-                                В превью отобразится как встроенный плеер
+                                В тексте: <code>[{videoLabel || "Видео"}]({videoUrl.trim()})</code>
                             </Text>
+                            {(videoUrl.includes("vk.com/video") || videoUrl.includes("vkvideo.ru/video-")) &&
+                                !videoUrl.includes("video_ext.php") && (
+                                    <div style={{
+                                        marginTop: 8, padding: "6px 10px",
+                                        background: "#fffbe6", border: "1px solid #ffe58f",
+                                        borderRadius: 4,
+                                    }}>
+                                        <Text style={{ fontSize: 11, color: "#ad6800" }}>
+                                            ⚠️ Для ВКонтакте используйте embed-ссылку:
+                                            Нажмите "Поделиться" → "Код для встраивания" → скопируйте src из iframe
+                                        </Text>
+                                    </div>
+                                )}
                         </div>
                     )}
                 </div>

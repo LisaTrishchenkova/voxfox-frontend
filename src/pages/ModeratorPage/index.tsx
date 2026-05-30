@@ -18,9 +18,6 @@ import {
     CheckOutlined,
     CloseOutlined,
     EyeOutlined,
-    InboxOutlined,
-    LoadingOutlined,
-    UserOutlined,
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -257,10 +254,10 @@ const ModeratorPage = () => {
     const inReviewCourses = allCourses.filter((c) => !!c.reviewerId && c.reviewerId !== userData.id);
     const myCourses = allCourses.filter((c) => c.reviewerId === userData.id);
 
-    const tabs: { key: ModTab; label: string; icon: React.ReactNode; count: number }[] = [
-        { key: "free", label: "Свободные", icon: <InboxOutlined />, count: freeCourses.length },
-        { key: "inReview", label: "На проверке", icon: <LoadingOutlined />, count: inReviewCourses.length },
-        { key: "my", label: "Мои курсы", icon: <UserOutlined />, count: myCourses.length },
+    const tabs: { key: ModTab; label: string; count: number }[] = [
+        { key: "free", label: "Свободные", count: freeCourses.length },
+        { key: "inReview", label: "На проверке", count: inReviewCourses.length },
+        { key: "my", label: "Мои курсы", count: myCourses.length },
     ];
 
     const visibleCourses =
@@ -289,7 +286,6 @@ const ModeratorPage = () => {
                             <Button
                                 key={tab.key}
                                 type={activeTab === tab.key ? "primary" : "default"}
-                                icon={tab.icon}
                                 onClick={() => handleTabChange(tab.key)}
                                 style={activeTab === tab.key ? { background: "rgba(0,100,0,0.8)" } : {}}
                             >

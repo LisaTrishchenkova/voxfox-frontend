@@ -248,7 +248,7 @@ const TeacherProfilePage = () => {
                         ) : (
                             <Row gutter={[24, 24]}>
                                 {courses.map((course) => (
-                                    <Col key={course.id} xs={24} sm={12} xl={8}>
+                                    <Col key={course.id} xs={24} sm={12} xl={6}>
                                         <CardCourse course={course} />
                                     </Col>
                                 ))}

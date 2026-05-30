@@ -10,7 +10,6 @@ import {
   Col,
   Image,
   Input,
-  Menu,
   Row,
   Space,
   Typography,
@@ -24,6 +23,37 @@ import { clearUserCourseData } from "../utils/storage";
 import NotificationBell from "./NotificationBell";
 
 const { Title } = Typography;
+
+const NavItem = ({
+                   label,
+                   onClick,
+                   danger = false,
+                 }: {
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+}) => (
+    <span
+        onClick={onClick}
+        style={{
+          fontWeight: 600,
+          fontSize: 14,
+          color: danger ? "#cf1322" : "#389e0d",
+          cursor: "pointer",
+          padding: "0 12px",
+          whiteSpace: "nowrap",
+          userSelect: "none",
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLElement).style.opacity = "0.75";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLElement).style.opacity = "1";
+        }}
+    >
+        {label}
+    </span>
+);
 
 const Header = () => {
   const navigate = useNavigate();
@@ -72,11 +102,14 @@ const Header = () => {
             position: "sticky",
             top: 0,
             zIndex: 1000,
+            height: 64,
+            display: "flex",
+            alignItems: "center",
           }}
       >
-        <Row justify="space-between" align="middle">
+        <Row justify="space-between" align="middle" style={{ width: "100%" }}>
           <Col>
-            <Row align="middle" gutter={24}>
+            <Row align="middle" gutter={8}>
               <Col>
                 <Image
                     src={logo}
@@ -86,67 +119,19 @@ const Header = () => {
                 />
               </Col>
               <Col>
-                <Menu mode="horizontal" style={{ border: "none" }}>
-                  <Menu.Item
-                      key="home"
-                      style={{ fontWeight: 600, color: "#389e0d" }}
-                      onClick={() => navigate("/")}
-                  >
-                    Главная
-                  </Menu.Item>
-
-                  {/* Преподавание — только для Teacher и Admin */}
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <NavItem label="Главная" onClick={() => navigate("/")} />
+                  <NavItem label="Сообщество" onClick={() => navigate("/community")} />
                   {isAuth && (role === "Teacher" || role === "Admin") && (
-                      <Menu.Item
-                          key="teacher"
-                          style={{ fontWeight: 600, color: "#389e0d" }}
-                          onClick={() => navigate("/teacher")}
-                      >
-                        Преподавание
-                      </Menu.Item>
+                      <NavItem label="Преподавание" onClick={() => navigate("/teacher")} />
                   )}
-
-                  {/* Модерация — только для Moderator и Admin */}
                   {isAuth && (role === "Moderator" || role === "Admin") && (
-                      <Menu.Item
-                          key="moderator"
-                          style={{ fontWeight: 600, color: "#389e0d" }}
-                          onClick={() => navigate("/moderator")}
-                      >
-                        Модерация
-                      </Menu.Item>
+                      <NavItem label="Модерация" onClick={() => navigate("/moderator")} />
                   )}
-
-                  {/* Администрирование — только для Admin */}
                   {isAuth && role === "Admin" && (
-                      <Menu.Item
-                          key="admin"
-                          style={{ fontWeight: 600, color: "#cf1322" }}
-                          onClick={() => navigate("/admin")}
-                      >
-                        Администрирование
-                      </Menu.Item>
+                      <NavItem label="Администрирование" onClick={() => navigate("/admin")} danger />
                   )}
-
-                  <Menu.Item
-                      key="community"
-                      style={{ fontWeight: 600, color: "#389e0d" }}
-                  >
-                    Сообщество
-                  </Menu.Item>
-                  <Menu.Item
-                      key="about"
-                      style={{ fontWeight: 600, color: "#389e0d" }}
-                  >
-                    О нас
-                  </Menu.Item>
-                  <Menu.Item
-                      key="pricing"
-                      style={{ fontWeight: 600, color: "#389e0d" }}
-                  >
-                    Цены
-                  </Menu.Item>
-                </Menu>
+                </div>
               </Col>
             </Row>
           </Col>
@@ -154,11 +139,12 @@ const Header = () => {
           <Col>
             <Space size="middle" align="center">
               <Input.Search
+                  key={location.pathname}
                   placeholder="Поиск курсов..."
                   allowClear
                   prefix={<SearchOutlined style={{ color: "#52c41a" }} />}
                   style={{ width: 240, borderRadius: 20 }}
-                  value={searchValue}
+                  defaultValue={searchValue}
                   onSearch={handleHeaderSearch}
               />
 
@@ -180,6 +166,7 @@ const Header = () => {
                           fontSize: 14,
                           fontWeight: 500,
                           cursor: "pointer",
+                          whiteSpace: "nowrap",
                         }}
                     >
                       {userData.name}
@@ -196,6 +183,7 @@ const Header = () => {
                           border: "4px solid #fff",
                           boxShadow: "0 4px 12px rgba(76,175,80,0.3)",
                           cursor: "pointer",
+                          flexShrink: 0,
                         }}
                     />
 

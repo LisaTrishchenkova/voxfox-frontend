@@ -1,5 +1,4 @@
 import {
-    Alert,
     Button,
     Card,
     Col,
@@ -27,6 +26,7 @@ import {
     BookOutlined,
     DeleteOutlined,
     EditOutlined,
+    EyeOutlined,
     LockOutlined,
     PlusOutlined,
     ReloadOutlined,
@@ -296,18 +296,11 @@ const CoursesTab = () => {
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<CourseStatus | undefined>(undefined);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
-    const pageSize = 20;
+    const pageSize = 12;
 
     useEffect(() => {
         const load = async () => {
             setLoading(true);
-            const data = await courseApi.getCourses({
-                searchTerm: search || undefined,
-                page,
-                pageSize,
-            });
-            // getCourses возвращает только Published — для всех статусов нужен отдельный fetch
-            // Используем прямой запрос чтобы получить все курсы
             const p = new URLSearchParams();
             if (search) p.append("searchTerm", search);
             if (statusFilter) p.append("status", statusFilter);
@@ -318,16 +311,14 @@ const CoursesTab = () => {
                 const result = await res.json();
                 setCourses(result.items ?? []);
                 setTotal(result.totalCount ?? 0);
-            } else if (data) {
-                setCourses(data.items);
-                setTotal(data.totalCount);
             }
             setLoading(false);
         };
         void load();
     }, [search, statusFilter, page]);
 
-    const handleDelete = async (course: CourseDto) => {
+    const handleDelete = async (course: CourseDto, e: React.MouseEvent) => {
+        e.stopPropagation();
         setActionLoading(course.id);
         const ok = await courseApi.deleteCourse(course.id);
         if (ok) {
@@ -340,7 +331,8 @@ const CoursesTab = () => {
         setActionLoading(null);
     };
 
-    const handleUnpublish = async (course: CourseDto) => {
+    const handleUnpublish = async (course: CourseDto, e: React.MouseEvent) => {
+        e.stopPropagation();
         setActionLoading(course.id);
         const ok = await adminApi.unpublishCourse(course.id);
         if (ok) {
@@ -352,7 +344,8 @@ const CoursesTab = () => {
         setActionLoading(null);
     };
 
-    const handleForceRelease = async (course: CourseDto) => {
+    const handleForceRelease = async (course: CourseDto, e: React.MouseEvent) => {
+        e.stopPropagation();
         setActionLoading(course.id);
         const ok = await adminApi.forceReleaseCourse(course.id);
         if (ok) {
@@ -363,105 +356,32 @@ const CoursesTab = () => {
         setActionLoading(null);
     };
 
-    const columns = [
-        {
-            title: "Курс", key: "course",
-            render: (_: unknown, c: CourseDto) => (
-                <div>
-                    <Text strong style={{ display: "block", fontSize: 13 }}>{c.title}</Text>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                        {c.author?.name ?? "—"} · {c.price === 0 ? "Бесплатно" : `${c.price} ₽`}
-                    </Text>
-                </div>
-            ),
-        },
-        {
-            title: "Статус", key: "status",
-            render: (_: unknown, c: CourseDto) => (
-                <Tag color={statusColor[c.status]}>{statusLabel[c.status] ?? c.status}</Tag>
-            ),
-        },
-        {
-            title: "Студентов", key: "students",
-            render: (_: unknown, c: CourseDto) => (
-                <Text style={{ fontSize: 13 }}>{c.enrollmentCount}</Text>
-            ),
-        },
-        {
-            title: "Рейтинг", key: "rating",
-            render: (_: unknown, c: CourseDto) => (
-                <Text style={{ fontSize: 13, color: c.rating > 0 ? "#faad14" : "#ccc" }}>
-                    {c.rating > 0 ? `★ ${Number(c.rating).toFixed(1)}` : "—"}
-                </Text>
-            ),
-        },
-        {
-            title: "Действия", key: "actions",
-            render: (_: unknown, c: CourseDto) => (
-                <Space size="small" wrap>
-                    {c.status === "UnderReview" && (
-                        <Popconfirm
-                            title="Снять захват?"
-                            description="Курс будет освобождён от модератора"
-                            onConfirm={() => handleForceRelease(c)}
-                            okText="Снять" cancelText="Отмена">
-                            <Button size="small" icon={<UnlockOutlined />} loading={actionLoading === c.id}>
-                                Force Release
-                            </Button>
-                        </Popconfirm>
-                    )}
-                    {c.status === "Published" && (
-                        <Popconfirm
-                            title="Снять с публикации?"
-                            description="Курс будет переведён в черновик"
-                            onConfirm={() => handleUnpublish(c)}
-                            okText="Снять" cancelText="Отмена"
-                            okButtonProps={{ danger: true }}>
-                            <Button size="small" icon={<StopOutlined />} loading={actionLoading === c.id}>
-                                Снять
-                            </Button>
-                        </Popconfirm>
-                    )}
-                    {c.status === "UnderReview" && (
-                        <Button size="small" icon={<EditOutlined />}
-                                onClick={() => navigate(`/moderator/review/${c.id}`)}>
-                            Просмотр
-                        </Button>
-                    )}
-                    <Popconfirm
-                        title="Удалить курс?"
-                        description="Это действие необратимо. Все данные курса будут удалены."
-                        onConfirm={() => handleDelete(c)}
-                        okText="Удалить" cancelText="Отмена"
-                        okButtonProps={{ danger: true }}>
-                        <Button size="small" danger icon={<DeleteOutlined />} loading={actionLoading === c.id}>
-                            Удалить
-                        </Button>
-                    </Popconfirm>
-                </Space>
-            ),
-        },
-    ];
+    const handleSearch = () => { setSearch(searchInput.trim()); setPage(1); };
 
     return (
         <div>
-            <Row gutter={16} style={{ marginBottom: 16 }}>
+            {/* Поиск и фильтры */}
+            <Row gutter={8} style={{ marginBottom: 16 }}>
                 <Col flex="auto">
-                    <Input placeholder="Поиск по названию..."
-                           prefix={<SearchOutlined />} value={searchInput}
-                           onChange={(e) => setSearchInput(e.target.value)}
-                           onPressEnter={() => { setSearch(searchInput.trim()); setPage(1); }}
-                           allowClear onClear={() => { setSearchInput(""); setSearch(""); }} />
+                    <Input
+                        placeholder="Поиск по названию..."
+                        prefix={<SearchOutlined />}
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        onPressEnter={handleSearch}
+                        allowClear
+                        onClear={() => { setSearchInput(""); setSearch(""); setPage(1); }}
+                    />
                 </Col>
                 <Col>
-                    <Button icon={<SearchOutlined />} onClick={() => { setSearch(searchInput.trim()); setPage(1); }}>
-                        Найти
-                    </Button>
+                    <Button icon={<SearchOutlined />} onClick={handleSearch}>Найти</Button>
                 </Col>
                 <Col>
-                    <Select placeholder="Статус" allowClear style={{ width: 180 }}
-                            value={statusFilter}
-                            onChange={(v) => { setStatusFilter(v); setPage(1); }}>
+                    <Select
+                        placeholder="Статус" allowClear style={{ width: 180 }}
+                        value={statusFilter}
+                        onChange={(v) => { setStatusFilter(v); setPage(1); }}
+                    >
                         <Select.Option value="Draft">Черновик</Select.Option>
                         <Select.Option value="UnderReview">На проверке</Select.Option>
                         <Select.Option value="RejectedByModerator">Отклонён</Select.Option>
@@ -470,28 +390,127 @@ const CoursesTab = () => {
                 </Col>
             </Row>
 
-            <Alert
-                type="info"
-                showIcon={false}
-                message={<Text style={{ fontSize: 12 }}>Как администратор вы можете удалить любой курс, снять опубликованный с публикации или освободить захваченный модератором.</Text>}
-                style={{ marginBottom: 16 }}
-            />
+            {loading ? (
+                <div style={{ textAlign: "center", paddingTop: 60 }}><Spin size="large" /></div>
+            ) : courses.length === 0 ? (
+                <Empty description="Курсы не найдены" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            ) : (
+                <>
+                    <Row gutter={[20, 20]}>
+                        {courses.map((course) => (
+                            <Col key={course.id} xs={24} sm={12} md={8} lg={6}>
+                                <div
+                                    onClick={() => navigate(`/course/${course.id}`)}
+                                    style={{
+                                        background: "#fff", borderRadius: 10,
+                                        border: "1px solid #f0f0f0", padding: 16,
+                                        cursor: "pointer", transition: "box-shadow 0.2s",
+                                        display: "flex", flexDirection: "column", height: "100%",
+                                    }}
+                                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.1)"; }}
+                                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+                                >
+                                    {course.coverImageUrl && (
+                                        <img
+                                            src={course.coverImageUrl}
+                                            alt={course.title}
+                                            style={{
+                                                width: "100%", aspectRatio: "16/9",
+                                                objectFit: "cover", borderRadius: 6,
+                                                marginBottom: 12, display: "block",
+                                            }}
+                                        />
+                                    )}
 
-            <Table
-                dataSource={courses}
-                columns={columns}
-                rowKey="id"
-                loading={loading}
-                pagination={false}
-                style={{ background: "#fff", borderRadius: 8 }}
-                locale={{ emptyText: <Empty description="Курсы не найдены" /> }}
-            />
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                                        <Tag color={statusColor[course.status]} style={{ fontSize: 11 }}>
+                                            {statusLabel[course.status] ?? course.status}
+                                        </Tag>
+                                        <Text type="secondary" style={{ fontSize: 11 }}>
+                                            {course.price === 0 ? "Бесплатно" : `${course.price} ₽`}
+                                        </Text>
+                                    </div>
 
-            {total > pageSize && (
-                <div style={{ textAlign: "center", marginTop: 16 }}>
-                    <Pagination current={page} pageSize={pageSize} total={total}
-                                onChange={setPage} showSizeChanger={false} showTotal={(t) => `Всего: ${t}`} />
-                </div>
+                                    <Text strong style={{ fontSize: 13, display: "block", marginBottom: 4, lineHeight: 1.4 }}>
+                                        {course.title}
+                                    </Text>
+
+                                    <Text type="secondary" style={{ fontSize: 12, marginBottom: 8, flex: 1 }}>
+                                        {course.author?.name ?? "—"}
+                                    </Text>
+
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                                        <Text type="secondary" style={{ fontSize: 11 }}>
+                                            {course.enrollmentCount} студентов
+                                        </Text>
+                                        {course.rating > 0 && (
+                                            <Text style={{ fontSize: 11, color: "#faad14" }}>
+                                                ★ {Number(course.rating).toFixed(1)}
+                                            </Text>
+                                        )}
+                                    </div>
+
+                                    {/* Кнопки действий */}
+                                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }} onClick={(e) => e.stopPropagation()}>
+                                        <Button
+                                            size="small" icon={<EyeOutlined />}
+                                            onClick={(e) => { e.stopPropagation(); navigate(`/course/${course.id}`); }}
+                                        >
+                                            Открыть
+                                        </Button>
+
+                                        {course.status === "UnderReview" && (
+                                            <Popconfirm
+                                                title="Снять захват?"
+                                                description="Курс будет освобождён от модератора"
+                                                onConfirm={(e) => handleForceRelease(course, e as React.MouseEvent)}
+                                                okText="Снять" cancelText="Отмена"
+                                            >
+                                                <Button size="small" icon={<UnlockOutlined />} loading={actionLoading === course.id}>
+                                                    Release
+                                                </Button>
+                                            </Popconfirm>
+                                        )}
+
+                                        {course.status === "Published" && (
+                                            <Popconfirm
+                                                title="Снять с публикации?"
+                                                description="Курс будет переведён в черновик"
+                                                onConfirm={(e) => handleUnpublish(course, e as React.MouseEvent)}
+                                                okText="Снять" cancelText="Отмена"
+                                                okButtonProps={{ danger: true }}
+                                            >
+                                                <Button size="small" icon={<StopOutlined />} loading={actionLoading === course.id}>
+                                                    Снять
+                                                </Button>
+                                            </Popconfirm>
+                                        )}
+
+                                        <Popconfirm
+                                            title="Удалить курс?"
+                                            description="Это действие необратимо."
+                                            onConfirm={(e) => handleDelete(course, e as React.MouseEvent)}
+                                            okText="Удалить" cancelText="Отмена"
+                                            okButtonProps={{ danger: true }}
+                                        >
+                                            <Button size="small" danger icon={<DeleteOutlined />} loading={actionLoading === course.id} />
+                                        </Popconfirm>
+                                    </div>
+                                </div>
+                            </Col>
+                        ))}
+                    </Row>
+
+                    {total > pageSize && (
+                        <div style={{ textAlign: "center", marginTop: 32 }}>
+                            <Pagination
+                                current={page} pageSize={pageSize} total={total}
+                                onChange={setPage} showSizeChanger={false}
+                                showTotal={(t) => `Всего: ${t}`}
+                            />
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

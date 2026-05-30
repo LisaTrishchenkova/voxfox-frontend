@@ -529,7 +529,7 @@ const UserProfilePage = () => {
                       <Row gutter={[24, 24]}>
                         {enrollments.map(
                             (e) => e.course && (
-                                <Col key={e.id} xs={24} sm={12} lg={8}>
+                                <Col key={e.id} xs={24} sm={12} lg={6}>
                                   <CardCourse course={e.course} />
                                 </Col>
                             )
@@ -550,7 +550,7 @@ const UserProfilePage = () => {
                       <Row gutter={[24, 24]}>
                         {favorites.map(
                             (f) => f.course && (
-                                <Col key={f.id} xs={24} sm={12} lg={8}>
+                                <Col key={f.id} xs={24} sm={12} lg={6}>
                                   <CardCourse course={f.course} isFavorite={true} />
                                 </Col>
                             )
