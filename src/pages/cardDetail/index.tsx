@@ -99,7 +99,6 @@ const CardDetailPage = () => {
             >
               {course.tags.map((tag) => (
                 <span
-                  key={tag.id}
                   style={{
                     background: "#3b7159",
                     color: "white",

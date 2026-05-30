@@ -1,0 +1,132 @@
+/* src/styles/markdown-preview.css */
+/* Подключить в main.tsx или App.tsx: import "./styles/markdown-preview.css" */
+
+.markdown-preview {
+    font-size: 14px;
+    line-height: 1.75;
+    color: #1f1f1f;
+}
+
+.markdown-preview h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 16px;
+    color: #111;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 8px;
+}
+
+.markdown-preview h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 20px 0 12px;
+    color: #222;
+}
+
+.markdown-preview h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 16px 0 8px;
+    color: #333;
+}
+
+.markdown-preview p {
+    margin: 0 0 12px;
+}
+
+.markdown-preview strong {
+    font-weight: 700;
+    color: #111;
+}
+
+.markdown-preview em {
+    font-style: italic;
+}
+
+.markdown-preview del {
+    text-decoration: line-through;
+    color: #888;
+}
+
+.markdown-preview ul,
+.markdown-preview ol {
+    padding-left: 24px;
+    margin: 0 0 12px;
+}
+
+.markdown-preview li {
+    margin-bottom: 4px;
+}
+
+.markdown-preview blockquote {
+    margin: 12px 0;
+    padding: 8px 16px;
+    border-left: 3px solid #52c41a;
+    background: #f6ffed;
+    color: #444;
+    border-radius: 0 4px 4px 0;
+}
+
+.markdown-preview code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    font-size: 12px;
+    background: #f5f5f5;
+    border: 1px solid #e8e8e8;
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: #c7254e;
+}
+
+.markdown-preview pre {
+    background: #1e1e1e;
+    border-radius: 6px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 12px 0;
+}
+
+.markdown-preview pre code {
+    background: none;
+    border: none;
+    color: #d4d4d4;
+    padding: 0;
+    font-size: 13px;
+}
+
+.markdown-preview a {
+    color: #389e0d;
+    text-decoration: underline;
+}
+
+.markdown-preview hr {
+    border: none;
+    border-top: 2px solid #f0f0f0;
+    margin: 20px 0;
+}
+
+.markdown-preview table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 13px;
+}
+
+.markdown-preview th,
+.markdown-preview td {
+    border: 1px solid #e8e8e8;
+    padding: 8px 12px;
+    text-align: left;
+}
+
+.markdown-preview th {
+    background: #fafafa;
+    font-weight: 600;
+}
+
+.markdown-preview tr:nth-child(even) td {
+    background: #fafafa;
+}
+
+.markdown-preview input[type="checkbox"] {
+    margin-right: 6px;
+}

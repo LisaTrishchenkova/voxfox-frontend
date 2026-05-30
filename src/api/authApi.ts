@@ -3,15 +3,15 @@ import type {
   LoginRequest,
   LoginResponse,
   RegistrationRequest,
+  UserRole
 } from "./types/auth";
 import { authStorage } from "../services/auth-storage.service";
-import {API_URL} from "../config.ts";
-
+import { API_URL } from "../config.ts";
 
 export const authApi = {
   login: async (
     email: string,
-    password: string
+    password: string,
   ): Promise<LoginResponse | null> => {
     const requestData: LoginRequest = { email, password };
 
@@ -19,7 +19,7 @@ export const authApi = {
       console.log(API_URL);
       const response = await axios.post<LoginResponse>(
         `${API_URL}/Auth/login`,
-        requestData
+        requestData,
       );
 
       const responseData = response.data;
@@ -51,13 +51,14 @@ export const authApi = {
   registration: async (
     email: string,
     name: string,
-    password: string
+    password: string,
+    role: UserRole
   ): Promise<number> => {
-    const requestData: RegistrationRequest = { email, name, password };
+    const requestData: RegistrationRequest = { email, name, password, role };
 
     const response = await axios.post(
       `${API_URL}/Auth/registration`,
-      requestData
+      requestData,
     );
     return response.status;
   },
