@@ -5,7 +5,6 @@ import {
   Input,
   Button,
   Checkbox,
-  Divider,
   Typography,
   Space,
   type FormProps,
@@ -13,15 +12,13 @@ import {
 import {
   MailOutlined,
   LockOutlined,
-  GoogleOutlined,
-  GithubOutlined,
-  FacebookOutlined,
   ArrowRightOutlined,
 } from "@ant-design/icons";
 import type { LoginFormData } from "../../api/types/auth.ts";
 import { authApi } from "../../api/authApi.ts";
 import { gradients, commonStyles, componentProps } from "../../theme.ts";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import {useUserStore} from "../../stores/userStore.ts";
 
 const { Title, Text, Link } = Typography;
 
@@ -30,6 +27,7 @@ const LoginPage = () => {
   const[searrchParams] = useSearchParams();
   const redirect = searrchParams.get("redirect") ?? "/";
   const [form] = Form.useForm();
+  const { fetchUser } = useUserStore();
 
   const onFinish: FormProps<LoginFormData>["onFinish"] = async (values) => {
     console.log(values);
@@ -38,7 +36,7 @@ const LoginPage = () => {
     if (loginResponse == null) {
       return;
     }
-    localStorage.setItem("tokenAccess", loginResponse.tokenAccess);
+    await fetchUser();
     navigate(redirect, {replace: true});
   };
 
@@ -239,52 +237,12 @@ const LoginPage = () => {
               </Form.Item>
             </Form>
 
-            <Divider>
-              <Text type="secondary">или продолжить через</Text>
-            </Divider>
-
             <Space
               direction="vertical"
               align="center"
               style={{ width: "100%" }}
               size="large"
             >
-              <Space size="large">
-                <Button
-                  shape="circle"
-                  icon={<GoogleOutlined />}
-                  size="large"
-                  style={{
-                    width: 52,
-                    height: 52,
-                    border: "1px solid #e8e8e8",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                  }}
-                />
-                <Button
-                  shape="circle"
-                  icon={<GithubOutlined />}
-                  size="large"
-                  style={{
-                    width: 52,
-                    height: 52,
-                    border: "1px solid #e8e8e8",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                  }}
-                />
-                <Button
-                  shape="circle"
-                  icon={<FacebookOutlined />}
-                  size="large"
-                  style={{
-                    width: 52,
-                    height: 52,
-                    border: "1px solid #e8e8e8",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                  }}
-                />
-              </Space>
-
               <div style={{ textAlign: "center" }}>
                 <Text type="secondary">
                   Нажимая кнопку "Войти", вы соглашаетесь с{" "}
@@ -393,91 +351,6 @@ const LoginPage = () => {
               </div>
 
               {/* Дополнительная информация */}
-              <div
-                style={{
-                  background: "rgba(255, 255, 255, 0.1)",
-                  padding: 24,
-                  borderRadius: 16,
-                  backdropFilter: "blur(10px)",
-                  maxWidth: 600,
-                  margin: "0 auto",
-                }}
-              >
-                <Text
-                  style={{
-                    color: "#fff",
-                    fontSize: "16px",
-                    display: "block",
-                    marginBottom: "12px",
-                  }}
-                >
-                  <span
-                    style={{
-                      display: "inline-block",
-                      width: "24px",
-                      height: "24px",
-                      background: "#fff",
-                      borderRadius: "50%",
-                      color: "#52c41a",
-                      fontWeight: "bold",
-                      lineHeight: "24px",
-                      marginRight: "12px",
-                    }}
-                  >
-                    ✓
-                  </span>
-                  Доступ к 500+ курсам
-                </Text>
-                <Text
-                  style={{
-                    color: "#fff",
-                    fontSize: "16px",
-                    display: "block",
-                    marginBottom: "12px",
-                  }}
-                >
-                  <span
-                    style={{
-                      display: "inline-block",
-                      width: "24px",
-                      height: "24px",
-                      background: "#fff",
-                      borderRadius: "50%",
-                      color: "#52c41a",
-                      fontWeight: "bold",
-                      lineHeight: "24px",
-                      marginRight: "12px",
-                    }}
-                  >
-                    ✓
-                  </span>
-                  Практические проекты
-                </Text>
-                <Text
-                  style={{
-                    color: "#fff",
-                    fontSize: "16px",
-                    display: "block",
-                  }}
-                >
-                  <span
-                    style={{
-                      display: "inline-block",
-                      width: "24px",
-                      height: "24px",
-                      background: "#fff",
-                      borderRadius: "50%",
-                      color: "#52c41a",
-                      fontWeight: "bold",
-                      lineHeight: "24px",
-                      marginRight: "12px",
-                    }}
-                  >
-                    ✓
-                  </span>
-                  Поддержка комьюнити
-                </Text>
-              </div>
             </div>
           </div>
         </Col>

@@ -1,193 +1,204 @@
-import { LoginOutlined, SearchOutlined, UserOutlined } from "@ant-design/icons";
+import {
+  LoginOutlined,
+  LogoutOutlined,
+  SearchOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import {
   Avatar,
   Button,
   Col,
   Image,
   Input,
-  Menu,
   Row,
   Space,
   Typography,
 } from "antd";
-import { useEffect, useState, type MouseEventHandler } from "react";
-import { useNavigate } from "react-router-dom";
-import type { UserResponse } from "../api/types/user";
-import { userApi } from "../api/userApi";
+import { useEffect, type MouseEventHandler } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import logo from "../assets/logo.jpg";
 import { authStorage } from "../services/auth-storage.service";
+import { getAvatarUrl, useUserStore } from "../stores/userStore";
+import { clearUserCourseData } from "../utils/storage";
+import NotificationBell from "./NotificationBell";
 
 const { Title } = Typography;
 
+const NavItem = ({
+                   label,
+                   onClick,
+                   danger = false,
+                 }: {
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+}) => (
+    <span
+        onClick={onClick}
+        style={{
+          fontWeight: 600,
+          fontSize: 14,
+          color: danger ? "#cf1322" : "#389e0d",
+          cursor: "pointer",
+          padding: "0 12px",
+          whiteSpace: "nowrap",
+          userSelect: "none",
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLElement).style.opacity = "0.75";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLElement).style.opacity = "1";
+        }}
+    >
+        {label}
+    </span>
+);
+
 const Header = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const isAuth = authStorage.isAuthenticated();
-  const [userData, setUserData] = useState<UserResponse | null>(null);
-  const redirectToLogin: MouseEventHandler<HTMLElement> = (event) => {
-    event.preventDefault();
+  const { userData, fetchUser } = useUserStore();
+
+  const role = userData?.role ?? "";
+
+  const searchValue =
+      location.pathname === "/"
+          ? (new URLSearchParams(location.search).get("search") ?? "")
+          : "";
+
+  useEffect(() => {
+    fetchUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const redirectToLogin: MouseEventHandler<HTMLElement> = (e) => {
+    e.preventDefault();
     navigate("/login");
   };
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const userId = authStorage.getUserData<string>();
-      if (!userId) {
-        return;
-      }
-      const userResponse = await userApi.getUserById(userId);
-      setUserData(userResponse);
-    };
-    fetchUser();
-  }, []);
+  const handleLogout = () => {
+    const userId = authStorage.getUserData<string>();
+    authStorage.clearAllAuthData();
+    useUserStore.getState().clear();
+    if (userId) clearUserCourseData(userId);
+    navigate("/");
+    window.location.reload();
+  };
+
+  const handleHeaderSearch = (value: string) => {
+    const trimmed = value.trim();
+    navigate(trimmed ? `/?search=${encodeURIComponent(trimmed)}` : "/");
+  };
 
   return (
-    <header
-      style={{
-        background: "#fff",
-        padding: "0 24px",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
-        borderBottom: "1px solid #e8e8e8",
-        position: "sticky",
-        top: 0,
-        zIndex: 1000,
-      }}
-    >
-      <Row justify="space-between" align="middle">
-        <Col>
-          <Row align="middle" gutter={24}>
-            <Col>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "12px" }}
-              >
+      <header
+          style={{
+            background: "#fff",
+            padding: "0 24px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+            borderBottom: "1px solid #e8e8e8",
+            position: "sticky",
+            top: 0,
+            zIndex: 1000,
+            height: 64,
+            display: "flex",
+            alignItems: "center",
+          }}
+      >
+        <Row justify="space-between" align="middle" style={{ width: "100%" }}>
+          <Col>
+            <Row align="middle" gutter={8}>
+              <Col>
                 <Image
-                  src={logo}
-                  alt="VoxFox"
-                  preview={false}
-                  style={{
-                    height: "40px",
-                    width: "auto",
-                    objectFit: "contain",
-                  }}
+                    src={logo}
+                    alt="VoxFox"
+                    preview={false}
+                    style={{ height: 40, width: "auto", objectFit: "contain" }}
                 />
-                {/* <Title
-                  level={3}
-                  style={{
-                    margin: 0,
-                    background: gradients.primaryText,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    fontWeight: 700,
-                  }}
-                >
-                  VoxFox
-                </Title> */}
-              </div>
-            </Col>
-            <Col>
-              <Menu mode="horizontal" style={{ border: "none" }}>
-                <Menu.Item
-                  key="home"
-                  style={{ fontWeight: 600, color: "#389e0d" }}
-                  // activeStyle={{
-                  //   color: "#fa8c16",
-                  //   borderBottom: "2px solid #fa8c16",
-                  // }}
-                  onClick={() => navigate("/")}
-                >
-                  Главная
-                </Menu.Item>
-                {isAuth && (
-                  <Menu.Item
-                    key="projects"
-                    style={{ fontWeight: 600, color: "#389e0d" }}
-                  >
-                    Проекты
-                  </Menu.Item>
-                )}
-                {isAuth && (
-                  <Menu.Item
-                    key="learn"
-                    style={{ fontWeight: 600, color: "#389e0d" }}
-                    onClick={() => navigate("/cource")}
-                  >
-                    Преподавание
-                  </Menu.Item>
-                )}
+              </Col>
+              <Col>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <NavItem label="Главная" onClick={() => navigate("/")} />
+                  <NavItem label="Сообщество" onClick={() => navigate("/community")} />
+                  {isAuth && (role === "Teacher" || role === "Admin") && (
+                      <NavItem label="Преподавание" onClick={() => navigate("/teacher")} />
+                  )}
+                  {isAuth && (role === "Moderator" || role === "Admin") && (
+                      <NavItem label="Модерация" onClick={() => navigate("/moderator")} />
+                  )}
+                  {isAuth && role === "Admin" && (
+                      <NavItem label="Администрирование" onClick={() => navigate("/admin")} danger />
+                  )}
+                </div>
+              </Col>
+            </Row>
+          </Col>
 
-                <Menu.Item
-                  key="community"
-                  style={{ fontWeight: 600, color: "#389e0d" }}
-                >
-                  Сообщество
-                </Menu.Item>
-                <Menu.Item
-                  key="about"
-                  style={{ fontWeight: 600, color: "#389e0d" }}
-                >
-                  О нас
-                </Menu.Item>
-                <Menu.Item
-                  key="pricing"
-                  style={{ fontWeight: 600, color: "#389e0d" }}
-                >
-                  Цены
-                </Menu.Item>
-              </Menu>
-            </Col>
-          </Row>
-        </Col>
-        <Col>
-          <Space size="middle" align="center">
-            <Input.Search
-              placeholder="Поиск курсов..."
-              allowClear
-              // onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-              //   if (!userData) return;
+          <Col>
+            <Space size="middle" align="center">
+              <Input.Search
+                  key={location.pathname}
+                  placeholder="Поиск курсов..."
+                  allowClear
+                  prefix={<SearchOutlined style={{ color: "#52c41a" }} />}
+                  style={{ width: 240, borderRadius: 20 }}
+                  defaultValue={searchValue}
+                  onSearch={handleHeaderSearch}
+              />
 
-              //   setUserData({
-              //     ...userData,
-              //     name: e.target.value,
-              //   });
-              // }}
-              prefix={<SearchOutlined style={{ color: "#52c41a" }} />}
-              style={{ width: 240, borderRadius: 20 }}
-            />
-            {!isAuth && (
-              <Button icon={<LoginOutlined />} onClick={redirectToLogin}>
-                Войти
-              </Button>
-            )}
-            {userData && (
-              <>
-                <Title
-                  onClick={() => navigate("/user-profile")}
-                  level={4}
-                  style={{
-                    margin: 0,
-                    fontSize: "14px",
-                    fontWeight: 500,
-                  }}
-                >
-                  {userData.name}
-                </Title>
-                <Avatar
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
-                    border: "4px solid #fff",
-                    boxShadow: "0 4px 12px rgba(76, 175, 80, 0.3)",
-                    // marginBottom: 16,
-                  }}
-                  onClick={() => navigate("/user-profile")}
-                  size={"default"}
-                  icon={<UserOutlined />}
-                />{" "}
-              </>
-            )}
-          </Space>
-        </Col>
-      </Row>
-    </header>
+              {!isAuth && (
+                  <Button icon={<LoginOutlined />} onClick={redirectToLogin}>
+                    Войти
+                  </Button>
+              )}
+
+              {userData && (
+                  <>
+                    <NotificationBell />
+
+                    <Title
+                        level={4}
+                        onClick={() => navigate("/profile")}
+                        style={{
+                          margin: 0,
+                          fontSize: 14,
+                          fontWeight: 500,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                    >
+                      {userData.name}
+                    </Title>
+
+                    <Avatar
+                        src={getAvatarUrl(userData.avatarUrl)}
+                        icon={!userData.avatarUrl && <UserOutlined />}
+                        onClick={() => navigate("/profile")}
+                        style={{
+                          background: userData.avatarUrl
+                              ? undefined
+                              : "linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)",
+                          border: "4px solid #fff",
+                          boxShadow: "0 4px 12px rgba(76,175,80,0.3)",
+                          cursor: "pointer",
+                          flexShrink: 0,
+                        }}
+                    />
+
+                    <Button
+                        icon={<LogoutOutlined />}
+                        type="text"
+                        danger
+                        onClick={handleLogout}
+                    />
+                  </>
+              )}
+            </Space>
+          </Col>
+        </Row>
+      </header>
   );
 };
 

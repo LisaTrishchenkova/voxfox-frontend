@@ -137,24 +137,24 @@ jobs:
             exit 1
           fi
 
-      - name: Notify success
-        if: success()
-        uses: actions-cool/maintain-one-comment@v3
-        with:
-          body: |
-            🚀 **Deployed to Staging successfully!**               # ✅ staging!
-
-            **Version:** `${{ steps.version.outputs.version }}`
-            **Branch:** `staging`
-            **Commit:** [`${{ steps.version.outputs.short_sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }})
-            **Previous version:** `${{ steps.current.outputs.current }}`
-
-            🔗 **Links:**
-            • 🌐 **Staging:** https://${{ vars.CLOUDFRONT_DOMAIN }}
-            • 📦 **Archive:** s3://${{ vars.S3_BUCKET }}/archive/${{ steps.version.outputs.version }}
-            • 🔍 **Version.json:** https://${{ vars.CLOUDFRONT_DOMAIN }}/version.json
-
-            [View deployment run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+#      - name: Notify success
+#        if: success()
+#        uses: actions-cool/maintain-one-comment@v3
+#        with:
+#          body: |
+#            🚀 **Deployed to Staging successfully!**               # ✅ staging!
+#
+#            **Version:** `${{ steps.version.outputs.version }}`
+#            **Branch:** `staging`
+#            **Commit:** [`${{ steps.version.outputs.short_sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }})
+#            **Previous version:** `${{ steps.current.outputs.current }}`
+#
+#            🔗 **Links:**
+#            • 🌐 **Staging:** https://${{ vars.CLOUDFRONT_DOMAIN }}
+#            • 📦 **Archive:** s3://${{ vars.S3_BUCKET }}/archive/${{ steps.version.outputs.version }}
+#            • 🔍 **Version.json:** https://${{ vars.CLOUDFRONT_DOMAIN }}/version.json
+#
+#            [View deployment run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
       - name: Auto-rollback on failure
         if: failure()
@@ -167,17 +167,17 @@ jobs:
             echo "✅ Rolled back to ${PREV_VERSION}"
           fi
 
-      - name: Notify failure
-        if: failure()
-        uses: actions-cool/maintain-one-comment@v3
-        with:
-          body: |
-            ❌ **Deploy to Staging failed!**
-
-            **Version:** `${{ steps.version.outputs.version }}`
-            **Branch:** `staging`
-            **Commit:** [`${{ steps.version.outputs.short_sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }})
-
-            **Rollback:** ${{ steps.current.outputs.current != 'none' && '🔄 Auto-rollback triggered' || '⚠️ No previous version' }}
-
-            [View failed run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+#      - name: Notify failure
+#        if: failure()
+#        uses: actions-cool/maintain-one-comment@v3
+#        with:
+#          body: |
+#            ❌ **Deploy to Staging failed!**
+#
+#            **Version:** `${{ steps.version.outputs.version }}`
+#            **Branch:** `staging`
+#            **Commit:** [`${{ steps.version.outputs.short_sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.workflow_run.head_sha }})
+#
+#            **Rollback:** ${{ steps.current.outputs.current != 'none' && '🔄 Auto-rollback triggered' || '⚠️ No previous version' }}
+#
+#            [View failed run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})

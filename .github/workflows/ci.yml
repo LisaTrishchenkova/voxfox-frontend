@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [dev, staging, main]
+    branches: [dev, staging, master]
   push:
-    branches: [dev, staging, main]
+    branches: [dev, staging, master]
 
 permissions:
   contents: read
@@ -217,22 +217,22 @@ jobs:
               body: message
             });
 
-      - name: Comment PR on failure
-        if: steps.status.outputs.overall == 'failure'
-        uses: actions-cool/maintain-one-comment@v3
-        with:
-          body: |
-            ## ❌ CI Failed
-
-            | Check | Status |
-            |-------|--------|
-            | Lint & Type Check | ${{ needs.lint.result == 'success' && '✅' || '❌' }} |
-            | Tests | ${{ needs.test.result == 'success' && '✅' || '❌' }} |
-            | Build | ${{ needs.build.result == 'success' && '✅' || '❌' }} |
-
-            🔍 [View details](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-
-            Please check the logs and fix the issues.
+#      - name: Comment PR on failure
+#        if: steps.status.outputs.overall == 'failure'
+#        uses: actions-cool/maintain-one-comment@v3
+#        with:
+#          body: |
+#            ## ❌ CI Failed
+#
+#            | Check | Status |
+#            |-------|--------|
+#            | Lint & Type Check | ${{ needs.lint.result == 'success' && '✅' || '❌' }} |
+#            | Tests | ${{ needs.test.result == 'success' && '✅' || '❌' }} |
+#            | Build | ${{ needs.build.result == 'success' && '✅' || '❌' }} |
+#
+#            🔍 [View details](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+#
+#            Please check the logs and fix the issues.
 
   cleanup:
     timeout-minutes: 5
