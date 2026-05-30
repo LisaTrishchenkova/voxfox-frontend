@@ -87,7 +87,7 @@ const taskTypeLabel: Record<TaskType, string> = {
     TextInput: "Текстовый ответ",
 };
 
-const PAGE_SIZE = 9;
+const PAGE_SIZE = 12;
 
 interface CourseFormValues {
     title: string;
@@ -218,36 +218,54 @@ const TaskForm = ({ lessonId, onCreated, onCancel }: {
     const [form] = Form.useForm<TaskFormValues>();
     const [taskType, setTaskType] = useState<TaskType>("SingleChoice");
     const [options, setOptions] = useState<string[]>(["", ""]);
+    const [hints, setHints] = useState<string[]>([""]);
     const [saving, setSaving] = useState(false);
+
+    const addHint = () => { if (hints.length < 3) setHints((p) => [...p, ""]); };
+    const removeHint = (i: number) => setHints((p) => p.filter((_, idx) => idx !== i));
+    const setHint = (i: number, val: string) => setHints((p) => p.map((h, idx) => idx === i ? val : h));
 
     const handleSubmit = async (values: TaskFormValues) => {
         setSaving(true);
+        const cleanHints = hints.map((h) => h.trim()).filter(Boolean);
         let result: TaskTeacherDto | null = null;
+
         if (taskType === "SingleChoice") {
             if (values.correctIndex == null) { message.error("Выберите правильный ответ"); setSaving(false); return; }
             result = await taskTeacherApi.createSingleChoice(lessonId, {
                 question: values.question, options, correctIndex: values.correctIndex,
-                explanation: values.explanation, points: values.points ?? 1, isRequired: values.isRequired ?? true,
+                explanation: values.explanation, hints: cleanHints,
+                points: values.points ?? 1, isRequired: values.isRequired ?? true,
             });
         } else if (taskType === "MultiChoice") {
             if (!values.correctIndexes?.length) { message.error("Выберите хотя бы один правильный ответ"); setSaving(false); return; }
             result = await taskTeacherApi.createMultiChoice(lessonId, {
                 question: values.question, options, correctIndexes: values.correctIndexes,
-                explanation: values.explanation, points: values.points ?? 1, isRequired: values.isRequired ?? true,
+                explanation: values.explanation, hints: cleanHints,
+                points: values.points ?? 1, isRequired: values.isRequired ?? true,
             });
         } else {
             result = await taskTeacherApi.createTextInput(lessonId, {
                 question: values.question, correctAnswer: values.correctAnswer ?? "",
-                explanation: values.explanation, points: values.points ?? 1, isRequired: values.isRequired ?? true,
+                explanation: values.explanation, hints: cleanHints,
+                points: values.points ?? 1, isRequired: values.isRequired ?? true,
             });
         }
-        if (result) { message.success("Задание создано"); onCreated(result); form.resetFields(); setOptions(["", ""]); }
-        else { message.error("Ошибка при создании задания"); }
+
+        if (result) {
+            message.success("Задание создано");
+            onCreated(result);
+            form.resetFields();
+            setOptions(["", ""]);
+            setHints([""]);
+        } else {
+            message.error("Ошибка при создании задания");
+        }
         setSaving(false);
     };
 
     return (
-        <div style={{ background: "#f0fff4", borderRadius: 8, padding: 20, marginTop: 12, border: "1px solid #b7eb8f" }}>
+        <div style={{ borderRadius: 8, padding: 20, marginTop: 12, border: "1px solid #b7eb8f"}}>
             <Text strong style={{ color: "#389e0d" }}>Новое задание</Text>
             <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ marginTop: 12 }}>
                 <Form.Item label="Тип задания">
@@ -257,16 +275,19 @@ const TaskForm = ({ lessonId, onCreated, onCancel }: {
                         <Select.Option value="TextInput">Текстовый ответ</Select.Option>
                     </Select>
                 </Form.Item>
+
                 <Form.Item label="Вопрос" name="question"
                            rules={[{ required: true, message: "Введите вопрос" }, { min: 5 }]}>
                     <Input.TextArea rows={2} placeholder="Введите вопрос..." />
                 </Form.Item>
+
                 {(taskType === "SingleChoice" || taskType === "MultiChoice") && (
                     <Form.Item label="Варианты ответов">
                         <Space direction="vertical" style={{ width: "100%" }}>
                             {options.map((opt, i) => (
                                 <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                    <Input value={opt} onChange={(e) => setOptions((p) => p.map((o, idx) => idx === i ? e.target.value : o))}
+                                    <Input value={opt}
+                                           onChange={(e) => setOptions((p) => p.map((o, idx) => idx === i ? e.target.value : o))}
                                            placeholder={`Вариант ${i + 1}`} style={{ flex: 1 }} />
                                     {options.length > 2 && (
                                         <Button size="small" danger icon={<DeleteOutlined />}
@@ -280,6 +301,7 @@ const TaskForm = ({ lessonId, onCreated, onCancel }: {
                         </Space>
                     </Form.Item>
                 )}
+
                 {taskType === "SingleChoice" && (
                     <Form.Item label="Правильный ответ" name="correctIndex">
                         <Radio.Group>
@@ -289,6 +311,7 @@ const TaskForm = ({ lessonId, onCreated, onCancel }: {
                         </Radio.Group>
                     </Form.Item>
                 )}
+
                 {taskType === "MultiChoice" && (
                     <Form.Item label="Правильные ответы" name="correctIndexes">
                         <Checkbox.Group>
@@ -298,27 +321,58 @@ const TaskForm = ({ lessonId, onCreated, onCancel }: {
                         </Checkbox.Group>
                     </Form.Item>
                 )}
+
                 {taskType === "TextInput" && (
                     <Form.Item label="Правильный ответ" name="correctAnswer"
                                rules={[{ required: true, message: "Введите правильный ответ" }]}>
                         <Input placeholder="Правильный ответ..." />
                     </Form.Item>
                 )}
+
                 <Row gutter={16}>
                     <Col span={8}>
                         <Form.Item label="Очки" name="points" initialValue={1}>
                             <InputNumber min={1} max={100} style={{ width: "100%" }} />
                         </Form.Item>
                     </Col>
-                    <Col span={8}>
-                        <Form.Item label="Обязательное" name="isRequired" valuePropName="checked" initialValue={true}>
-                            <Switch />
-                        </Form.Item>
-                    </Col>
                 </Row>
-                <Form.Item label="Объяснение (показывается после ответа)" name="explanation">
+
+                {/* Подсказки */}
+                <Form.Item label={
+                    <span>
+                        Подсказки
+                        <Text type="secondary" style={{ fontSize: 11, marginLeft: 6 }}>
+                            (показываются после каждой неправильной попытки, до 3 штук)
+                        </Text>
+                    </span>
+                }>
+                    <Space direction="vertical" style={{ width: "100%" }}>
+                        {hints.map((hint, i) => (
+                            <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                <Input
+                                    value={hint}
+                                    onChange={(e) => setHint(i, e.target.value)}
+                                    placeholder={`Подсказка ${i + 1}`}
+                                    style={{ flex: 1 }}
+                                />
+                                {hints.length > 1 && (
+                                    <Button size="small" danger icon={<DeleteOutlined />}
+                                            onClick={() => removeHint(i)} />
+                                )}
+                            </div>
+                        ))}
+                        {hints.length < 3 && (
+                            <Button size="small" icon={<PlusOutlined />} onClick={addHint}>
+                                Добавить подсказку
+                            </Button>
+                        )}
+                    </Space>
+                </Form.Item>
+
+                <Form.Item label="Объяснение (показывается после правильного ответа)" name="explanation">
                     <Input.TextArea rows={2} placeholder="Необязательно..." />
                 </Form.Item>
+
                 <div style={{ display: "flex", gap: 8 }}>
                     <Button type="primary" htmlType="submit" loading={saving} style={{ background: "rgba(0,100,0,0.8)" }}>
                         Создать задание
@@ -362,7 +416,7 @@ const LessonEditor = ({ lesson, sectionId, onSaved, onCancel }: {
         <div style={{ border: "2px solid #52c41a", borderRadius: 10, padding: 20, marginBottom: 12, background: "#fff" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <Text strong style={{ fontSize: 15, color: "#389e0d" }}>
-                    {lesson ? `✏️ Редактирование: ${lesson.title}` : "➕ Новый урок"}
+                    {lesson ? `Редактирование: ${lesson.title}` : "Новый урок"}
                 </Text>
                 <Button size="small" icon={<CloseOutlined />} onClick={onCancel} type="text" danger>Отмена</Button>
             </div>
@@ -381,7 +435,7 @@ const LessonEditor = ({ lesson, sectionId, onSaved, onCancel }: {
                         </Form.Item>
                     </Col>
                 </Row>
-                <Form.Item label="Содержимое урока (Markdown + видео)">
+                <Form.Item label="Содержимое урока (Markdown)">
                     <MarkdownEditor value={content} onChange={setContent} minHeight={400} />
                 </Form.Item>
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
@@ -469,7 +523,12 @@ const LessonPanel = ({ lesson, sectionId, onDelete, onUpdated }: {
                                             <Text style={{ fontSize: 13 }}>{task.question}</Text>
                                             <div style={{ marginTop: 4 }}>
                                                 <Text type="secondary" style={{ fontSize: 12 }}>
-                                                    {task.points} очк. · {task.isRequired ? "Обязательное" : "Необязательное"}
+                                                    {task.points} очк.
+                                                    {task.hints && task.hints.length > 0 && (
+                                                        <span style={{ marginLeft: 6, color: "#faad14" }}>
+                                                            · {task.hints.length} подсказки
+                                                        </span>
+                                                    )}
                                                 </Text>
                                             </div>
                                         </div>
@@ -751,7 +810,6 @@ const TeacherPage = () => {
     const [createForm] = Form.useForm<CourseFormValues>();
     const [creating, setCreating] = useState(false);
 
-    // Фильтры и поиск
     const [searchInput, setSearchInput] = useState("");
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<CourseStatus | "">("");
@@ -776,7 +834,6 @@ const TeacherPage = () => {
         void load();
     }, []);
 
-    // Фильтрация и поиск на фронте
     const filteredCourses = useMemo(() => {
         let result = allCourses;
         if (statusFilter) result = result.filter((c) => c.status === statusFilter);
@@ -792,15 +849,8 @@ const TeacherPage = () => {
         return filteredCourses.slice(start, start + PAGE_SIZE);
     }, [filteredCourses, page]);
 
-    const handleSearch = () => {
-        setSearch(searchInput.trim());
-        setPage(1);
-    };
-
-    const handleStatusFilter = (val: CourseStatus | "") => {
-        setStatusFilter(val);
-        setPage(1);
-    };
+    const handleSearch = () => { setSearch(searchInput.trim()); setPage(1); };
+    const handleStatusFilter = (val: CourseStatus | "") => { setStatusFilter(val); setPage(1); };
 
     const handleCreateCourse = async (values: CourseFormValues, tags: string[]) => {
         setCreating(true);
@@ -836,7 +886,6 @@ const TeacherPage = () => {
 
     if (userData.role !== "Teacher" && userData.role !== "Admin") return null;
 
-    // Счётчики по статусам
     const counts: Record<string, number> = {
         "": allCourses.length,
         Draft: allCourses.filter((c) => c.status === "Draft").length,
@@ -874,9 +923,7 @@ const TeacherPage = () => {
                                 </Button>
                             </div>
 
-                            {/* Фильтры */}
                             <div style={{ marginBottom: 20 }}>
-                                {/* Фильтр по статусу — кнопки */}
                                 <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
                                     {([
                                         { value: "", label: "Все" },
@@ -907,7 +954,6 @@ const TeacherPage = () => {
                                     ))}
                                 </div>
 
-                                {/* Поиск */}
                                 <Row gutter={8}>
                                     <Col flex="auto">
                                         <Input
@@ -944,48 +990,59 @@ const TeacherPage = () => {
                                 </Empty>
                             ) : (
                                 <>
-                                    <Row gutter={[24, 24]}>
+                                    <Row gutter={[20, 20]}>
                                         {paginatedCourses.map((course) => (
-                                            <Col key={course.id} xs={24} sm={12} lg={8}>
+                                            <Col key={course.id} xs={24} sm={12} md={8} lg={6}>
                                                 <div
                                                     onClick={() => setSelectedCourse(course)}
                                                     style={{
-                                                        background: "#fff", borderRadius: 12,
-                                                        border: "1px solid #f0f0f0", padding: 20,
+                                                        background: "#fff", borderRadius: 10,
+                                                        border: "1px solid #f0f0f0", padding: 16,
                                                         cursor: "pointer", transition: "box-shadow 0.2s",
+                                                        height: "100%", display: "flex", flexDirection: "column",
                                                     }}
                                                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.1)"; }}
                                                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
                                                 >
                                                     {course.coverImageUrl && (
                                                         <img src={course.coverImageUrl} alt={course.title}
-                                                             style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 8, marginBottom: 12 }} />
+                                                             style={{
+                                                                 width: "100%", aspectRatio: "16/9",
+                                                                 objectFit: "cover", borderRadius: 6,
+                                                                 marginBottom: 12, display: "block",
+                                                             }} />
                                                     )}
                                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                                                        <Tag color={statusColor[course.status]}>{statusLabel[course.status]}</Tag>
-                                                        <Tag>{levelLabel[course.level]}</Tag>
+                                                        <Tag color={statusColor[course.status]} style={{ fontSize: 11 }}>
+                                                            {statusLabel[course.status]}
+                                                        </Tag>
+                                                        <Tag style={{ fontSize: 11 }}>{levelLabel[course.level]}</Tag>
                                                     </div>
-                                                    <Text strong style={{ fontSize: 15, display: "block", marginBottom: 6 }}>{course.title}</Text>
-                                                    <Text type="secondary" style={{ fontSize: 13 }}>
-                                                        {course.description.length > 80 ? course.description.slice(0, 80) + "..." : course.description}
+                                                    <Text strong style={{ fontSize: 14, display: "block", marginBottom: 4, lineHeight: 1.4 }}>
+                                                        {course.title}
                                                     </Text>
-                                                    <Divider style={{ margin: "12px 0" }} />
+                                                    <Text type="secondary" style={{ fontSize: 12, flex: 1 }}>
+                                                        {course.description.length > 70 ? course.description.slice(0, 70) + "..." : course.description}
+                                                    </Text>
+                                                    <Divider style={{ margin: "10px 0" }} />
                                                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                                        <Text type="secondary" style={{ fontSize: 12 }}>{course.enrollmentCount} студентов</Text>
-                                                        <Text type="secondary" style={{ fontSize: 12 }}>
+                                                        <Text type="secondary" style={{ fontSize: 11 }}>{course.enrollmentCount} студентов</Text>
+                                                        <Text type="secondary" style={{ fontSize: 11 }}>
                                                             {course.price === 0 ? "Бесплатно" : `${course.price} ₽`}
                                                         </Text>
                                                     </div>
                                                     {course.tags && course.tags.length > 0 && (
                                                         <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
-                                                            {course.tags.slice(0, 3).map((t) => (
-                                                                <Tag key={t.name} style={{ fontSize: 11 }}>{t.name}</Tag>
+                                                            {course.tags.slice(0, 2).map((t) => (
+                                                                <Tag key={t.name} style={{ fontSize: 10, margin: 0 }}>{t.name}</Tag>
                                                             ))}
                                                         </div>
                                                     )}
                                                     {course.status === "RejectedByModerator" && (
                                                         <div style={{ marginTop: 8 }}>
-                                                            <Tag color="error" icon={<QuestionCircleOutlined />}>Требует исправлений</Tag>
+                                                            <Tag color="error" icon={<QuestionCircleOutlined />} style={{ fontSize: 11 }}>
+                                                                Требует исправлений
+                                                            </Tag>
                                                         </div>
                                                     )}
                                                 </div>
@@ -996,12 +1053,9 @@ const TeacherPage = () => {
                                     {filteredCourses.length > PAGE_SIZE && (
                                         <div style={{ textAlign: "center", marginTop: 32 }}>
                                             <Pagination
-                                                current={page}
-                                                pageSize={PAGE_SIZE}
-                                                total={filteredCourses.length}
-                                                onChange={setPage}
-                                                showSizeChanger={false}
-                                                showTotal={(t) => `Всего: ${t}`}
+                                                current={page} pageSize={PAGE_SIZE}
+                                                total={filteredCourses.length} onChange={setPage}
+                                                showSizeChanger={false} showTotal={(t) => `Всего: ${t}`}
                                             />
                                         </div>
                                     )}

@@ -623,7 +623,7 @@ const CourseLearningPage = () => {
                   {tasks.length > 0 && (
                       <div style={{ marginTop: 40 }}>
                         <Divider />
-                        <Title level={4}>Задания</Title>
+                        <Title level={4}>Задание</Title>
                         {tasks.map((task) => (
                             <TaskCard
                                 key={task.id} task={task}
@@ -642,7 +642,7 @@ const CourseLearningPage = () => {
                         <Button type="primary" size="large" loading={navigating}
                                 style={{ background: "rgba(0,100,0,0.8)", minWidth: 200 }}
                                 onClick={handleFinishCourse}>
-                          🎉 Завершить курс
+                          Завершить курс
                         </Button>
                     ) : (
                         <Button type="primary" size="large" loading={navigating}

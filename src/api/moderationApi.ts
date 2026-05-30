@@ -1,5 +1,6 @@
 import { authStorage } from "../services/auth-storage.service";
 import { API_URL } from "../config";
+import type {CourseDto} from "./types/course.ts";
 
 export interface CourseReviewDto {
     id: string;
@@ -179,6 +180,17 @@ export const adminApi = {
             return res.ok;
         } catch {
             return false;
+        }
+    },
+    getAllCourses: async (): Promise<CourseDto[]> => {
+        try {
+            const res = await fetch(`${API_URL}/admin/courses`, {
+                headers: authStorage.getAuthHeaders(),
+            });
+            if (!res.ok) return [];
+            return res.json();
+        } catch {
+            return [];
         }
     },
 };
