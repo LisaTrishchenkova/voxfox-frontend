@@ -1,10 +1,185 @@
-import axios from "axios";
-import type { UserResponse } from "./types/user";
-import { API_BASE_URL } from "./config";
+import { authStorage } from "../services/auth-storage.service";
+import { API_URL } from "../config";
+import type {
+  UserResponse,
+  MeResponse,
+  UpdateProfileRequest,
+  ChangePasswordRequest,
+  UserStatsDto,
+} from "./types/user";
+import type { CourseDto } from "./types/course";
+import type { CertificateDto } from "./types/certificate";
 
 export const userApi = {
-  getUserById: async (id: string): Promise<UserResponse> => {
-    const response = await axios.get(`${API_BASE_URL}/Users/${id}`);
-    return response.data;
+  getUserById: async (id: string): Promise<UserResponse | null> => {
+    try {
+      const res = await fetch(`${API_URL}/Users/${id}`, {
+        headers: authStorage.getAuthHeaders(),
+      });
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  getMe: async (): Promise<MeResponse | null> => {
+    try {
+      const res = await fetch(`${API_URL}/Auth/me`, {
+        headers: authStorage.getAuthHeaders(),
+      });
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  updateProfile: async (data: UpdateProfileRequest): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/Users/profile`, {
+        method: "PUT",
+        headers: authStorage.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  changePassword: async (data: ChangePasswordRequest): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/Users/password`, {
+        method: "PUT",
+        headers: authStorage.getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  getUserStats: async (id: string): Promise<UserStatsDto | null> => {
+    try {
+      const res = await fetch(`${API_URL}/Users/${id}/stats`);
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  getUserCourses: async (id: string): Promise<CourseDto[]> => {
+    try {
+      const res = await fetch(`${API_URL}/Users/${id}/courses`);
+      if (!res.ok) return [];
+      return res.json();
+    } catch {
+      return [];
+    }
+  },
+
+  getMyCertificates: async (): Promise<CertificateDto[]> => {
+    try {
+      const res = await fetch(`${API_URL}/Users/certificates`, {
+        headers: authStorage.getAuthHeaders(),
+      });
+      if (!res.ok) return [];
+      return res.json();
+    } catch {
+      return [];
+    }
+  },
+
+  uploadAvatar: async (file: File): Promise<boolean> => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const headers = authStorage.getAuthHeaders() as Record<string, string>;
+      delete headers["Content-Type"];
+      const res = await fetch(`${API_URL}/Users/avatar`, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  deleteAvatar: async (): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/Users/avatar`, {
+        method: "DELETE",
+        headers: authStorage.getAuthHeaders(),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  // Admin only
+  getAllUsers: async (params?: {
+    search?: string;
+    role?: string;
+    includeDeleted?: boolean;
+    page?: number;
+    pageSize?: number;
+  }): Promise<UserResponse[]> => {
+    try {
+      const p = new URLSearchParams();
+      if (params?.search) p.append("search", params.search);
+      if (params?.role) p.append("role", params.role);
+      if (params?.includeDeleted != null) p.append("includeDeleted", params.includeDeleted.toString());
+      if (params?.page) p.append("page", params.page.toString());
+      if (params?.pageSize) p.append("pageSize", params.pageSize.toString());
+      const res = await fetch(`${API_URL}/Users?${p.toString()}`, {
+        headers: authStorage.getAuthHeaders(),
+      });
+      if (!res.ok) return [];
+      return res.json();
+    } catch {
+      return [];
+    }
+  },
+
+  setUserRole: async (id: string, role: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/Users/${id}/role?role=${role}`, {
+        method: "PUT",
+        headers: authStorage.getAuthHeaders(),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  deleteUser: async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/Users/${id}`, {
+        method: "DELETE",
+        headers: authStorage.getAuthHeaders(),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  restoreUser: async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/Users/${id}/restore`, {
+        method: "PUT",
+        headers: authStorage.getAuthHeaders(),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
   },
 };
