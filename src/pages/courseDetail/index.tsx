@@ -25,7 +25,6 @@ import type {ReviewDto} from "../../api/types/review.ts";
 import {useUserStore} from "../../stores/userStore.ts";
 import leoProfanity from "leo-profanity";
 
-// подключаем русский словарь
 leoProfanity.loadDictionary("ru");
 
 const {Title, Text, Paragraph} = Typography;
@@ -60,6 +59,9 @@ const CourseDetailPage = () => {
 
   const isAuth = authStorage.isAuthenticated();
   const currentUserId = authStorage.getUserData<string>();
+
+  // курс опубликован — только тогда можно записаться и добавить в избранное
+  const isPublished = course?.status === "Published";
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -152,7 +154,6 @@ const CourseDetailPage = () => {
       return;
     }
 
-    // проверка на нецензурные слова
     const commentText = values.comment ?? "";
     if (leoProfanity.check(commentText)) {
       message.error("Комментарий содержит недопустимые слова. Пожалуйста, используйте корректные выражения.");
@@ -209,6 +210,55 @@ const CourseDetailPage = () => {
         </>
     );
 
+  // кнопка записи — что показывать
+  const renderEnrollButton = () => {
+    // уже записан — показываем кнопку "Начать курс" независимо от статуса
+    if (isAuth && enrollment) {
+      return (
+          <Button type="primary" size="large" block
+                  style={{marginTop: 12, height: 48, fontSize: 16, background: "rgba(0,100,0,0.8)"}}
+                  onClick={() => navigate(`/course/${id}/learn`)}>
+            Продолжить курс
+          </Button>
+      );
+    }
+
+    // курс не опубликован — запись недоступна
+    if (!isPublished) {
+      return (
+          <Button size="large" block disabled
+                  style={{marginTop: 12, height: 48, fontSize: 16}}>
+            Запись недоступна
+          </Button>
+      );
+    }
+
+    // не авторизован
+    if (!isAuth) {
+      return (
+          <Button type="primary" size="large" block
+                  style={{marginTop: 12, height: 48, fontSize: 16, background: "rgba(0,100,0,0.8)"}}
+                  onClick={() => navigate(`/login?redirect=/course/${id}`)}>
+            Войти чтобы записаться
+          </Button>
+      );
+    }
+
+    // авторизован, не записан, курс опубликован
+    return (
+        <Button type="primary" size="large" block loading={enrollLoading}
+                style={{marginTop: 12, height: 48, fontSize: 16, background: "rgba(0,100,0,0.8)"}}
+                onClick={async () => {
+                  setEnrollLoading(true);
+                  const result = await enrollmentApi.enroll(id!);
+                  if (result) setEnrollment(result);
+                  setEnrollLoading(false);
+                }}>
+          Записаться на курс
+        </Button>
+    );
+  };
+
   return (
       <>
         <Header/>
@@ -220,6 +270,10 @@ const CourseDetailPage = () => {
                 <Tag color="green">{levelLabels[course.level] ?? course.level}</Tag>
                 {course.certificateEnabled && (
                     <Tag color="gold" icon={<TrophyOutlined/>}>Сертификат</Tag>
+                )}
+                {/* показываем статус если курс не опубликован */}
+                {!isPublished && (
+                    <Tag color="warning">Курс ещё не опубликован</Tag>
                 )}
               </div>
 
@@ -273,42 +327,22 @@ const CourseDetailPage = () => {
                 <Title level={3} style={{margin: 0}}>
                   {course.isFree ? "Бесплатно" : `${course.price} ₽`}
                 </Title>
-                {isAuth ? (
-                    enrollment ? (
-                        <Button type="primary" size="large" block
-                                style={{marginTop: 12, height: 48, fontSize: 16, background: "rgba(0,100,0,0.8)"}}
-                                onClick={() => navigate(`/course/${id}/learn`)}>
-                          Начать курс
-                        </Button>
-                    ) : (
-                        <Button type="primary" size="large" block loading={enrollLoading}
-                                style={{marginTop: 12, height: 48, fontSize: 16, background: "rgba(0,100,0,0.8)"}}
-                                onClick={async () => {
-                                  setEnrollLoading(true);
-                                  const result = await enrollmentApi.enroll(id!);
-                                  if (result) setEnrollment(result);
-                                  setEnrollLoading(false);
-                                }}>
-                          Записаться на курс
-                        </Button>
-                    )
-                ) : (
-                    <Button type="primary" size="large" block
-                            style={{marginTop: 12, height: 48, fontSize: 16, background: "rgba(0,100,0,0.8)"}}
-                            onClick={() => navigate(`/login?redirect=/course/${id}`)}>
-                      Войти чтобы записаться
+
+                {/* кнопка записи */}
+                {renderEnrollButton()}
+
+                {/* кнопка избранного — только если курс опубликован */}
+                {isPublished && (
+                    <Button size="large" block loading={favoriteLoading}
+                            icon={isFavorite
+                                ? <HeartFilled style={{color: "#AC2724"}}/>
+                                : <HeartOutlined style={{color: "#AC2724"}}/>
+                            }
+                            style={{marginTop: 8, height: 48, fontSize: 16}}
+                            onClick={toggleFavorite}>
+                      {isFavorite ? "В избранном" : "В избранное"}
                     </Button>
                 )}
-
-                <Button size="large" block loading={favoriteLoading}
-                        icon={isFavorite
-                            ? <HeartFilled style={{color: "#AC2724"}}/>
-                            : <HeartOutlined style={{color: "#AC2724"}}/>
-                        }
-                        style={{marginTop: 8, height: 48, fontSize: 16}}
-                        onClick={toggleFavorite}>
-                  {isFavorite ? "В избранном" : "В избранное"}
-                </Button>
               </div>
             </Col>
           </Row>
@@ -318,7 +352,6 @@ const CourseDetailPage = () => {
           <Row gutter={[48, 32]}>
             <Col xs={24} md={16}>
 
-              {/* О курсе */}
               {course.fullDescription && (
                   <>
                     <Title level={3}>О курсе</Title>
@@ -329,7 +362,6 @@ const CourseDetailPage = () => {
                   </>
               )}
 
-              {/* Программа курса */}
               <Title level={3} style={{marginTop: 32}}>Программа курса</Title>
               <Divider style={{margin: "12px 0"}}/>
               {loadingSections ? (
@@ -381,7 +413,6 @@ const CourseDetailPage = () => {
                   </>
               )}
 
-              {/* Отзывы */}
               <Title level={3} style={{marginTop: 48}}>Отзывы</Title>
               <Divider style={{margin: "12px 0"}}/>
 
