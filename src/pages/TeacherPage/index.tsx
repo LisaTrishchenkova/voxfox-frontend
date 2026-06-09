@@ -36,7 +36,7 @@ import {
     SearchOutlined,
     SendOutlined,
 } from "@ant-design/icons";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../../components/Header.tsx";
 import Footer from "../../components/Footer.tsx";
@@ -45,6 +45,8 @@ import { courseApi } from "../../api/courseApi.ts";
 import { sectionApi } from "../../api/sectionApi.ts";
 import { lessonApi } from "../../api/lessonApi.ts";
 import { taskTeacherApi } from "../../api/taskTeacherApi.ts";
+import { courseDraftApi, draftToCreateDto } from "../../api/courseDraftApi.ts";
+import type { CourseDraftDto, DraftSectionDto, DraftLessonDto, DraftTaskDto } from "../../api/courseDraftApi.ts";
 import { useUserStore } from "../../stores/userStore.ts";
 import { API_URL } from "../../config.ts";
 import { authStorage } from "../../services/auth-storage.service.ts";
@@ -63,6 +65,8 @@ import type { TaskTeacherDto } from "../../api/taskTeacherApi.ts";
 const { Content } = Layout;
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
+
+const MAX_OPTIONS = 6;
 
 const statusColor: Record<string, string> = {
     Draft: "default",
@@ -210,24 +214,88 @@ const CourseForm = ({
 };
 
 // ─── TaskForm ────────────────────────────────────────────────
-const TaskForm = ({ lessonId, onCreated, onCancel }: {
+const TaskForm = ({ lessonId, onCreated, onCancel, draftMode = false }: {
     lessonId: string;
     onCreated: (task: TaskTeacherDto) => void;
     onCancel: () => void;
+    draftMode?: boolean; // если true — не вызывает API, просто возвращает данные через onCreated
 }) => {
     const [form] = Form.useForm<TaskFormValues>();
     const [taskType, setTaskType] = useState<TaskType>("SingleChoice");
     const [options, setOptions] = useState<string[]>(["", ""]);
     const [hints, setHints] = useState<string[]>([""]);
     const [saving, setSaving] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+    const [showForm, setShowForm] = useState(!draftMode); // в draftMode форма скрыта по умолчанию
 
     const addHint = () => { if (hints.length < 3) setHints((p) => [...p, ""]); };
     const removeHint = (i: number) => setHints((p) => p.filter((_, idx) => idx !== i));
     const setHint = (i: number, val: string) => setHints((p) => p.map((h, idx) => idx === i ? val : h));
 
+    const updateOption = (i: number, val: string) => {
+        setOptions((p) => p.map((o, idx) => idx === i ? val : o));
+    };
+
+    const addOption = () => {
+        const lastOption = options[options.length - 1];
+        if (!lastOption.trim()) {
+            message.warning("Заполните предыдущий вариант перед добавлением нового");
+            return;
+        }
+        if (options.length >= MAX_OPTIONS) {
+            message.warning(`Максимальное количество вариантов — ${MAX_OPTIONS}`);
+            return;
+        }
+        setOptions((p) => [...p, ""]);
+    };
+
+    const removeOption = (i: number) => {
+        setOptions((p) => p.filter((_, idx) => idx !== i));
+        form.setFieldsValue({ correctIndex: undefined, correctIndexes: [] });
+    };
+
     const handleSubmit = async (values: TaskFormValues) => {
+        setSubmitted(true);
+        if (taskType === "SingleChoice" || taskType === "MultiChoice") {
+            const emptyIndex = options.findIndex((o) => !o.trim());
+            if (emptyIndex !== -1) {
+                message.error(`Вариант ${emptyIndex + 1} не заполнен. Все варианты ответов должны быть заполнены`);
+                return;
+            }
+        }
+
         setSaving(true);
         const cleanHints = hints.map((h) => h.trim()).filter(Boolean);
+
+        if (draftMode) {
+            // В режиме черновика — не вызываем API, формируем объект и возвращаем через onCreated
+            // Создаём объект который совместим с DraftTaskDto
+            const draftTaskData: DraftTaskDto = {
+                id: `temp-task-${Date.now()}`,
+                originalTaskId: undefined,
+                type: taskType,
+                question: values.question,
+                options: taskType !== "TextInput" ? options : undefined,
+                correctIndex: taskType === "SingleChoice" ? (values.correctIndex ?? undefined) : undefined,
+                correctIndexes: taskType === "MultiChoice" ? (values.correctIndexes ?? undefined) : undefined,
+                correctAnswer: taskType === "TextInput" ? (values.correctAnswer ?? undefined) : undefined,
+                explanation: values.explanation ?? undefined,
+                points: values.points ?? 1,
+                isRequired: values.isRequired ?? true,
+                orderIndex: 0,
+            };
+            // Приводим к TaskTeacherDto для совместимости с onCreated
+            const fakeTask = draftTaskData as unknown as TaskTeacherDto;
+            onCreated(fakeTask);
+            form.resetFields();
+            setOptions(["", ""]);
+            setHints([""]);
+            setSubmitted(false);
+            setShowForm(false);
+            setSaving(false);
+            return;
+        }
+
         let result: TaskTeacherDto | null = null;
 
         if (taskType === "SingleChoice") {
@@ -258,77 +326,100 @@ const TaskForm = ({ lessonId, onCreated, onCancel }: {
             form.resetFields();
             setOptions(["", ""]);
             setHints([""]);
+            setSubmitted(false);
         } else {
             message.error("Ошибка при создании задания");
         }
         setSaving(false);
     };
 
+    const canAddOption = options.length < MAX_OPTIONS;
+
+    // В draftMode показываем кнопку "Добавить задание", форма разворачивается по клику
+    if (draftMode && !showForm) {
+        return (
+            <Button size="small" icon={<PlusOutlined />} style={{ marginTop: 8 }} onClick={() => setShowForm(true)}>
+                Добавить задание
+            </Button>
+        );
+    }
+
     return (
-        <div style={{ borderRadius: 8, padding: 20, marginTop: 12, border: "1px solid #b7eb8f"}}>
+        <div style={{ borderRadius: 8, padding: 20, marginTop: 12, border: "1px solid #b7eb8f" }}>
             <Text strong style={{ color: "#389e0d" }}>Новое задание</Text>
             <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ marginTop: 12 }}>
                 <Form.Item label="Тип задания">
-                    <Select value={taskType} onChange={setTaskType} style={{ width: 240 }}>
+                    <Select value={taskType} onChange={(val) => {
+                        setTaskType(val);
+                        form.setFieldsValue({ correctIndex: undefined, correctIndexes: [] });
+                    }} style={{ width: 240 }}>
                         <Select.Option value="SingleChoice">Одиночный выбор</Select.Option>
                         <Select.Option value="MultiChoice">Множественный выбор</Select.Option>
                         <Select.Option value="TextInput">Текстовый ответ</Select.Option>
                     </Select>
                 </Form.Item>
-
                 <Form.Item label="Вопрос" name="question"
                            rules={[{ required: true, message: "Введите вопрос" }, { min: 5 }]}>
                     <Input.TextArea rows={2} placeholder="Введите вопрос..." />
                 </Form.Item>
-
                 {(taskType === "SingleChoice" || taskType === "MultiChoice") && (
-                    <Form.Item label="Варианты ответов">
+                    <Form.Item label={
+                        <span>Варианты ответов <Text type="secondary" style={{ fontSize: 11, marginLeft: 6 }}>({options.length} / {MAX_OPTIONS})</Text></span>
+                    }>
                         <Space direction="vertical" style={{ width: "100%" }}>
                             {options.map((opt, i) => (
                                 <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                    <Input value={opt}
-                                           onChange={(e) => setOptions((p) => p.map((o, idx) => idx === i ? e.target.value : o))}
-                                           placeholder={`Вариант ${i + 1}`} style={{ flex: 1 }} />
+                                    <Text type="secondary" style={{ fontSize: 12, minWidth: 20 }}>{i + 1}.</Text>
+                                    <Input value={opt} onChange={(e) => updateOption(i, e.target.value)}
+                                           placeholder={`Вариант ${i + 1}`}
+                                           style={{ flex: 1, borderColor: submitted && opt.trim() === "" ? "#ff4d4f" : undefined }}
+                                           status={submitted && opt.trim() === "" ? "error" : ""} />
                                     {options.length > 2 && (
-                                        <Button size="small" danger icon={<DeleteOutlined />}
-                                                onClick={() => setOptions((p) => p.filter((_, idx) => idx !== i))} />
+                                        <Button size="small" danger icon={<DeleteOutlined />} onClick={() => removeOption(i)} />
                                     )}
                                 </div>
                             ))}
-                            <Button size="small" icon={<PlusOutlined />} onClick={() => setOptions((p) => [...p, ""])}>
-                                Добавить вариант
+                            {submitted && options.some((o) => !o.trim()) && (
+                                <Text type="danger" style={{ fontSize: 12 }}>Все варианты должны быть заполнены</Text>
+                            )}
+                            <Button size="small" icon={<PlusOutlined />} onClick={addOption} disabled={!canAddOption}>
+                                Добавить вариант{!canAddOption && ` (макс. ${MAX_OPTIONS})`}
                             </Button>
                         </Space>
                     </Form.Item>
                 )}
-
                 {taskType === "SingleChoice" && (
                     <Form.Item label="Правильный ответ" name="correctIndex">
                         <Radio.Group>
                             <Space direction="vertical">
-                                {options.map((opt, i) => <Radio key={i} value={i}>{opt || `Вариант ${i + 1}`}</Radio>)}
+                                {options.map((opt, i) => (
+                                    <Radio key={i} value={i} disabled={!opt.trim()}>
+                                        {opt || <Text type="secondary">{`Вариант ${i + 1} (не заполнен)`}</Text>}
+                                    </Radio>
+                                ))}
                             </Space>
                         </Radio.Group>
                     </Form.Item>
                 )}
-
                 {taskType === "MultiChoice" && (
                     <Form.Item label="Правильные ответы" name="correctIndexes">
                         <Checkbox.Group>
                             <Space direction="vertical">
-                                {options.map((opt, i) => <Checkbox key={i} value={i}>{opt || `Вариант ${i + 1}`}</Checkbox>)}
+                                {options.map((opt, i) => (
+                                    <Checkbox key={i} value={i} disabled={!opt.trim()}>
+                                        {opt || <Text type="secondary">{`Вариант ${i + 1} (не заполнен)`}</Text>}
+                                    </Checkbox>
+                                ))}
                             </Space>
                         </Checkbox.Group>
                     </Form.Item>
                 )}
-
                 {taskType === "TextInput" && (
                     <Form.Item label="Правильный ответ" name="correctAnswer"
-                               rules={[{ required: true, message: "Введите правильный ответ" }]}>
+                               rules={[{ required: true, message: "Введите правильный ответ" }, { whitespace: true, message: "Ответ не может быть пустым" }]}>
                         <Input placeholder="Правильный ответ..." />
                     </Form.Item>
                 )}
-
                 <Row gutter={16}>
                     <Col span={8}>
                         <Form.Item label="Очки" name="points" initialValue={1}>
@@ -336,43 +427,27 @@ const TaskForm = ({ lessonId, onCreated, onCancel }: {
                         </Form.Item>
                     </Col>
                 </Row>
-
-                {/* Подсказки */}
                 <Form.Item label={
-                    <span>
-                        Подсказки
-                        <Text type="secondary" style={{ fontSize: 11, marginLeft: 6 }}>
-                            (показываются после каждой неправильной попытки, до 3 штук)
-                        </Text>
-                    </span>
+                    <span>Подсказки <Text type="secondary" style={{ fontSize: 11, marginLeft: 6 }}>(показываются после каждой неправильной попытки, до 3 штук)</Text></span>
                 }>
                     <Space direction="vertical" style={{ width: "100%" }}>
                         {hints.map((hint, i) => (
                             <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                <Input
-                                    value={hint}
-                                    onChange={(e) => setHint(i, e.target.value)}
-                                    placeholder={`Подсказка ${i + 1}`}
-                                    style={{ flex: 1 }}
-                                />
+                                <Input value={hint} onChange={(e) => setHint(i, e.target.value)}
+                                       placeholder={`Подсказка ${i + 1}`} style={{ flex: 1 }} />
                                 {hints.length > 1 && (
-                                    <Button size="small" danger icon={<DeleteOutlined />}
-                                            onClick={() => removeHint(i)} />
+                                    <Button size="small" danger icon={<DeleteOutlined />} onClick={() => removeHint(i)} />
                                 )}
                             </div>
                         ))}
                         {hints.length < 3 && (
-                            <Button size="small" icon={<PlusOutlined />} onClick={addHint}>
-                                Добавить подсказку
-                            </Button>
+                            <Button size="small" icon={<PlusOutlined />} onClick={addHint}>Добавить подсказку</Button>
                         )}
                     </Space>
                 </Form.Item>
-
                 <Form.Item label="Объяснение (показывается после правильного ответа)" name="explanation">
                     <Input.TextArea rows={2} placeholder="Необязательно..." />
                 </Form.Item>
-
                 <div style={{ display: "flex", gap: 8 }}>
                     <Button type="primary" htmlType="submit" loading={saving} style={{ background: "rgba(0,100,0,0.8)" }}>
                         Создать задание
@@ -525,9 +600,7 @@ const LessonPanel = ({ lesson, sectionId, onDelete, onUpdated }: {
                                                 <Text type="secondary" style={{ fontSize: 12 }}>
                                                     {task.points} очк.
                                                     {task.hints && task.hints.length > 0 && (
-                                                        <span style={{ marginLeft: 6, color: "#faad14" }}>
-                                                            · {task.hints.length} подсказки
-                                                        </span>
+                                                        <span style={{ marginLeft: 6, color: "#faad14" }}>· {task.hints.length} подсказки</span>
                                                     )}
                                                 </Text>
                                             </div>
@@ -560,6 +633,58 @@ const LessonPanel = ({ lesson, sectionId, onDelete, onUpdated }: {
     );
 };
 
+// ─── DraftSectionEditor ──────────────────────────────────────
+// Компонент редактирования одного раздела черновика
+const DraftLessonEditor = ({ lesson, onSave, onCancel }: {
+    lesson: DraftLessonDto | null; // null = новый урок
+    onSave: (data: { title: string; description: string; content: string }) => void;
+    onCancel: () => void;
+}) => {
+    const [form] = Form.useForm<LessonFormValues>();
+    const [content, setContent] = useState(lesson?.content ?? "");
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        form.setFieldsValue({ title: lesson?.title ?? "", description: lesson?.description ?? "" });
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setContent(lesson?.content ?? "");
+    }, [lesson]);
+
+    return (
+        <div style={{ border: "2px solid #52c41a", borderRadius: 10, padding: 20, marginBottom: 12, background: "#fff" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <Text strong style={{ fontSize: 15, color: "#389e0d" }}>
+                    {lesson ? `Редактирование: ${lesson.title}` : "Новый урок"}
+                </Text>
+                <Button size="small" icon={<CloseOutlined />} onClick={onCancel} type="text" danger>Отмена</Button>
+            </div>
+            <Form form={form} layout="vertical" onFinish={(values) => onSave({ ...values, content })}>
+                <Row gutter={16}>
+                    <Col span={12}>
+                        <Form.Item label="Название урока" name="title" rules={[{ required: true }, { min: 2 }]}>
+                            <Input placeholder="Название урока" />
+                        </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                        <Form.Item label="Краткое описание" name="description" rules={[{ required: true }, { min: 10 }]}>
+                            <Input placeholder="Краткое описание" />
+                        </Form.Item>
+                    </Col>
+                </Row>
+                <Form.Item label="Содержимое урока (Markdown)">
+                    <MarkdownEditor value={content} onChange={setContent} minHeight={400} />
+                </Form.Item>
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                    <Button onClick={onCancel}>Отмена</Button>
+                    <Button type="primary" htmlType="submit" icon={<CheckOutlined />} style={{ background: "rgba(0,100,0,0.8)" }}>
+                        {lesson ? "Сохранить урок" : "Создать урок"}
+                    </Button>
+                </div>
+            </Form>
+        </div>
+    );
+};
+
 // ─── CourseEditor ─────────────────────────────────────────────
 const CourseEditor = ({ course, categories, onBack, onUpdated }: {
     course: CourseDto;
@@ -583,6 +708,41 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
     const [editCourseTags, setEditCourseTags] = useState<string[]>([]);
     const [editCourseKey, setEditCourseKey] = useState(0);
 
+    // Черновик для опубликованного курса
+    const [existingDraft, setExistingDraft] = useState<CourseDraftDto | null>(null);
+    const [loadingDraft] = useState(false); // зарезервировано
+    const [submittingDraft, setSubmittingDraft] = useState(false);
+    const [cancellingDraft, setCancellingDraft] = useState(false);
+    const [creatingDraft, setCreatingDraft] = useState(false);
+    const [confirmEditModalOpen, setConfirmEditModalOpen] = useState(false);
+    // "view" | "editing" | "review"
+    type PublishedMode = "view" | "editing" | "review";
+    const [publishedMode, setPublishedMode] = useState<PublishedMode>("view");
+
+    // Состояние редактора черновика структуры
+    const [draftSections, setDraftSections] = useState<DraftSectionDto[]>([]);
+    const [draftSectionModal, setDraftSectionModal] = useState(false);
+    const [editingDraftSection, setEditingDraftSection] = useState<DraftSectionDto | null>(null);
+    const [draftSectionForm] = Form.useForm<SectionFormValues>();
+
+    // Синхронизируем форму раздела когда editingDraftSection меняется
+    useEffect(() => {
+        if (draftSectionModal) {
+            if (editingDraftSection) {
+                // eslint-disable-next-line react-hooks/set-state-in-effect
+                draftSectionForm.setFieldsValue({
+                    title: editingDraftSection.title,
+                    description: editingDraftSection.description,
+                });
+            } else {
+                // eslint-disable-next-line react-hooks/set-state-in-effect
+                draftSectionForm.resetFields();
+            }
+        }
+    }, [draftSectionModal, editingDraftSection]);
+    const [editingDraftLesson, setEditingDraftLesson] = useState<{ sectionId: string; lesson: DraftLessonDto | null } | null>(null);
+    const [savingDraft, setSavingDraft] = useState(false);
+
     useEffect(() => {
         const load = async () => {
             const data: SectionDto[] = await courseApi.getSections(course.id);
@@ -595,8 +755,179 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
             setLessonsBySection(lessonsMap);
             setLoading(false);
         };
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         void load();
     }, [course.id]);
+
+    // При открытии опубликованного курса — проверяем есть ли уже черновик
+    const draftCheckedRef = useRef(false);
+    useEffect(() => {
+        if (course.status !== "Published" || draftCheckedRef.current) return;
+        draftCheckedRef.current = true;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        courseDraftApi.getDraft(course.id).then((draft) => {
+            if (draft) {
+                setExistingDraft(draft);
+                setDraftSections(draft.sections ?? []);
+                setPublishedMode(draft.status === "UnderReview" ? "review" : "editing");
+            } else {
+                setConfirmEditModalOpen(true);
+            }
+        });
+    }, [course.id, course.status]);
+
+    // ─── Сохранить черновик целиком на бэкенд ────────────────
+    const saveDraftToServer = async (draft: CourseDraftDto, sections: DraftSectionDto[]): Promise<CourseDraftDto | null> => {
+        setSavingDraft(true);
+        const updated = { ...draft, sections };
+        const result = await courseDraftApi.updateDraftFull(course.id, draft.id, draftToCreateDto(updated));
+        setSavingDraft(false);
+        if (!result) { message.error("Ошибка при сохранении черновика"); return null; }
+        return result;
+    };
+
+    // ─── Операции с разделами черновика ─────────────────────
+
+    const handleDraftSaveSection = async (values: SectionFormValues) => {
+        if (!existingDraft) return;
+        let newSections: DraftSectionDto[];
+
+        if (editingDraftSection) {
+            newSections = draftSections.map((s) =>
+                s.id === editingDraftSection.id ? { ...s, ...values } : s
+            );
+        } else {
+            const newSection: DraftSectionDto = {
+                id: `temp-${Date.now()}`,
+                title: values.title,
+                description: values.description,
+                orderIndex: draftSections.length,
+                lessons: [],
+            };
+            newSections = [...draftSections, newSection];
+        }
+
+        const saved = await saveDraftToServer(existingDraft, newSections);
+        if (saved) {
+            setExistingDraft(saved);
+            setDraftSections(saved.sections ?? []);
+            message.success(editingDraftSection ? "Раздел обновлён" : "Раздел создан");
+        }
+        setDraftSectionModal(false);
+    };
+
+    const handleDraftDeleteSection = async (sectionId: string) => {
+        if (!existingDraft) return;
+        const newSections = draftSections
+            .filter((s) => s.id !== sectionId)
+            .map((s, i) => ({ ...s, orderIndex: i }));
+        const saved = await saveDraftToServer(existingDraft, newSections);
+        if (saved) {
+            setExistingDraft(saved);
+            setDraftSections(saved.sections ?? []);
+            message.success("Раздел удалён");
+        }
+    };
+
+    // ─── Операции с уроками черновика ─────────────────────
+
+    const handleDraftSaveLesson = async (sectionId: string, data: { title: string; description: string; content: string }) => {
+        if (!existingDraft) return;
+        const newSections = draftSections.map((s) => {
+            if (s.id !== sectionId) return s;
+
+            if (editingDraftLesson?.lesson) {
+                // редактируем существующий урок
+                return {
+                    ...s,
+                    lessons: s.lessons.map((l) =>
+                        l.id === editingDraftLesson.lesson!.id ? { ...l, ...data } : l
+                    ),
+                };
+            } else {
+                // новый урок
+                const newLesson: DraftLessonDto = {
+                    id: `temp-lesson-${Date.now()}`,
+                    title: data.title,
+                    description: data.description,
+                    content: data.content,
+                    orderIndex: s.lessons.length,
+                    tasks: [],
+                };
+                return { ...s, lessons: [...s.lessons, newLesson] };
+            }
+        });
+
+        const saved = await saveDraftToServer(existingDraft, newSections);
+        if (saved) {
+            setExistingDraft(saved);
+            setDraftSections(saved.sections ?? []);
+            message.success(editingDraftLesson?.lesson ? "Урок обновлён" : "Урок создан");
+        }
+        setEditingDraftLesson(null);
+    };
+
+    const handleDraftDeleteLesson = async (sectionId: string, lessonId: string) => {
+        if (!existingDraft) return;
+        const newSections = draftSections.map((s) => {
+            if (s.id !== sectionId) return s;
+            return {
+                ...s,
+                lessons: s.lessons.filter((l) => l.id !== lessonId).map((l, i) => ({ ...l, orderIndex: i })),
+            };
+        });
+        const saved = await saveDraftToServer(existingDraft, newSections);
+        if (saved) {
+            setExistingDraft(saved);
+            setDraftSections(saved.sections ?? []);
+            message.success("Урок удалён");
+        }
+    };
+
+    // ─── Операции с заданиями черновика ─────────────────────
+
+    const handleDraftTaskCreated = async (sectionId: string, lessonId: string, task: DraftTaskDto) => {
+        if (!existingDraft) return;
+        const newSections = draftSections.map((s) => {
+            if (s.id !== sectionId) return s;
+            return {
+                ...s,
+                lessons: s.lessons.map((l) => {
+                    if (l.id !== lessonId) return l;
+                    return { ...l, tasks: [...l.tasks, { ...task, orderIndex: l.tasks.length }] };
+                }),
+            };
+        });
+        const saved = await saveDraftToServer(existingDraft, newSections);
+        if (saved) {
+            setExistingDraft(saved);
+            setDraftSections(saved.sections ?? []);
+        }
+    };
+
+    const handleDraftTaskDeleted = async (sectionId: string, lessonId: string, taskId: string) => {
+        if (!existingDraft) return;
+        const newSections = draftSections.map((s) => {
+            if (s.id !== sectionId) return s;
+            return {
+                ...s,
+                lessons: s.lessons.map((l) => {
+                    if (l.id !== lessonId) return l;
+                    return {
+                        ...l,
+                        tasks: l.tasks.filter((t) => t.id !== taskId).map((t, i) => ({ ...t, orderIndex: i })),
+                    };
+                }),
+            };
+        });
+        const saved = await saveDraftToServer(existingDraft, newSections);
+        if (saved) {
+            setExistingDraft(saved);
+            setDraftSections(saved.sections ?? []);
+        }
+    };
+
+    // ─── Стандартные операции (для не-Published курсов) ──────
 
     const handleSaveSection = async (values: SectionFormValues) => {
         if (editingSection) {
@@ -662,6 +993,247 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
         setSavingCourse(false);
     };
 
+    // Для Published — сохранение метаданных через черновик
+    const handleSaveCourseDraft = async (values: CourseFormValues, tags: string[]) => {
+        if (!existingDraft) return;
+        setSavingCourse(true);
+        const updatedDraft: CourseDraftDto = {
+            ...existingDraft,
+            title: values.title,
+            description: values.description,
+            fullDescription: values.fullDescription,
+            coverImageUrl: values.coverImageUrl,
+            price: values.price ?? 0,
+            level: values.level ?? "Beginner",
+            certificateEnabled: values.certificateEnabled ?? false,
+            categoryId: values.categoryId,
+            tags,
+            sections: draftSections,
+        };
+        const saved = await courseDraftApi.updateDraftFull(course.id, existingDraft.id, draftToCreateDto(updatedDraft));
+        if (saved) {
+            setExistingDraft(saved);
+            setDraftSections(saved.sections ?? []);
+            message.success("Изменения сохранены в черновике");
+            setEditCourseOpen(false);
+        } else {
+            message.error("Ошибка при сохранении черновика");
+        }
+        setSavingCourse(false);
+    };
+
+    const handleSubmitDraft = async () => {
+        if (!existingDraft) return;
+        setSubmittingDraft(true);
+        const ok = await courseDraftApi.submitDraft(course.id, existingDraft.id);
+        if (ok) {
+            message.success("Изменения отправлены на модерацию");
+            setExistingDraft(null);
+            setPublishedMode("review");
+        } else {
+            message.error("Ошибка при отправке на модерацию");
+        }
+        setSubmittingDraft(false);
+    };
+
+    const handleCancelDraft = async () => {
+        if (!existingDraft) return;
+        setCancellingDraft(true);
+        const ok = await courseDraftApi.deleteDraft(course.id, existingDraft.id);
+        if (ok) {
+            message.success("Черновик изменений удалён");
+            setExistingDraft(null);
+            setDraftSections([]);
+            setPublishedMode("view");
+        } else {
+            message.error("Ошибка при удалении черновика");
+        }
+        setCancellingDraft(false);
+    };
+
+    const handleConfirmEdit = async () => {
+        setCreatingDraft(true);
+        const draft = await courseDraftApi.getOrCreateDraft(course.id);
+        setCreatingDraft(false);
+        if (draft) {
+            setExistingDraft(draft);
+            setDraftSections(draft.sections ?? []);
+            setPublishedMode("editing");
+            setConfirmEditModalOpen(false);
+        } else {
+            message.error("Не удалось создать черновик. Попробуйте ещё раз.");
+        }
+    };
+
+    const openEditForm = () => {
+        const tags = existingDraft?.tags ?? course.tags?.map((t) => t.name) ?? [];
+        const source = existingDraft ?? course;
+        setEditCourseTags(tags);
+        setEditCourseKey((k) => k + 1);
+        courseForm.setFieldsValue({
+            title: source.title,
+            description: source.description,
+            fullDescription: source.fullDescription ?? undefined,
+            price: source.price,
+            level: (source.level as CourseLevel) ?? "Beginner",
+            certificateEnabled: source.certificateEnabled,
+            categoryId: (source as CourseDto).categoryId ?? (source as CourseDraftDto).categoryId ?? undefined,
+            coverImageUrl: source.coverImageUrl ?? undefined,
+        });
+        setEditCourseOpen(true);
+    };
+
+    const isUnderReview = course.status === "UnderReview";
+    const isPublished = course.status === "Published";
+    const isReadOnly   = isPublished && publishedMode === "view";
+    const isDraftReview = isPublished && publishedMode === "review";
+    const isEditing    = isPublished && publishedMode === "editing";
+
+    // ─── Рендер черновика структуры (sections/lessons/tasks) ─
+
+    const renderDraftStructure = () => (
+        <>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <Title level={4} style={{ margin: 0 }}>Разделы курса {savingDraft && <Spin size="small" style={{ marginLeft: 8 }} />}</Title>
+                <Button icon={<PlusOutlined />} onClick={() => { setEditingDraftSection(null); draftSectionForm.resetFields(); setDraftSectionModal(true); }}>
+                    Добавить раздел
+                </Button>
+            </div>
+
+            {draftSections.length === 0 ? (
+                <Empty description="Разделов пока нет. Добавьте первый раздел!" />
+            ) : (
+                <Collapse defaultActiveKey={draftSections.map((s) => s.id)}>
+                    {draftSections.map((section) => (
+                        <Panel key={section.id} header={
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                                <span>
+                                    <BookOutlined style={{ color: "#52c41a", marginRight: 8 }} />
+                                    <Text strong>{section.title}</Text>
+                                    <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>{section.description}</Text>
+                                </span>
+                                <Space onClick={(e) => e.stopPropagation()}>
+                                    <Button size="small" icon={<EditOutlined />} onClick={() => {
+                                        setEditingDraftSection(section);
+                                        setDraftSectionModal(true);
+                                    }} />
+                                    <Popconfirm title="Удалить раздел?" description="Все уроки раздела тоже будут удалены из черновика"
+                                                onConfirm={() => handleDraftDeleteSection(section.id)}
+                                                okText="Удалить" cancelText="Отмена" okButtonProps={{ danger: true }}>
+                                        <Button size="small" danger icon={<DeleteOutlined />} />
+                                    </Popconfirm>
+                                </Space>
+                            </div>
+                        }>
+                            {section.lessons.map((lesson) => (
+                                <div key={lesson.id}>
+                                    {editingDraftLesson?.lesson?.id === lesson.id ? (
+                                        <DraftLessonEditor
+                                            lesson={lesson}
+                                            onSave={(data) => handleDraftSaveLesson(section.id, data)}
+                                            onCancel={() => setEditingDraftLesson(null)}
+                                        />
+                                    ) : (
+                                        <div style={{ border: "1px solid #f0f0f0", borderRadius: 8, marginBottom: 8, background: "#fff" }}>
+                                            <div style={{ padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+                                                    <FileTextOutlined style={{ color: "#52c41a" }} />
+                                                    <Text strong>{lesson.title}</Text>
+                                                    <Text type="secondary" style={{ fontSize: 12 }}>{lesson.description}</Text>
+                                                </div>
+                                                <Space>
+                                                    <Button size="small" icon={<EditOutlined />}
+                                                            onClick={() => setEditingDraftLesson({ sectionId: section.id, lesson })} />
+                                                    <Popconfirm title="Удалить урок из черновика?"
+                                                                onConfirm={() => handleDraftDeleteLesson(section.id, lesson.id)}
+                                                                okText="Удалить" cancelText="Отмена" okButtonProps={{ danger: true }}>
+                                                        <Button size="small" danger icon={<DeleteOutlined />} />
+                                                    </Popconfirm>
+                                                </Space>
+                                            </div>
+                                            {/* Задания урока в черновике */}
+                                            <div style={{ padding: "0 16px 12px" }}>
+                                                {lesson.tasks.length > 0 && (
+                                                    <div style={{ marginBottom: 8 }}>
+                                                        {lesson.tasks.map((task) => (
+                                                            <div key={task.id} style={{
+                                                                padding: "8px 12px", background: "#fafafa", borderRadius: 6,
+                                                                marginBottom: 4, display: "flex", justifyContent: "space-between",
+                                                            }}>
+                                                                <div>
+                                                                    <Tag color="blue" style={{ fontSize: 11 }}>{task.type}</Tag>
+                                                                    <Text style={{ fontSize: 13 }}>{task.question}</Text>
+                                                                </div>
+                                                                <Popconfirm title="Удалить задание из черновика?"
+                                                                            onConfirm={() => handleDraftTaskDeleted(section.id, lesson.id, task.id)}
+                                                                            okText="Удалить" cancelText="Отмена" okButtonProps={{ danger: true }}>
+                                                                    <Button size="small" danger icon={<DeleteOutlined />} />
+                                                                </Popconfirm>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                <TaskForm
+                                                    lessonId={lesson.id}
+                                                    onCreated={(task) => {
+                                                        const draftTask: DraftTaskDto = {
+                                                            id: `temp-task-${Date.now()}`,
+                                                            originalTaskId: undefined,
+                                                            type: task.type,
+                                                            question: task.question,
+                                                            options: task.options ?? undefined,
+                                                            correctIndex: task.correctIndex ?? undefined,
+                                                            correctIndexes: task.correctIndexes ?? undefined,
+                                                            correctAnswer: task.correctAnswer ?? undefined,
+                                                            explanation: task.explanation ?? undefined,
+                                                            points: task.points,
+                                                            isRequired: task.isRequired,
+                                                            orderIndex: lesson.tasks.length,
+                                                        };
+                                                        void handleDraftTaskCreated(section.id, lesson.id, draftTask);
+                                                    }}
+                                                    onCancel={() => {}}
+                                                    draftMode
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+
+                            {editingDraftLesson?.sectionId === section.id && !editingDraftLesson.lesson ? (
+                                <DraftLessonEditor
+                                    lesson={null}
+                                    onSave={(data) => handleDraftSaveLesson(section.id, data)}
+                                    onCancel={() => setEditingDraftLesson(null)}
+                                />
+                            ) : (
+                                <Button icon={<PlusOutlined />} size="small" style={{ marginTop: 8 }}
+                                        onClick={() => setEditingDraftLesson({ sectionId: section.id, lesson: null })}>
+                                    Добавить урок
+                                </Button>
+                            )}
+                        </Panel>
+                    ))}
+                </Collapse>
+            )}
+
+            <Modal open={draftSectionModal} title={editingDraftSection ? "Редактировать раздел" : "Новый раздел"}
+                   onCancel={() => setDraftSectionModal(false)} footer={null} centered>
+                <Form form={draftSectionForm} layout="vertical" onFinish={handleDraftSaveSection}>
+                    <Form.Item label="Название" name="title" rules={[{ required: true }, { min: 2 }]}><Input /></Form.Item>
+                    <Form.Item label="Описание" name="description" rules={[{ required: true }, { min: 10 }]}><Input.TextArea rows={3} /></Form.Item>
+                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                        <Button onClick={() => setDraftSectionModal(false)}>Отмена</Button>
+                        <Button type="primary" htmlType="submit" style={{ background: "rgba(0,100,0,0.8)" }}>
+                            {editingDraftSection ? "Сохранить" : "Создать"}
+                        </Button>
+                    </div>
+                </Form>
+            </Modal>
+        </>
+    );
+
     return (
         <div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
@@ -676,107 +1248,165 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
                        style={{ marginBottom: 16 }} />
             )}
 
+            {isEditing && (
+                <Alert
+                    type="info"
+                    message="Режим редактирования черновика"
+                    description="Все изменения разделов, уроков и заданий сохраняются в черновик. Студенты видят текущую версию курса. Когда закончите — отправьте изменения на проверку."
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                    action={
+                        <Space>
+                            <Button size="small" type="primary" loading={submittingDraft}
+                                    style={{ background: "rgba(0,100,0,0.8)" }}
+                                    onClick={handleSubmitDraft}>
+                                Отправить на проверку
+                            </Button>
+                            <Popconfirm
+                                title="Отменить изменения?"
+                                description="Черновик будет удалён, курс останется без изменений."
+                                onConfirm={handleCancelDraft}
+                                okText="Отменить изменения" cancelText="Нет"
+                                okButtonProps={{ danger: true }}
+                            >
+                                <Button size="small" danger loading={cancellingDraft}>Отменить</Button>
+                            </Popconfirm>
+                        </Space>
+                    }
+                />
+            )}
+            {isDraftReview && (
+                <Alert
+                    type="warning"
+                    message="Изменения на проверке у модератора"
+                    description="Вы отправили изменения курса на модерацию. Пока идёт проверка, редактирование недоступно. После проверки изменения либо применятся, либо вы получите уведомление с замечаниями."
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                />
+            )}
+
             <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
-                <Button icon={<EditOutlined />} onClick={() => {
-                    setEditCourseTags(course.tags?.map((t) => t.name) ?? []);
-                    setEditCourseKey((k) => k + 1);
-                    courseForm.setFieldsValue({
-                        title: course.title, description: course.description,
-                        fullDescription: course.fullDescription ?? undefined,
-                        price: course.price, level: course.level,
-                        certificateEnabled: course.certificateEnabled,
-                        categoryId: course.categoryId ?? undefined,
-                        coverImageUrl: course.coverImageUrl ?? undefined,
-                    });
-                    setEditCourseOpen(true);
-                }}>
-                    Редактировать курс
-                </Button>
+                <Tooltip title={isUnderReview ? "Нельзя редактировать курс во время модерации" : ""}>
+                    <Button icon={<EditOutlined />} disabled={isUnderReview || isReadOnly || isDraftReview} loading={loadingDraft} onClick={openEditForm}>
+                        {isEditing ? "Редактировать метаданные" : "Редактировать курс"}
+                    </Button>
+                </Tooltip>
+
                 {(course.status === "Draft" || course.status === "RejectedByModerator") && (
                     <Button type="primary" icon={<SendOutlined />} loading={submitting}
                             style={{ background: "rgba(0,100,0,0.8)" }} onClick={handleSubmitModeration}>
                         Отправить на модерацию
                     </Button>
                 )}
-                {course.status === "UnderReview" && (
+                {isUnderReview && (
                     <Tag color="processing" style={{ padding: "4px 12px", fontSize: 13 }}>Ожидает проверки модератора</Tag>
                 )}
-                {course.status === "Published" && (
+                {isPublished && !isEditing && !isDraftReview && (
                     <Tag color="success" style={{ padding: "4px 12px", fontSize: 13 }}>Курс опубликован</Tag>
                 )}
             </div>
 
             <Divider />
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <Title level={4} style={{ margin: 0 }}>Разделы курса</Title>
-                <Button icon={<PlusOutlined />} onClick={() => {
-                    setEditingSection(null);
-                    sectionForm.resetFields();
-                    setSectionModalOpen(true);
-                }}>Добавить раздел</Button>
-            </div>
-
-            {loading ? <Spin /> : sections.length === 0 ? (
-                <Empty description="Разделов пока нет. Добавьте первый раздел!" />
-            ) : (
-                <Collapse defaultActiveKey={sections.map((s) => s.id)}>
-                    {sections.map((section) => (
-                        <Panel key={section.id} header={
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                                <span>
-                                    <BookOutlined style={{ color: "#52c41a", marginRight: 8 }} />
-                                    <Text strong>{section.title}</Text>
-                                    <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>{section.description}</Text>
-                                </span>
-                                <Space onClick={(e) => e.stopPropagation()}>
-                                    <Button size="small" icon={<EditOutlined />} onClick={() => {
-                                        setEditingSection(section);
-                                        sectionForm.setFieldsValue({ title: section.title, description: section.description });
-                                        setSectionModalOpen(true);
-                                    }} />
-                                    <Popconfirm title="Удалить раздел?" description="Все уроки раздела тоже будут удалены"
-                                                onConfirm={() => handleDeleteSection(section.id)}
-                                                okText="Удалить" cancelText="Отмена" okButtonProps={{ danger: true }}>
-                                        <Button size="small" danger icon={<DeleteOutlined />} />
-                                    </Popconfirm>
-                                </Space>
+            {/* Структура курса */}
+            {loading ? <Spin /> : isEditing ? (
+                // Режим редактирования черновика — всё через draft state
+                renderDraftStructure()
+            ) : isUnderReview || isReadOnly || isDraftReview ? (
+                <div style={{ background: "#fffbe6", border: "1px solid #ffe58f", borderRadius: 8, padding: "20px 24px" }}>
+                    <Text strong style={{ display: "block", marginBottom: 8, color: "#d48806", fontSize: 15 }}>
+                        {isUnderReview
+                            ? "⏳ Курс отправлен на проверку модератору"
+                            : isDraftReview
+                                ? "⏳ Изменения курса проверяются модератором"
+                                : "👁 Курс опубликован — только просмотр"}
+                    </Text>
+                    <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+                        {isUnderReview
+                            ? "Пока идёт проверка, редактирование недоступно — модератор проверяет именно ту версию, которую вы отправили. После проверки вы получите уведомление."
+                            : isDraftReview
+                                ? "Вы отправили изменения на проверку. Пока модератор их не рассмотрит, редактирование разделов и уроков недоступно. После одобрения изменения применятся к курсу."
+                                : "Редактирование разделов и уроков недоступно в режиме просмотра. Нажмите «Редактировать курс» чтобы внести изменения — они пройдут модерацию перед публикацией."}
+                    </Text>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {sections.map((section) => (
+                            <div key={section.id} style={{
+                                background: "#fff", border: "1px solid #f0f0f0", borderRadius: 6,
+                                padding: "10px 14px", display: "flex", alignItems: "center", gap: 8,
+                            }}>
+                                <BookOutlined style={{ color: "#52c41a" }} />
+                                <Text strong>{section.title}</Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>{section.description}</Text>
                             </div>
-                        }>
-                            {(lessonsBySection[section.id] ?? []).map((lesson) => (
-                                <LessonPanel key={lesson.id} lesson={lesson} sectionId={section.id}
-                                             onDelete={handleDeleteLesson}
-                                             onUpdated={(updated) => {
-                                                 setLessonsBySection((p) => ({
-                                                     ...p,
-                                                     [section.id]: p[section.id].map((l) => l.id === updated.id ? updated : l),
-                                                 }));
-                                             }} />
+                        ))}
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                        <Title level={4} style={{ margin: 0 }}>Разделы курса</Title>
+                        <Button icon={<PlusOutlined />} onClick={() => { setEditingSection(null); sectionForm.resetFields(); setSectionModalOpen(true); }}>
+                            Добавить раздел
+                        </Button>
+                    </div>
+                    {sections.length === 0 ? (
+                        <Empty description="Разделов пока нет. Добавьте первый раздел!" />
+                    ) : (
+                        <Collapse defaultActiveKey={sections.map((s) => s.id)}>
+                            {sections.map((section) => (
+                                <Panel key={section.id} header={
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                                        <span>
+                                            <BookOutlined style={{ color: "#52c41a", marginRight: 8 }} />
+                                            <Text strong>{section.title}</Text>
+                                            <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>{section.description}</Text>
+                                        </span>
+                                        <Space onClick={(e) => e.stopPropagation()}>
+                                            <Button size="small" icon={<EditOutlined />} onClick={() => {
+                                                setEditingSection(section);
+                                                sectionForm.setFieldsValue({ title: section.title, description: section.description });
+                                                setSectionModalOpen(true);
+                                            }} />
+                                            <Popconfirm title="Удалить раздел?" description="Все уроки раздела тоже будут удалены"
+                                                        onConfirm={() => handleDeleteSection(section.id)}
+                                                        okText="Удалить" cancelText="Отмена" okButtonProps={{ danger: true }}>
+                                                <Button size="small" danger icon={<DeleteOutlined />} />
+                                            </Popconfirm>
+                                        </Space>
+                                    </div>
+                                }>
+                                    {(lessonsBySection[section.id] ?? []).map((lesson) => (
+                                        <LessonPanel key={lesson.id} lesson={lesson} sectionId={section.id}
+                                                     onDelete={handleDeleteLesson}
+                                                     onUpdated={(updated) => {
+                                                         setLessonsBySection((p) => ({
+                                                             ...p,
+                                                             [section.id]: p[section.id].map((l) => l.id === updated.id ? updated : l),
+                                                         }));
+                                                     }} />
+                                    ))}
+                                    {inlineLesson?.sectionId === section.id ? (
+                                        <LessonEditor key={`new-${section.id}`} lesson={null} sectionId={section.id}
+                                                      onSaved={handleLessonSaved} onCancel={() => setInlineLesson(null)} />
+                                    ) : (
+                                        <Button icon={<PlusOutlined />} size="small" style={{ marginTop: 8 }}
+                                                onClick={() => setInlineLesson({ sectionId: section.id })}>
+                                            Добавить урок
+                                        </Button>
+                                    )}
+                                </Panel>
                             ))}
-                            {inlineLesson?.sectionId === section.id ? (
-                                <LessonEditor key={`new-${section.id}`} lesson={null} sectionId={section.id}
-                                              onSaved={handleLessonSaved} onCancel={() => setInlineLesson(null)} />
-                            ) : (
-                                <Button icon={<PlusOutlined />} size="small" style={{ marginTop: 8 }}
-                                        onClick={() => setInlineLesson({ sectionId: section.id })}>
-                                    Добавить урок
-                                </Button>
-                            )}
-                        </Panel>
-                    ))}
-                </Collapse>
+                        </Collapse>
+                    )}
+                </>
             )}
 
+            {/* Модалки для не-Published курсов */}
             <Modal open={sectionModalOpen} title={editingSection ? "Редактировать раздел" : "Новый раздел"}
                    onCancel={() => setSectionModalOpen(false)} footer={null} centered>
                 <Form form={sectionForm} layout="vertical" onFinish={handleSaveSection}>
-                    <Form.Item label="Название" name="title" rules={[{ required: true }, { min: 2 }]}>
-                        <Input />
-                    </Form.Item>
-                    <Form.Item label="Описание" name="description"
-                               rules={[{ required: true }, { min: 10, message: "Минимум 10 символов" }]}>
-                        <Input.TextArea rows={3} />
-                    </Form.Item>
+                    <Form.Item label="Название" name="title" rules={[{ required: true }, { min: 2 }]}><Input /></Form.Item>
+                    <Form.Item label="Описание" name="description" rules={[{ required: true }, { min: 10 }]}><Input.TextArea rows={3} /></Form.Item>
                     <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                         <Button onClick={() => setSectionModalOpen(false)}>Отмена</Button>
                         <Button type="primary" htmlType="submit" style={{ background: "rgba(0,100,0,0.8)" }}>
@@ -786,11 +1416,52 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
                 </Form>
             </Modal>
 
-            <Modal open={editCourseOpen} title="Редактировать курс" onCancel={() => setEditCourseOpen(false)}
-                   footer={null} centered width={700} styles={{ body: { padding: "16px 24px 24px" } }}>
-                <CourseForm key={editCourseKey} form={courseForm} categories={categories}
-                            initialTags={editCourseTags} onFinish={handleSaveCourse}
-                            onCancel={() => setEditCourseOpen(false)} submitLabel="Сохранить" loading={savingCourse} />
+            <Modal
+                open={editCourseOpen}
+                title={isEditing ? "Редактировать метаданные курса (черновик)" : "Редактировать курс"}
+                onCancel={() => setEditCourseOpen(false)}
+                footer={null} centered width={700}
+                styles={{ body: { padding: "16px 24px 24px" } }}
+            >
+                {isEditing && (
+                    <Alert type="info" message="Изменения метаданных сохраняются в черновик и вступят в силу после одобрения модератором."
+                           showIcon style={{ marginBottom: 16 }} />
+                )}
+                <CourseForm
+                    key={editCourseKey}
+                    form={courseForm}
+                    categories={categories}
+                    initialTags={editCourseTags}
+                    onFinish={isEditing ? handleSaveCourseDraft : handleSaveCourse}
+                    onCancel={() => setEditCourseOpen(false)}
+                    submitLabel={isEditing ? "Сохранить в черновик" : "Сохранить"}
+                    loading={savingCourse}
+                />
+            </Modal>
+
+            {/* Modal подтверждения редактирования опубликованного курса */}
+            <Modal
+                open={confirmEditModalOpen}
+                title="Редактировать опубликованный курс?"
+                onCancel={() => setConfirmEditModalOpen(false)}
+                footer={null}
+                centered
+            >
+                <div style={{ padding: "8px 0 16px" }}>
+                    <Text style={{ display: "block", marginBottom: 16 }}>
+                        Этот курс уже опубликован и доступен студентам. Вы можете внести изменения, но они
+                        не вступят в силу сразу — сначала пройдут проверку модератора.
+                    </Text>
+                    <Text type="secondary" style={{ display: "block", marginBottom: 24 }}>
+                        Пока изменения на проверке, студенты продолжают видеть текущую версию курса.
+                    </Text>
+                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                        <Button onClick={() => setConfirmEditModalOpen(false)}>Только просмотр</Button>
+                        <Button type="primary" loading={creatingDraft} style={{ background: "rgba(0,100,0,0.8)" }} onClick={handleConfirmEdit}>
+                            Редактировать
+                        </Button>
+                    </div>
+                </div>
             </Modal>
         </div>
     );
@@ -831,6 +1502,7 @@ const TeacherPage = () => {
             if (catsRes.ok) setCategories(await catsRes.json());
             setLoading(false);
         };
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         void load();
     }, []);
 
