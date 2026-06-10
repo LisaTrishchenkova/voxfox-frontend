@@ -33,13 +33,10 @@ export const courseApi = {
       if (params.minPrice != null) p.append("minPrice", params.minPrice.toString());
       if (params.maxPrice != null) p.append("maxPrice", params.maxPrice.toString());
       if (params.isFree != null) p.append("isFree", params.isFree.toString());
-
       const res = await fetch(`${API_URL}/Courses?${p.toString()}`);
       if (!res.ok) return null;
       return res.json();
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   },
 
   getCourseById: async (id: string): Promise<CourseDto | null> => {
@@ -47,9 +44,7 @@ export const courseApi = {
       const res = await fetch(`${API_URL}/Courses/${id}`);
       if (!res.ok) return null;
       return res.json();
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   },
 
   getMyCourses: async (status?: CourseStatus): Promise<CourseDto[]> => {
@@ -61,9 +56,7 @@ export const courseApi = {
       });
       if (!res.ok) return [];
       return res.json();
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   },
 
   getPendingCourses: async (page = 1, pageSize = 20): Promise<PaginatedResponse | null> => {
@@ -73,9 +66,7 @@ export const courseApi = {
       });
       if (!res.ok) return null;
       return res.json();
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   },
 
   createCourse: async (data: CreateCourseDto): Promise<CourseDto | null> => {
@@ -87,9 +78,7 @@ export const courseApi = {
       });
       if (!res.ok) return null;
       return res.json();
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   },
 
   updateCourse: async (id: string, data: Partial<CreateCourseDto>): Promise<boolean> => {
@@ -100,21 +89,32 @@ export const courseApi = {
         body: JSON.stringify(data),
       });
       return res.ok;
-    } catch {
-      return false;
-    }
+    } catch { return false; }
   },
 
-  deleteCourse: async (id: string): Promise<boolean> => {
+  deleteCourse: async (id: string, reason?: string): Promise<boolean> => {
     try {
-      const res = await fetch(`${API_URL}/Courses/${id}`, {
+      const url = reason
+          ? `${API_URL}/Courses/${id}?reason=${encodeURIComponent(reason)}`
+          : `${API_URL}/Courses/${id}`;
+      const authHeaders = authStorage.getAuthHeaders() as Record<string, string>;
+      const { "Content-Type": _, ...headersWithoutContentType } = authHeaders;
+      const res = await fetch(url, {
         method: "DELETE",
+        headers: headersWithoutContentType,
+      });
+      return res.ok;
+    } catch { return false; }
+  },
+
+  restoreCourse: async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/Courses/${id}/restore`, {
+        method: "PUT",
         headers: authStorage.getAuthHeaders(),
       });
       return res.ok;
-    } catch {
-      return false;
-    }
+    } catch { return false; }
   },
 
   submitForModeration: async (id: string): Promise<boolean> => {
@@ -124,9 +124,7 @@ export const courseApi = {
         headers: authStorage.getAuthHeaders(),
       });
       return res.ok;
-    } catch {
-      return false;
-    }
+    } catch { return false; }
   },
 
   approveCourse: async (id: string): Promise<boolean> => {
@@ -136,9 +134,7 @@ export const courseApi = {
         headers: authStorage.getAuthHeaders(),
       });
       return res.ok;
-    } catch {
-      return false;
-    }
+    } catch { return false; }
   },
 
   rejectCourse: async (id: string, reason?: string): Promise<boolean> => {
@@ -149,9 +145,7 @@ export const courseApi = {
         body: JSON.stringify({ reason }),
       });
       return res.ok;
-    } catch {
-      return false;
-    }
+    } catch { return false; }
   },
 
   getSections: async (courseId: string) => {
@@ -159,9 +153,7 @@ export const courseApi = {
       const res = await fetch(`${API_URL}/Courses/${courseId}/sections`);
       if (!res.ok) return [];
       return res.json();
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   },
 
   getCourseEnrollments: async (courseId: string) => {
@@ -171,8 +163,6 @@ export const courseApi = {
       });
       if (!res.ok) return [];
       return res.json();
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   },
 };

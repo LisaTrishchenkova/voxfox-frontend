@@ -23,6 +23,7 @@ import {
     Tooltip,
     Typography,
     message,
+    Upload,
 } from "antd";
 import {
     BookOutlined,
@@ -35,12 +36,14 @@ import {
     QuestionCircleOutlined,
     SearchOutlined,
     SendOutlined,
+    UploadOutlined,
 } from "@ant-design/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../../components/Header.tsx";
 import Footer from "../../components/Footer.tsx";
 import MarkdownEditor from "../../components/MarkdownEditor.tsx";
+import ReactMarkdown from "react-markdown";
 import { courseApi } from "../../api/courseApi.ts";
 import { sectionApi } from "../../api/sectionApi.ts";
 import { lessonApi } from "../../api/lessonApi.ts";
@@ -49,6 +52,7 @@ import { courseDraftApi, draftToCreateDto } from "../../api/courseDraftApi.ts";
 import type { CourseDraftDto, DraftSectionDto, DraftLessonDto, DraftTaskDto } from "../../api/courseDraftApi.ts";
 import { useUserStore } from "../../stores/userStore.ts";
 import { API_URL } from "../../config.ts";
+import { getImageUrl, COVER_PLACEHOLDER_STYLE } from "../../utils/imageUtils.ts";
 import { authStorage } from "../../services/auth-storage.service.ts";
 import type {
     CourseDto,
@@ -118,17 +122,22 @@ interface TaskFormValues {
 // ─── CourseForm ─────────────────────────────────────────────
 const CourseForm = ({
                         form, categories, initialTags = [], onFinish, onCancel, submitLabel, loading,
+                        courseId, onCoverUploaded,
                     }: {
     form: ReturnType<typeof Form.useForm<CourseFormValues>>[0];
     categories: CategoryDto[];
     initialTags?: string[];
-    onFinish: (values: CourseFormValues, tags: string[]) => void;
+    onFinish: (values: CourseFormValues, tags: string[], coverFile?: File | null) => void;
     onCancel: () => void;
     submitLabel: string;
     loading: boolean;
+    courseId?: string;          // если передан — показываем загрузку файла
+    onCoverUploaded?: (url: string) => void; // коллбэк после успешной загрузки
 }) => {
     const [tagInput, setTagInput] = useState("");
     const [tags, setTags] = useState<string[]>(initialTags);
+    const [uploadingCover, setUploadingCover] = useState(false);
+    const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null);
 
     const addTag = () => {
         const t = tagInput.trim();
@@ -137,7 +146,7 @@ const CourseForm = ({
     };
 
     return (
-        <Form form={form} layout="vertical" onFinish={(values) => onFinish(values, tags)}>
+        <Form form={form} layout="vertical" onFinish={(values) => onFinish(values, tags, pendingCoverFile)}>
             <Row gutter={16}>
                 <Col span={16}>
                     <Form.Item label="Название" name="title"
@@ -178,9 +187,65 @@ const CourseForm = ({
                     </Form.Item>
                 </Col>
             </Row>
-            <Form.Item label="Ссылка на обложку" name="coverImageUrl"
-                       extra="Прямая ссылка на изображение (jpg, png, webp)">
-                <Input placeholder="https://..." />
+            <Form.Item label="Обложка курса">
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {/* Загрузка файла — только для существующего курса */}
+                    {courseId && (
+                        <Upload
+                            accept=".jpg,.jpeg,.png,.webp"
+                            showUploadList={false}
+                            beforeUpload={async (file) => {
+                                setUploadingCover(true);
+                                const formData = new FormData();
+                                formData.append("file", file);
+                                try {
+                                    // Для multipart/form-data НЕ ставим Content-Type — браузер сам добавит с boundary
+                                    const authHeaders = authStorage.getAuthHeaders() as Record<string, string>;
+                                    const { "Content-Type": _, ...headersWithoutContentType } = authHeaders;
+                                    const res = await fetch(
+                                        `${API_URL}/Courses/${courseId}/cover`,
+                                        { method: "POST", headers: headersWithoutContentType, body: formData }
+                                    );
+                                    if (res.ok) {
+                                        const data = await res.json();
+                                        form.setFieldValue("coverImageUrl", data.coverImageUrl);
+                                        onCoverUploaded?.(data.coverImageUrl);
+                                        message.success("Обложка загружена");
+                                    } else {
+                                        message.error("Ошибка при загрузке обложки");
+                                    }
+                                } catch {
+                                    message.error("Ошибка при загрузке обложки");
+                                }
+                                setUploadingCover(false);
+                                return false; // не даём antd делать свой upload
+                            }}
+                        >
+                            <Button icon={<UploadOutlined />} loading={uploadingCover} size="small">
+                                Загрузить файл (jpg, png, webp, до 10MB)
+                            </Button>
+                        </Upload>
+                    )}
+                    <Form.Item name="coverImageUrl" noStyle
+                               extra={courseId ? "Или вставьте прямую ссылку на изображение" : "Прямая ссылка на изображение (jpg, png, webp)"}>
+                        <Input placeholder="https://..." />
+                    </Form.Item>
+                    {!courseId && (
+                        <Upload
+                            accept=".jpg,.jpeg,.png,.webp"
+                            showUploadList={false}
+                            beforeUpload={(file) => {
+                                setPendingCoverFile(file);
+                                message.info(`Файл «${file.name}» будет загружен после создания курса`);
+                                return false;
+                            }}
+                        >
+                            <Button icon={<UploadOutlined />} size="small">
+                                {pendingCoverFile ? `Файл выбран: ${pendingCoverFile.name}` : "Выбрать файл обложки"}
+                            </Button>
+                        </Upload>
+                    )}
+                </div>
             </Form.Item>
             <Form.Item label="Теги">
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
@@ -633,6 +698,152 @@ const LessonPanel = ({ lesson, sectionId, onDelete, onUpdated }: {
     );
 };
 
+// ─── ReadonlyTaskList ────────────────────────────────────────
+const ReadonlyTaskList = ({ lessonId }: { lessonId: string }) => {
+    const [tasks, setTasks] = useState<TaskTeacherDto[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        taskTeacherApi.getLessonTasks(lessonId).then((data) => {
+            setTasks(data);
+            setLoading(false);
+        });
+    }, [lessonId]);
+
+    if (loading) return <Spin size="small" />;
+    if (tasks.length === 0) return <Text type="secondary" style={{ fontSize: 13 }}>Заданий нет</Text>;
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {tasks.map((task, idx) => (
+                <div key={task.id} style={{ border: "1px solid #e8f5e9", borderRadius: 8, padding: "14px 16px", background: "#fff" }}>
+                    {/* Заголовок */}
+                    <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 10 }}>
+                        <Text type="secondary" style={{ fontSize: 12, minWidth: 20 }}>{idx + 1}.</Text>
+                        <div style={{ flex: 1 }}>
+                            <Tag color="blue" style={{ fontSize: 11, marginBottom: 6 }}>{taskTypeLabel[task.type]}</Tag>
+                            <Text strong style={{ display: "block", fontSize: 14 }}>{task.question}</Text>
+                            <Text type="secondary" style={{ fontSize: 12 }}>{task.points} очк.</Text>
+                        </div>
+                    </div>
+
+                    {/* Варианты ответов — SingleChoice */}
+                    {task.type === "SingleChoice" && task.options && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginLeft: 28 }}>
+                            {task.options.map((opt, i) => (
+                                <div key={i} style={{
+                                    padding: "6px 10px", borderRadius: 6, fontSize: 13,
+                                    background: task.correctIndex === i ? "#f6ffed" : "#fafafa",
+                                    border: `1px solid ${task.correctIndex === i ? "#b7eb8f" : "#f0f0f0"}`,
+                                    display: "flex", alignItems: "center", gap: 8,
+                                }}>
+                                    {task.correctIndex === i
+                                        ? <CheckOutlined style={{ color: "#52c41a", fontSize: 12 }} />
+                                        : <span style={{ width: 12, display: "inline-block" }} />
+                                    }
+                                    <Text style={{ fontSize: 13, color: task.correctIndex === i ? "#389e0d" : undefined }}>
+                                        {opt}
+                                    </Text>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Варианты ответов — MultiChoice */}
+                    {task.type === "MultiChoice" && task.options && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginLeft: 28 }}>
+                            {task.options.map((opt, i) => {
+                                const isCorrect = task.correctIndexes?.includes(i);
+                                return (
+                                    <div key={i} style={{
+                                        padding: "6px 10px", borderRadius: 6, fontSize: 13,
+                                        background: isCorrect ? "#f6ffed" : "#fafafa",
+                                        border: `1px solid ${isCorrect ? "#b7eb8f" : "#f0f0f0"}`,
+                                        display: "flex", alignItems: "center", gap: 8,
+                                    }}>
+                                        {isCorrect
+                                            ? <CheckOutlined style={{ color: "#52c41a", fontSize: 12 }} />
+                                            : <span style={{ width: 12, display: "inline-block" }} />
+                                        }
+                                        <Text style={{ fontSize: 13, color: isCorrect ? "#389e0d" : undefined }}>
+                                            {opt}
+                                        </Text>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Текстовый ответ */}
+                    {task.type === "TextInput" && (
+                        <div style={{ marginLeft: 28 }}>
+                            <Text type="secondary" style={{ fontSize: 12 }}>Правильный ответ: </Text>
+                            <Text style={{ fontSize: 13, color: "#389e0d", fontWeight: 600 }}>{task.correctAnswer}</Text>
+                        </div>
+                    )}
+
+                    {/* Объяснение */}
+                    {task.explanation && (
+                        <div style={{ marginTop: 8, marginLeft: 28, padding: "6px 10px", background: "#fffbe6", borderRadius: 6, borderLeft: "3px solid #faad14" }}>
+                            <Text type="secondary" style={{ fontSize: 12 }}>Объяснение: </Text>
+                            <Text style={{ fontSize: 13 }}>{task.explanation}</Text>
+                        </div>
+                    )}
+
+                    {/* Подсказки */}
+                    {task.hints && task.hints.length > 0 && (
+                        <div style={{ marginTop: 8, marginLeft: 28 }}>
+                            {task.hints.map((hint, i) => (
+                                <div key={i} style={{ fontSize: 12, color: "#faad14" }}>
+                                    💡 Подсказка {i + 1}: {hint}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+};
+
+// ─── ReadonlyLessonContent ────────────────────────────────────
+// Загружает полный урок (с content) и задания
+const ReadonlyLessonContent = ({ lessonId }: { lessonId: string }) => {
+    const [lesson, setLesson] = useState<LessonDto | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        // Загружаем полный урок с content
+        fetch(`${API_URL}/Lessons/${lessonId}`, { headers: authStorage.getAuthHeaders() })
+            .then((r) => r.ok ? r.json() : null)
+            .then((data) => {
+                setLesson(data);
+                setLoading(false);
+            })
+            .catch(() => setLoading(false));
+    }, [lessonId]);
+
+    if (loading) return <div style={{ padding: 16 }}><Spin size="small" /></div>;
+    if (!lesson) return <Text type="secondary">Не удалось загрузить урок</Text>;
+
+    return (
+        <div>
+            {lesson.content ? (
+                <div style={{ marginBottom: 16 }}>
+                    <ReactMarkdown>{lesson.content}</ReactMarkdown>
+                </div>
+            ) : (
+                <Text type="secondary" style={{ fontSize: 13, display: "block", marginBottom: 12 }}>
+                    Содержимое урока не добавлено
+                </Text>
+            )}
+            <Divider style={{ margin: "12px 0" }} />
+            <Text strong style={{ fontSize: 13, display: "block", marginBottom: 8 }}>Задания:</Text>
+            <ReadonlyTaskList lessonId={lessonId} />
+        </div>
+    );
+};
+
 // ─── DraftSectionEditor ──────────────────────────────────────
 // Компонент редактирования одного раздела черновика
 const DraftLessonEditor = ({ lesson, onSave, onCancel }: {
@@ -643,12 +854,7 @@ const DraftLessonEditor = ({ lesson, onSave, onCancel }: {
     const [form] = Form.useForm<LessonFormValues>();
     const [content, setContent] = useState(lesson?.content ?? "");
 
-    useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        form.setFieldsValue({ title: lesson?.title ?? "", description: lesson?.description ?? "" });
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setContent(lesson?.content ?? "");
-    }, [lesson]);
+
 
     return (
         <div style={{ border: "2px solid #52c41a", borderRadius: 10, padding: 20, marginBottom: 12, background: "#fff" }}>
@@ -658,7 +864,7 @@ const DraftLessonEditor = ({ lesson, onSave, onCancel }: {
                 </Text>
                 <Button size="small" icon={<CloseOutlined />} onClick={onCancel} type="text" danger>Отмена</Button>
             </div>
-            <Form form={form} layout="vertical" onFinish={(values) => onSave({ ...values, content })}>
+            <Form form={form} layout="vertical" initialValues={{ title: lesson?.title ?? "", description: lesson?.description ?? "" }} onFinish={(values) => onSave({ ...values, content })}>
                 <Row gutter={16}>
                     <Col span={12}>
                         <Form.Item label="Название урока" name="title" rules={[{ required: true }, { min: 2 }]}>
@@ -729,19 +935,18 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
     useEffect(() => {
         if (draftSectionModal) {
             if (editingDraftSection) {
-                // eslint-disable-next-line react-hooks/set-state-in-effect
                 draftSectionForm.setFieldsValue({
                     title: editingDraftSection.title,
                     description: editingDraftSection.description,
                 });
             } else {
-                // eslint-disable-next-line react-hooks/set-state-in-effect
                 draftSectionForm.resetFields();
             }
         }
-    }, [draftSectionModal, editingDraftSection]);
+    }, [draftSectionModal, editingDraftSection, draftSectionForm]);
     const [editingDraftLesson, setEditingDraftLesson] = useState<{ sectionId: string; lesson: DraftLessonDto | null } | null>(null);
     const [savingDraft, setSavingDraft] = useState(false);
+
 
     useEffect(() => {
         const load = async () => {
@@ -749,13 +954,11 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
             setSections(data);
             const lessonsMap: Record<string, LessonDto[]> = {};
             await Promise.all(data.map(async (s) => {
-                const ls = await sectionApi.getLessonsBySection(s.id);
-                lessonsMap[s.id] = ls;
+                lessonsMap[s.id] = await sectionApi.getLessonsBySection(s.id);
             }));
             setLessonsBySection(lessonsMap);
             setLoading(false);
         };
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         void load();
     }, [course.id]);
 
@@ -764,11 +967,11 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
     useEffect(() => {
         if (course.status !== "Published" || draftCheckedRef.current) return;
         draftCheckedRef.current = true;
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         courseDraftApi.getDraft(course.id).then((draft) => {
             if (draft) {
                 setExistingDraft(draft);
-                setDraftSections(draft.sections ?? []);
+                const sorted0 = [...(draft.sections ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
+                setDraftSections(sorted0);
                 setPublishedMode(draft.status === "UnderReview" ? "review" : "editing");
             } else {
                 setConfirmEditModalOpen(true);
@@ -780,7 +983,8 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
     const saveDraftToServer = async (draft: CourseDraftDto, sections: DraftSectionDto[]): Promise<CourseDraftDto | null> => {
         setSavingDraft(true);
         const updated = { ...draft, sections };
-        const result = await courseDraftApi.updateDraftFull(course.id, draft.id, draftToCreateDto(updated));
+        const payload = draftToCreateDto(updated);
+        const result = await courseDraftApi.updateDraftFull(course.id, draft.id, payload);
         setSavingDraft(false);
         if (!result) { message.error("Ошибка при сохранении черновика"); return null; }
         return result;
@@ -810,7 +1014,8 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
         const saved = await saveDraftToServer(existingDraft, newSections);
         if (saved) {
             setExistingDraft(saved);
-            setDraftSections(saved.sections ?? []);
+            const sortedSections = [...(saved.sections ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
+            setDraftSections(sortedSections);
             message.success(editingDraftSection ? "Раздел обновлён" : "Раздел создан");
         }
         setDraftSectionModal(false);
@@ -824,7 +1029,8 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
         const saved = await saveDraftToServer(existingDraft, newSections);
         if (saved) {
             setExistingDraft(saved);
-            setDraftSections(saved.sections ?? []);
+            const sortedSections = [...(saved.sections ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
+            setDraftSections(sortedSections);
             message.success("Раздел удалён");
         }
     };
@@ -861,7 +1067,8 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
         const saved = await saveDraftToServer(existingDraft, newSections);
         if (saved) {
             setExistingDraft(saved);
-            setDraftSections(saved.sections ?? []);
+            const sortedSections = [...(saved.sections ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
+            setDraftSections(sortedSections);
             message.success(editingDraftLesson?.lesson ? "Урок обновлён" : "Урок создан");
         }
         setEditingDraftLesson(null);
@@ -879,7 +1086,8 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
         const saved = await saveDraftToServer(existingDraft, newSections);
         if (saved) {
             setExistingDraft(saved);
-            setDraftSections(saved.sections ?? []);
+            const sortedSections = [...(saved.sections ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
+            setDraftSections(sortedSections);
             message.success("Урок удалён");
         }
     };
@@ -901,7 +1109,8 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
         const saved = await saveDraftToServer(existingDraft, newSections);
         if (saved) {
             setExistingDraft(saved);
-            setDraftSections(saved.sections ?? []);
+            const sortedSections = [...(saved.sections ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
+            setDraftSections(sortedSections);
         }
     };
 
@@ -923,7 +1132,8 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
         const saved = await saveDraftToServer(existingDraft, newSections);
         if (saved) {
             setExistingDraft(saved);
-            setDraftSections(saved.sections ?? []);
+            const sortedSections = [...(saved.sections ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
+            setDraftSections(sortedSections);
         }
     };
 
@@ -1013,7 +1223,8 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
         const saved = await courseDraftApi.updateDraftFull(course.id, existingDraft.id, draftToCreateDto(updatedDraft));
         if (saved) {
             setExistingDraft(saved);
-            setDraftSections(saved.sections ?? []);
+            const sortedSections = [...(saved.sections ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
+            setDraftSections(sortedSections);
             message.success("Изменения сохранены в черновике");
             setEditCourseOpen(false);
         } else {
@@ -1056,8 +1267,9 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
         const draft = await courseDraftApi.getOrCreateDraft(course.id);
         setCreatingDraft(false);
         if (draft) {
+            const sorted = [...(draft.sections ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
             setExistingDraft(draft);
-            setDraftSections(draft.sections ?? []);
+            setDraftSections(sorted);
             setPublishedMode("editing");
             setConfirmEditModalOpen(false);
         } else {
@@ -1103,8 +1315,8 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
             {draftSections.length === 0 ? (
                 <Empty description="Разделов пока нет. Добавьте первый раздел!" />
             ) : (
-                <Collapse defaultActiveKey={draftSections.map((s) => s.id)}>
-                    {draftSections.map((section) => (
+                <Collapse key={draftSections.map(s => s.id).join(',')} defaultActiveKey={draftSections.map((s) => s.id)}>
+                    {[...draftSections].sort((a, b) => a.orderIndex - b.orderIndex).map((section) => (
                         <Panel key={section.id} header={
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
                                 <span>
@@ -1125,7 +1337,7 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
                                 </Space>
                             </div>
                         }>
-                            {section.lessons.map((lesson) => (
+                            {[...section.lessons].sort((a, b) => a.orderIndex - b.orderIndex).map((lesson) => (
                                 <div key={lesson.id}>
                                     {editingDraftLesson?.lesson?.id === lesson.id ? (
                                         <DraftLessonEditor
@@ -1155,7 +1367,7 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
                                             <div style={{ padding: "0 16px 12px" }}>
                                                 {lesson.tasks.length > 0 && (
                                                     <div style={{ marginBottom: 8 }}>
-                                                        {lesson.tasks.map((task) => (
+                                                        {[...lesson.tasks].sort((a, b) => a.orderIndex - b.orderIndex).map((task) => (
                                                             <div key={task.id} style={{
                                                                 padding: "8px 12px", background: "#fafafa", borderRadius: 6,
                                                                 marginBottom: 4, display: "flex", justifyContent: "space-between",
@@ -1248,49 +1460,16 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
                        style={{ marginBottom: 16 }} />
             )}
 
-            {isEditing && (
-                <Alert
-                    type="info"
-                    message="Режим редактирования черновика"
-                    description="Все изменения разделов, уроков и заданий сохраняются в черновик. Студенты видят текущую версию курса. Когда закончите — отправьте изменения на проверку."
-                    showIcon
-                    style={{ marginBottom: 16 }}
-                    action={
-                        <Space>
-                            <Button size="small" type="primary" loading={submittingDraft}
-                                    style={{ background: "rgba(0,100,0,0.8)" }}
-                                    onClick={handleSubmitDraft}>
-                                Отправить на проверку
-                            </Button>
-                            <Popconfirm
-                                title="Отменить изменения?"
-                                description="Черновик будет удалён, курс останется без изменений."
-                                onConfirm={handleCancelDraft}
-                                okText="Отменить изменения" cancelText="Нет"
-                                okButtonProps={{ danger: true }}
-                            >
-                                <Button size="small" danger loading={cancellingDraft}>Отменить</Button>
-                            </Popconfirm>
-                        </Space>
-                    }
-                />
-            )}
-            {isDraftReview && (
-                <Alert
-                    type="warning"
-                    message="Изменения на проверке у модератора"
-                    description="Вы отправили изменения курса на модерацию. Пока идёт проверка, редактирование недоступно. После проверки изменения либо применятся, либо вы получите уведомление с замечаниями."
-                    showIcon
-                    style={{ marginBottom: 16 }}
-                />
-            )}
+
 
             <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
-                <Tooltip title={isUnderReview ? "Нельзя редактировать курс во время модерации" : ""}>
-                    <Button icon={<EditOutlined />} disabled={isUnderReview || isReadOnly || isDraftReview} loading={loadingDraft} onClick={openEditForm}>
-                        {isEditing ? "Редактировать метаданные" : "Редактировать курс"}
-                    </Button>
-                </Tooltip>
+                {!isReadOnly && !isDraftReview && (
+                    <Tooltip title={isUnderReview ? "Нельзя редактировать курс во время модерации" : ""}>
+                        <Button icon={<EditOutlined />} disabled={isUnderReview} loading={loadingDraft} onClick={openEditForm}>
+                            {isEditing ? "Редактировать метаданные" : "Редактировать курс"}
+                        </Button>
+                    </Tooltip>
+                )}
 
                 {(course.status === "Draft" || course.status === "RejectedByModerator") && (
                     <Button type="primary" icon={<SendOutlined />} loading={submitting}
@@ -1300,6 +1479,24 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
                 )}
                 {isUnderReview && (
                     <Tag color="processing" style={{ padding: "4px 12px", fontSize: 13 }}>Ожидает проверки модератора</Tag>
+                )}
+                {isEditing && (
+                    <>
+                        <Button type="primary" loading={submittingDraft}
+                                style={{ background: "rgba(0,100,0,0.8)" }}
+                                onClick={handleSubmitDraft}>
+                            Отправить на проверку
+                        </Button>
+                        <Popconfirm
+                            title="Отменить изменения?"
+                            description="Черновик будет удалён, курс останется без изменений."
+                            onConfirm={handleCancelDraft}
+                            okText="Отменить изменения" cancelText="Нет"
+                            okButtonProps={{ danger: true }}
+                        >
+                            <Button danger loading={cancellingDraft}>Отменить изменения</Button>
+                        </Popconfirm>
+                    </>
                 )}
                 {isPublished && !isEditing && !isDraftReview && (
                     <Tag color="success" style={{ padding: "4px 12px", fontSize: 13 }}>Курс опубликован</Tag>
@@ -1312,35 +1509,69 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
             {loading ? <Spin /> : isEditing ? (
                 // Режим редактирования черновика — всё через draft state
                 renderDraftStructure()
-            ) : isUnderReview || isReadOnly || isDraftReview ? (
-                <div style={{ background: "#fffbe6", border: "1px solid #ffe58f", borderRadius: 8, padding: "20px 24px" }}>
-                    <Text strong style={{ display: "block", marginBottom: 8, color: "#d48806", fontSize: 15 }}>
-                        {isUnderReview
-                            ? "⏳ Курс отправлен на проверку модератору"
-                            : isDraftReview
-                                ? "⏳ Изменения курса проверяются модератором"
-                                : "👁 Курс опубликован — только просмотр"}
+            ) : isUnderReview || isDraftReview ? (
+                <div style={{ background: "#fffbe6", border: "1px solid #ffe58f", borderRadius: 12, padding: "40px 32px", textAlign: "center" }}>
+                    <div style={{ fontSize: 56, marginBottom: 20 }}>⏳</div>
+                    <Text strong style={{ display: "block", fontSize: 20, color: "#d48806", marginBottom: 12 }}>
+                        {isUnderReview ? "Курс отправлен на проверку" : "Изменения отправлены на проверку"}
                     </Text>
-                    <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+                    <Text type="secondary" style={{ fontSize: 14, display: "block", maxWidth: 520, margin: "0 auto 24px" }}>
                         {isUnderReview
-                            ? "Пока идёт проверка, редактирование недоступно — модератор проверяет именно ту версию, которую вы отправили. После проверки вы получите уведомление."
-                            : isDraftReview
-                                ? "Вы отправили изменения на проверку. Пока модератор их не рассмотрит, редактирование разделов и уроков недоступно. После одобрения изменения применятся к курсу."
-                                : "Редактирование разделов и уроков недоступно в режиме просмотра. Нажмите «Редактировать курс» чтобы внести изменения — они пройдут модерацию перед публикацией."}
+                            ? "Ваш курс проходит первичную модерацию. До завершения проверки редактирование недоступно. После одобрения курс будет опубликован и станет доступен студентам."
+                            : "Ваши изменения проверяются модератором. Студенты пока видят текущую версию курса. После одобрения все изменения будут применены автоматически."}
                     </Text>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        {sections.map((section) => (
-                            <div key={section.id} style={{
-                                background: "#fff", border: "1px solid #f0f0f0", borderRadius: 6,
-                                padding: "10px 14px", display: "flex", alignItems: "center", gap: 8,
-                            }}>
-                                <BookOutlined style={{ color: "#52c41a" }} />
-                                <Text strong>{section.title}</Text>
-                                <Text type="secondary" style={{ fontSize: 12 }}>{section.description}</Text>
-                            </div>
-                        ))}
-                    </div>
                 </div>
+            ) : isReadOnly ? (
+                <>
+                    <Alert
+                        type="warning"
+                        message="Режим просмотра"
+                        description="Чтобы внести изменения — нажмите кнопку «Начать редактирование». Изменения пройдут модерацию перед публикацией."
+                        showIcon
+                        style={{ marginBottom: 16 }}
+                        action={
+                            <Button size="small" type="primary" style={{ background: "rgba(0,100,0,0.8)" }} onClick={handleConfirmEdit} loading={creatingDraft}>
+                                Начать редактирование
+                            </Button>
+                        }
+                    />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                        <Title level={4} style={{ margin: 0 }}>Разделы курса</Title>
+                    </div>
+                    {sections.length === 0 ? (
+                        <Empty description="Разделов пока нет" />
+                    ) : (
+                        <Collapse>
+                            {sections.map((section) => (
+                                <Panel key={section.id} header={
+                                    <span>
+                                        <BookOutlined style={{ color: "#52c41a", marginRight: 8 }} />
+                                        <Text strong>{section.title}</Text>
+                                        <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>{section.description}</Text>
+                                    </span>
+                                }>
+                                    {(lessonsBySection[section.id] ?? []).length === 0 ? (
+                                        <Text type="secondary" style={{ fontSize: 13 }}>Уроков нет</Text>
+                                    ) : (
+                                        <Collapse>
+                                            {(lessonsBySection[section.id] ?? []).map((lesson) => (
+                                                <Panel key={lesson.id} header={
+                                                    <span>
+                                                        <FileTextOutlined style={{ color: "#52c41a", marginRight: 8 }} />
+                                                        <Text strong>{lesson.title}</Text>
+                                                        <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>{lesson.description}</Text>
+                                                    </span>
+                                                }>
+                                                    <ReadonlyLessonContent lessonId={lesson.id} />
+                                                </Panel>
+                                            ))}
+                                        </Collapse>
+                                    )}
+                                </Panel>
+                            ))}
+                        </Collapse>
+                    )}
+                </>
             ) : (
                 <>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -1436,6 +1667,11 @@ const CourseEditor = ({ course, categories, onBack, onUpdated }: {
                     onCancel={() => setEditCourseOpen(false)}
                     submitLabel={isEditing ? "Сохранить в черновик" : "Сохранить"}
                     loading={savingCourse}
+                    courseId={course.id}
+                    onCoverUploaded={(url) => {
+                        onUpdated({ ...course, coverImageUrl: url });
+                        courseForm.setFieldValue("coverImageUrl", url);
+                    }}
                 />
             </Modal>
 
@@ -1502,7 +1738,6 @@ const TeacherPage = () => {
             if (catsRes.ok) setCategories(await catsRes.json());
             setLoading(false);
         };
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         void load();
     }, []);
 
@@ -1524,7 +1759,7 @@ const TeacherPage = () => {
     const handleSearch = () => { setSearch(searchInput.trim()); setPage(1); };
     const handleStatusFilter = (val: CourseStatus | "") => { setStatusFilter(val); setPage(1); };
 
-    const handleCreateCourse = async (values: CourseFormValues, tags: string[]) => {
+    const handleCreateCourse = async (values: CourseFormValues, tags: string[], coverFile?: File | null) => {
         setCreating(true);
         const tagsDto: TagsDto[] = tags.map((name) => ({ name }));
         const created = await courseApi.createCourse({
@@ -1534,11 +1769,28 @@ const TeacherPage = () => {
             categoryId: values.categoryId, coverImageUrl: values.coverImageUrl, tags: tagsDto,
         });
         if (created) {
-            setAllCourses((p) => [created, ...p]);
+            let finalCourse = created;
+            // Загружаем файл обложки если был выбран
+            if (coverFile) {
+                const formData = new FormData();
+                formData.append("file", coverFile);
+                const authHeaders = authStorage.getAuthHeaders() as Record<string, string>;
+                const { "Content-Type": _, ...headersWithoutContentType } = authHeaders;
+                const res = await fetch(`${API_URL}/Courses/${created.id}/cover`, {
+                    method: "POST", headers: headersWithoutContentType, body: formData,
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    finalCourse = { ...created, coverImageUrl: data.coverImageUrl };
+                } else {
+                    message.warning("Курс создан, но обложку загрузить не удалось");
+                }
+            }
+            setAllCourses((p) => [finalCourse, ...p]);
             message.success("Курс создан");
             setCreateModalOpen(false);
             createForm.resetFields();
-            setSelectedCourse(created);
+            setSelectedCourse(finalCourse);
         } else {
             message.error("Ошибка при создании курса");
         }
@@ -1676,14 +1928,13 @@ const TeacherPage = () => {
                                                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.1)"; }}
                                                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
                                                 >
-                                                    {course.coverImageUrl && (
-                                                        <img src={course.coverImageUrl} alt={course.title}
-                                                             style={{
-                                                                 width: "100%", aspectRatio: "16/9",
-                                                                 objectFit: "cover", borderRadius: 6,
-                                                                 marginBottom: 12, display: "block",
-                                                             }} />
-                                                    )}
+                                                    <div style={{ width: "100%", aspectRatio: "16/9", borderRadius: 6, marginBottom: 12, overflow: "hidden" }}>
+                                                        {course.coverImageUrl
+                                                            ? <img src={getImageUrl(course.coverImageUrl)} alt={course.title}
+                                                                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                                                            : <div style={{ ...COVER_PLACEHOLDER_STYLE, width: "100%", height: "100%" }}>🎓</div>
+                                                        }
+                                                    </div>
                                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                                                         <Tag color={statusColor[course.status]} style={{ fontSize: 11 }}>
                                                             {statusLabel[course.status]}
