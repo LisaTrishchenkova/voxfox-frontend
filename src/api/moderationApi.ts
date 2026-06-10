@@ -65,9 +65,7 @@ export const moderationApi = {
                 headers: authStorage.getAuthHeaders(),
             });
             return res.ok;
-        } catch {
-            return false;
-        }
+        } catch { return false; }
     },
 
     releaseCourse: async (courseId: string): Promise<boolean> => {
@@ -77,9 +75,7 @@ export const moderationApi = {
                 headers: authStorage.getAuthHeaders(),
             });
             return res.ok;
-        } catch {
-            return false;
-        }
+        } catch { return false; }
     },
 
     getCourseForReview: async (courseId: string): Promise<CourseReviewDto | null> => {
@@ -89,9 +85,7 @@ export const moderationApi = {
             });
             if (!res.ok) return null;
             return res.json();
-        } catch {
-            return null;
-        }
+        } catch { return null; }
     },
 
     getMyStats: async (): Promise<ModeratorStatsDto | null> => {
@@ -101,9 +95,7 @@ export const moderationApi = {
             });
             if (!res.ok) return null;
             return res.json();
-        } catch {
-            return null;
-        }
+        } catch { return null; }
     },
 };
 
@@ -117,9 +109,7 @@ export const adminApi = {
             });
             if (!res.ok) return null;
             return res.json();
-        } catch {
-            return null;
-        }
+        } catch { return null; }
     },
 
     getModeratorsStats: async (): Promise<ModeratorStatsDto[]> => {
@@ -129,9 +119,7 @@ export const adminApi = {
             });
             if (!res.ok) return [];
             return res.json();
-        } catch {
-            return [];
-        }
+        } catch { return []; }
     },
 
     blockUser: async (id: string, reason?: string): Promise<boolean> => {
@@ -142,9 +130,7 @@ export const adminApi = {
                 body: JSON.stringify({ reason }),
             });
             return res.ok;
-        } catch {
-            return false;
-        }
+        } catch { return false; }
     },
 
     unblockUser: async (id: string): Promise<boolean> => {
@@ -154,21 +140,18 @@ export const adminApi = {
                 headers: authStorage.getAuthHeaders(),
             });
             return res.ok;
-        } catch {
-            return false;
-        }
+        } catch { return false; }
     },
 
-    unpublishCourse: async (id: string): Promise<boolean> => {
+    unpublishCourse: async (id: string, reason?: string): Promise<boolean> => {
         try {
-            const res = await fetch(`${API_URL}/admin/courses/${id}/unpublish`, {
+            const res = await fetch(`${API_URL}/Courses/${id}/unpublish`, {
                 method: "PUT",
                 headers: authStorage.getAuthHeaders(),
+                body: JSON.stringify({ reason: reason ?? null }),
             });
             return res.ok;
-        } catch {
-            return false;
-        }
+        } catch { return false; }
     },
 
     forceReleaseCourse: async (id: string): Promise<boolean> => {
@@ -178,10 +161,9 @@ export const adminApi = {
                 headers: authStorage.getAuthHeaders(),
             });
             return res.ok;
-        } catch {
-            return false;
-        }
+        } catch { return false; }
     },
+
     getAllCourses: async (): Promise<CourseDto[]> => {
         try {
             const res = await fetch(`${API_URL}/admin/courses`, {
@@ -189,8 +171,6 @@ export const adminApi = {
             });
             if (!res.ok) return [];
             return res.json();
-        } catch {
-            return [];
-        }
+        } catch { return []; }
     },
 };

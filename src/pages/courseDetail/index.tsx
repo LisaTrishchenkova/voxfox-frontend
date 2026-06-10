@@ -24,6 +24,7 @@ import {reviewApi} from "../../api/reviewApi.ts";
 import type {ReviewDto} from "../../api/types/review.ts";
 import {useUserStore} from "../../stores/userStore.ts";
 import leoProfanity from "leo-profanity";
+import { getImageUrl } from "../../utils/imageUtils";
 
 leoProfanity.loadDictionary("ru");
 
@@ -319,10 +320,14 @@ const CourseDetailPage = () => {
             </Col>
 
             <Col xs={24} md={8} style={{textAlign: "center"}}>
-              {course.coverImageUrl && (
-                  <img src={course.coverImageUrl} alt={course.title}
-                       style={{width: "100%", borderRadius: 12, maxHeight: 280, objectFit: "cover"}}/>
-              )}
+              <div style={{ width: "100%", borderRadius: 12, overflow: "hidden", marginBottom: 16 }}>
+                {course.coverImageUrl
+                    ? <img src={getImageUrl(course.coverImageUrl)} alt={course.title}
+                           style={{ width: "100%", maxHeight: 280, objectFit: "cover", display: "block" }} />
+                    : <div style={{ height: 200, background: "linear-gradient(135deg, rgba(0,100,0,0.15) 0%, rgba(0,100,0,0.35) 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64, color: "rgba(0,100,0,0.4)" }}>🎓</div>
+                }
+              </div>
+
               <div style={{marginTop: 16}}>
                 <Title level={3} style={{margin: 0}}>
                   {course.isFree ? "Бесплатно" : `${course.price} ₽`}
