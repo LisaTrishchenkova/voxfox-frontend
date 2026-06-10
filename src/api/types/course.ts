@@ -41,6 +41,7 @@ export interface CourseDto {
   categoryId?: string | null;
   publishedAt?: string | null;
   createdAt: string;
+  isDeleted: boolean;
   reviewerId?: string | null;
   reviewerName?: string | null;
   reviewStartedAt?: string | null;
