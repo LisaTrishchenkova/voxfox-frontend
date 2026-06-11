@@ -1878,22 +1878,15 @@ const TeacherPage = () => {
                                     ))}
                                 </div>
 
-                                <Row gutter={8}>
-                                    <Col flex="auto">
-                                        <Input
-                                            placeholder="Поиск по названию или описанию..."
-                                            prefix={<SearchOutlined />}
-                                            value={searchInput}
-                                            onChange={(e) => setSearchInput(e.target.value)}
-                                            onPressEnter={handleSearch}
-                                            allowClear
-                                            onClear={() => { setSearchInput(""); setSearch(""); setPage(1); }}
-                                        />
-                                    </Col>
-                                    <Col>
-                                        <Button icon={<SearchOutlined />} onClick={handleSearch}>Найти</Button>
-                                    </Col>
-                                </Row>
+                                <Input.Search
+                                    placeholder="Поиск по названию или описанию..."
+                                    enterButton={<Button icon={<SearchOutlined />}>Найти</Button>}
+                                    size="large"
+                                    value={searchInput}
+                                    onChange={(e) => setSearchInput(e.target.value)}
+                                    onSearch={handleSearch}
+                                    allowClear
+                                />
                             </div>
 
                             <Divider style={{ margin: "0 0 24px" }} />

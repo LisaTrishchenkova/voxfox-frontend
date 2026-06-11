@@ -306,9 +306,8 @@ const CoursesTab = () => {
     const [page, setPage] = useState(1);
     const [searchInput, setSearchInput] = useState("");
     const [search, setSearch] = useState("");
-    const [statusFilter, setStatusFilter] = useState<CourseStatus | undefined>(undefined);
+    const [statusFilter, setStatusFilter] = useState<CourseStatus | "deleted" | undefined>(undefined);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
-    const [includeDeleted, setIncludeDeleted] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [deletingCourse, setDeletingCourse] = useState<CourseDto | null>(null);
     const [deleteReason, setDeleteReason] = useState("");
@@ -322,8 +321,12 @@ const CoursesTab = () => {
             setLoading(true);
             const p = new URLSearchParams();
             if (search) p.append("searchTerm", search);
-            if (statusFilter) p.append("status", statusFilter);
-            if (includeDeleted) p.append("includeDeleted", "true");
+            p.append("includeDeleted", "true");
+            if (statusFilter === "deleted") {
+                p.append("onlyDeleted", "true");
+            } else if (statusFilter) {
+                p.append("status", statusFilter);
+            }
             p.append("page", String(page));
             p.append("pageSize", String(pageSize));
             p.append("pageSize", String(pageSize));
@@ -336,7 +339,7 @@ const CoursesTab = () => {
             setLoading(false);
         };
         void load();
-    }, [search, statusFilter, page, includeDeleted]);
+    }, [search, statusFilter, page]);
 
     const handleOpenDelete = (course: CourseDto, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -409,14 +412,17 @@ const CoursesTab = () => {
 
     return (
         <div>
-            <Row gutter={8} style={{ marginBottom: 16 }}>
+            <Row gutter={8} style={{ marginBottom: 16 }} align="middle">
                 <Col flex="auto">
-                    <Input placeholder="Поиск по названию..." prefix={<SearchOutlined />}
-                           value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
-                           onPressEnter={handleSearch} allowClear
-                           onClear={() => { setSearchInput(""); setSearch(""); setPage(1); }} />
+                    <Input.Search
+                        placeholder="Поиск по названию курса..."
+                        enterButton={<Button icon={<SearchOutlined />}>Найти</Button>}
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        onSearch={handleSearch}
+                        allowClear
+                    />
                 </Col>
-                <Col><Button icon={<SearchOutlined />} onClick={handleSearch}>Найти</Button></Col>
                 <Col>
                     <Select placeholder="Статус" allowClear style={{ width: 180 }}
                             value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }}>
@@ -424,11 +430,8 @@ const CoursesTab = () => {
                         <Select.Option value="UnderReview">На проверке</Select.Option>
                         <Select.Option value="RejectedByModerator">Отклонён</Select.Option>
                         <Select.Option value="Published">Опубликован</Select.Option>
+                        <Select.Option value="deleted">Удалённые</Select.Option>
                     </Select>
-                </Col>
-                <Col style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <Switch checked={includeDeleted} onChange={(v) => { setIncludeDeleted(v); setPage(1); }} size="small" />
-                    <Text style={{ fontSize: 13 }}>Удалённые</Text>
                 </Col>
             </Row>
 
@@ -460,7 +463,7 @@ const CoursesTab = () => {
                                         </div>
                                     )}
                                     {/* Обложка */}
-                                    <div style={{ height: 140, overflow: "hidden", flexShrink: 0 }}>
+                                    <div style={{ height: 180, overflow: "hidden", flexShrink: 0 }}>
                                         {course.coverImageUrl
                                             ? <img src={getImageUrl(course.coverImageUrl)} alt={course.title}
                                                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -494,11 +497,11 @@ const CoursesTab = () => {
                                                     onClick={(e) => { e.stopPropagation(); navigate(`/course/${course.id}`); }}>
                                                 Открыть
                                             </Button>
-                                            {course.status === "UnderReview" && (
+                                            {course.status === "UnderReview" && course.reviewerId && (
                                                 <Popconfirm title="Снять захват?" description="Курс будет освобождён от модератора"
                                                             onConfirm={(e) => handleForceRelease(course, e as React.MouseEvent)}
                                                             okText="Снять" cancelText="Отмена">
-                                                    <Button size="small" icon={<UnlockOutlined />} loading={actionLoading === course.id}>Release</Button>
+                                                    <Button size="small" icon={<UnlockOutlined />} loading={actionLoading === course.id}>Снять захват</Button>
                                                 </Popconfirm>
                                             )}
                                             {course.status === "Published" && !course.isDeleted && (
@@ -720,9 +723,17 @@ const UsersTab = () => {
 
     return (
         <div>
-            <Row gutter={16} style={{ marginBottom: 16 }}>
-                <Col flex="auto"><Input placeholder="Поиск по имени или email..." prefix={<SearchOutlined />} value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onPressEnter={handleSearch} allowClear onClear={() => { setSearchInput(""); setSearch(""); }} /></Col>
-                <Col><Button icon={<SearchOutlined />} onClick={handleSearch}>Найти</Button></Col>
+            <Row gutter={8} style={{ marginBottom: 16 }} align="middle">
+                <Col flex="auto">
+                    <Input.Search
+                        placeholder="Поиск по имени или email..."
+                        enterButton={<Button icon={<SearchOutlined />}>Найти</Button>}
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        onSearch={handleSearch}
+                        allowClear
+                    />
+                </Col>
                 <Col><Select placeholder="Роль" allowClear style={{ width: 160 }} value={roleFilter} onChange={(v) => { setRoleFilter(v); setPage(1); }}><Select.Option value="Student">Студент</Select.Option><Select.Option value="Teacher">Преподаватель</Select.Option><Select.Option value="Moderator">Модератор</Select.Option><Select.Option value="Admin">Администратор</Select.Option></Select></Col>
                 <Col style={{ display: "flex", alignItems: "center", gap: 8 }}><Switch checked={includeDeleted} onChange={(v) => { setIncludeDeleted(v); setPage(1); }} size="small" /><Text style={{ fontSize: 13 }}>Показать удалённых</Text></Col>
             </Row>

@@ -1,5 +1,6 @@
 import {
     Avatar,
+    Button,
     Col,
     Empty,
     Input,
@@ -68,7 +69,6 @@ const CommunityPage = () => {
                 const res = await fetch(`${API_URL}/Users/teachers?${p}`);
                 if (res.ok) {
                     const data: TeachersResponse = await res.json();
-                    // бэк может вернуть массив или объект с items
                     if (Array.isArray(data)) {
                         setTeachers(data as unknown as TeacherDto[]);
                         setTotal((data as unknown as TeacherDto[]).length);
@@ -100,7 +100,6 @@ const CommunityPage = () => {
             <Header />
             <Layout style={{ minHeight: "calc(100vh - 64px)", background: "#fafafa" }}>
                 <Content style={{ padding: "40px 60px" }}>
-                    {/* Шапка */}
                     <div style={{ marginBottom: 32 }}>
                         <Title level={2} style={{ margin: 0 }}>Сообщество</Title>
                         <Text type="secondary" style={{ fontSize: 15 }}>
@@ -110,15 +109,14 @@ const CommunityPage = () => {
 
                     {/* Поиск */}
                     <div style={{ maxWidth: 480, marginBottom: 32 }}>
-                        <Input
+                        <Input.Search
                             size="large"
                             placeholder="Поиск преподавателя по имени..."
-                            prefix={<SearchOutlined style={{ color: "#52c41a" }} />}
+                            enterButton={<Button icon={<SearchOutlined />}>Найти</Button>}
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
-                            onPressEnter={handleSearch}
+                            onSearch={handleSearch}
                             allowClear
-                            onClear={() => { setSearchInput(""); setSearch(""); setPage(1); }}
                         />
                     </div>
 
@@ -151,12 +149,8 @@ const CommunityPage = () => {
                                                 alignItems: "center",
                                                 gap: 12,
                                             }}
-                                            onMouseEnter={(e) => {
-                                                (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.1)";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                (e.currentTarget as HTMLElement).style.boxShadow = "none";
-                                            }}
+                                            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.1)"; }}
+                                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
                                         >
                                             <Avatar
                                                 size={80}
@@ -169,16 +163,13 @@ const CommunityPage = () => {
                                                     flexShrink: 0,
                                                 }}
                                             />
-
                                             <div style={{ width: "100%" }}>
                                                 <Text strong style={{ fontSize: 15, display: "block", marginBottom: 4 }}>
                                                     {teacher.name}
                                                 </Text>
                                                 {teacher.bio ? (
                                                     <Text type="secondary" style={{ fontSize: 12 }}>
-                                                        {teacher.bio.length > 80
-                                                            ? teacher.bio.slice(0, 80) + "..."
-                                                            : teacher.bio}
+                                                        {teacher.bio.length > 80 ? teacher.bio.slice(0, 80) + "..." : teacher.bio}
                                                     </Text>
                                                 ) : (
                                                     <Text type="secondary" style={{ fontSize: 12, fontStyle: "italic" }}>
@@ -186,12 +177,8 @@ const CommunityPage = () => {
                                                     </Text>
                                                 )}
                                             </div>
-
                                             <Text type="secondary" style={{ fontSize: 11 }}>
-                                                С {new Date(teacher.createdAt).toLocaleDateString("ru-RU", {
-                                                month: "long",
-                                                year: "numeric",
-                                            })}
+                                                С {new Date(teacher.createdAt).toLocaleDateString("ru-RU", { month: "long", year: "numeric" })}
                                             </Text>
                                         </div>
                                     </Col>
