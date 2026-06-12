@@ -26,6 +26,15 @@ jobs:
           EOF
           npm run build
 
+      - name: Clear old files
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: rm -rf /var/www/voxfox/*
+
       - name: Deploy to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -36,4 +45,3 @@ jobs:
           source: "dist/*"
           target: "/var/www/voxfox"
           strip_components: 1
-          rm: true
