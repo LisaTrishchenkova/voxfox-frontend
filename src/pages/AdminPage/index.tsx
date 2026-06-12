@@ -1,40 +1,12 @@
 import {
-    Button,
-    Card,
-    Col,
-    Divider,
-    Empty,
-    Form,
-    Input,
-    Layout,
-    Modal,
-    Pagination,
-    Popconfirm,
-    Row,
-    Select,
-    Space,
-    Spin,
-    Statistic,
-    Switch,
-    Table,
-    Tag,
-    Typography,
-    message,
+    Button, Card, Col, Divider, Empty, Form, Input, Layout, Modal,
+    Pagination, Popconfirm, Row, Select, Space, Spin, Statistic,
+    Switch, Table, Tag, Typography, message,
 } from "antd";
 import {
-    BarChartOutlined,
-    BookOutlined,
-    DeleteOutlined,
-    EditOutlined,
-    EyeOutlined,
-    LockOutlined,
-    PlusOutlined,
-    ReloadOutlined,
-    SearchOutlined,
-    StopOutlined,
-    TeamOutlined,
-    UnlockOutlined,
-    UserOutlined,
+    BarChartOutlined, BookOutlined, DeleteOutlined, DollarOutlined,
+    EditOutlined, EyeOutlined, LockOutlined, PlusOutlined, ReloadOutlined,
+    SearchOutlined, StopOutlined, TeamOutlined, UnlockOutlined, UserOutlined,
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -46,64 +18,29 @@ import { courseApi } from "../../api/courseApi.ts";
 import { API_URL } from "../../config.ts";
 import { authStorage } from "../../services/auth-storage.service.ts";
 import { getImageUrl } from "../../utils/imageUtils.ts";
+import AdminTransactionsTab from "./AdminTransactionsTab.tsx";
 import type { AdminStatsDto, ModeratorStatsDto } from "../../api/moderationApi.ts";
 import type { CourseDto, CourseStatus } from "../../api/types/course.ts";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
-type AdminTab = "stats" | "users" | "courses" | "moderators" | "categories";
+type AdminTab = "stats" | "users" | "courses" | "moderators" | "categories" | "transactions";
 
 interface UserDto {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    avatarUrl: string | null;
-    bio: string | null;
-    createdAt: string;
-    isDeleted: boolean;
-    isBlocked?: boolean;
-    blockReason?: string | null;
+    id: string; name: string; email: string; role: string;
+    avatarUrl: string | null; bio: string | null; createdAt: string;
+    isDeleted: boolean; isBlocked?: boolean; blockReason?: string | null;
 }
+interface CategoryDto { id: string; name: string; }
 
-interface CategoryDto {
-    id: string;
-    name: string;
-}
-
-const roleColor: Record<string, string> = {
-    Student: "default",
-    Teacher: "green",
-    Moderator: "blue",
-    Admin: "red",
-};
-
-const roleLabel: Record<string, string> = {
-    Student: "Студент",
-    Teacher: "Преподаватель",
-    Moderator: "Модератор",
-    Admin: "Администратор",
-};
-
-const statusColor: Record<string, string> = {
-    Draft: "default",
-    UnderReview: "processing",
-    RejectedByModerator: "error",
-    Published: "success",
-};
-
-const statusLabel: Record<string, string> = {
-    Draft: "Черновик",
-    UnderReview: "На проверке",
-    RejectedByModerator: "Отклонён",
-    Published: "Опубликован",
-};
+const roleColor: Record<string, string> = { Student: "default", Teacher: "green", Moderator: "blue", Admin: "red" };
+const roleLabel: Record<string, string> = { Student: "Студент", Teacher: "Преподаватель", Moderator: "Модератор", Admin: "Администратор" };
+const statusColor: Record<string, string> = { Draft: "default", UnderReview: "processing", RejectedByModerator: "error", Published: "success" };
+const statusLabel: Record<string, string> = { Draft: "Черновик", UnderReview: "На проверке", RejectedByModerator: "Отклонён", Published: "Опубликован" };
 
 const usersApi = {
-    getUsers: async (params: {
-        search?: string; role?: string; includeDeleted?: boolean; page?: number; pageSize?: number;
-    }) => {
+    getUsers: async (params: { search?: string; role?: string; includeDeleted?: boolean; page?: number; pageSize?: number }) => {
         const p = new URLSearchParams();
         if (params.search) p.append("search", params.search);
         if (params.role) p.append("role", params.role);
@@ -115,21 +52,15 @@ const usersApi = {
         return res.json();
     },
     setRole: async (id: string, role: string) => {
-        const res = await fetch(`${API_URL}/Users/${id}/role?role=${role}`, {
-            method: "PUT", headers: authStorage.getAuthHeaders(),
-        });
+        const res = await fetch(`${API_URL}/Users/${id}/role?role=${role}`, { method: "PUT", headers: authStorage.getAuthHeaders() });
         return res.ok;
     },
     deleteUser: async (id: string) => {
-        const res = await fetch(`${API_URL}/Users/${id}`, {
-            method: "DELETE", headers: authStorage.getAuthHeaders(),
-        });
+        const res = await fetch(`${API_URL}/Users/${id}`, { method: "DELETE", headers: authStorage.getAuthHeaders() });
         return res.ok;
     },
     restoreUser: async (id: string) => {
-        const res = await fetch(`${API_URL}/Users/${id}/restore`, {
-            method: "PUT", headers: authStorage.getAuthHeaders(),
-        });
+        const res = await fetch(`${API_URL}/Users/${id}/restore`, { method: "PUT", headers: authStorage.getAuthHeaders() });
         return res.ok;
     },
 };
@@ -141,33 +72,17 @@ const categoriesApi = {
         return res.json();
     },
     create: async (name: string): Promise<{ data: CategoryDto | null; error: string | null }> => {
-        const res = await fetch(`${API_URL}/Categories`, {
-            method: "POST",
-            headers: authStorage.getAuthHeaders(),
-            body: JSON.stringify({ name }),
-        });
-        if (res.ok) {
-            const data = await res.json();
-            return { data, error: null };
-        }
-        try {
-            const errBody = await res.json();
-            const errMsg = errBody?.detail ?? errBody?.title ?? null;
-            return { data: null, error: errMsg };
-        } catch {
-            return { data: null, error: null };
-        }
+        const res = await fetch(`${API_URL}/Categories`, { method: "POST", headers: authStorage.getAuthHeaders(), body: JSON.stringify({ name }) });
+        if (res.ok) return { data: await res.json(), error: null };
+        try { const e = await res.json(); return { data: null, error: e?.detail ?? e?.title ?? null }; }
+        catch { return { data: null, error: null }; }
     },
-    update: async (id: string, name: string): Promise<boolean> => {
-        const res = await fetch(`${API_URL}/Categories/${id}`, {
-            method: "PUT", headers: authStorage.getAuthHeaders(), body: JSON.stringify({ name }),
-        });
+    update: async (id: string, name: string) => {
+        const res = await fetch(`${API_URL}/Categories/${id}`, { method: "PUT", headers: authStorage.getAuthHeaders(), body: JSON.stringify({ name }) });
         return res.ok;
     },
-    delete: async (id: string): Promise<boolean> => {
-        const res = await fetch(`${API_URL}/Categories/${id}`, {
-            method: "DELETE", headers: authStorage.getAuthHeaders(),
-        });
+    delete: async (id: string) => {
+        const res = await fetch(`${API_URL}/Categories/${id}`, { method: "DELETE", headers: authStorage.getAuthHeaders() });
         return res.ok;
     },
 };
@@ -178,12 +93,7 @@ const StatsTab = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const load = async () => {
-            setLoading(true);
-            const data = await adminApi.getStats();
-            setStats(data);
-            setLoading(false);
-        };
+        const load = async () => { setLoading(true); setStats(await adminApi.getStats()); setLoading(false); };
         void load();
     }, []);
 
@@ -191,99 +101,53 @@ const StatsTab = () => {
     if (!stats) return <Empty description="Не удалось загрузить статистику" />;
 
     const completionRate = stats.totalEnrollments > 0
-        ? Math.round(stats.completedEnrollments / stats.totalEnrollments * 100)
-        : 0;
+        ? Math.round(stats.completedEnrollments / stats.totalEnrollments * 100) : 0;
 
-    const sections = [
-        {
-            title: "Пользователи",
-            rows: [
-                { label: "Всего пользователей", value: stats.totalUsers },
-                { label: "Новых за месяц", value: stats.newUsersThisMonth, highlight: "green" },
-                { label: "Активных преподавателей", value: stats.activeTeachers },
-                { label: "Заблокированных", value: stats.blockedUsers, highlight: stats.blockedUsers > 0 ? "red" : undefined },
-            ],
-        },
-        {
-            title: "Курсы",
-            rows: [
-                { label: "Всего курсов", value: stats.totalCourses },
-                { label: "Опубликованных", value: stats.publishedCourses, highlight: "green" },
-                { label: "На проверке", value: stats.pendingCourses, highlight: stats.pendingCourses > 0 ? "orange" : undefined },
-                { label: "Черновики", value: stats.draftCourses },
-            ],
-        },
-        {
-            title: "Обучение",
-            rows: [
-                { label: "Записей на курсы", value: stats.totalEnrollments },
-                { label: "Завершено курсов", value: stats.completedEnrollments, highlight: "green" },
-                { label: "Выдано сертификатов", value: stats.totalCertificates },
-                { label: "Процент завершения", value: `${completionRate}%` },
-            ],
-        },
+    const cards = [
+        { title: "Пользователей", value: stats.totalUsers, sub: `+${stats.newUsersThisMonth} за месяц`, color: "#1890ff" },
+        { title: "Опубликованных курсов", value: stats.publishedCourses, sub: `${stats.pendingCourses} на проверке`, color: "#52c41a" },
+        { title: "Записей на курсы", value: stats.totalEnrollments, sub: `${completionRate}% завершено`, color: "#faad14" },
+        { title: "Сертификатов выдано", value: stats.totalCertificates, sub: `${stats.completedEnrollments} завершённых курсов`, color: "#722ed1" },
+        { title: "Преподавателей", value: stats.activeTeachers, sub: `${stats.blockedUsers} заблокированных`, color: "#13c2c2" },
+        { title: "Всего курсов", value: stats.totalCourses, sub: `${stats.draftCourses} черновиков`, color: "#eb2f96" },
     ];
 
     return (
         <div>
-            <Row gutter={[32, 32]}>
-                {sections.map((section) => (
-                    <Col key={section.title} xs={24} md={8}>
-                        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #f0f0f0", overflow: "hidden" }}>
-                            <div style={{ padding: "12px 18px", borderBottom: "1px solid #f0f0f0", background: "#fafafa" }}>
-                                <Text strong style={{ fontSize: 14 }}>{section.title}</Text>
-                            </div>
-                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                <tbody>
-                                {section.rows.map((row, i) => (
-                                    <tr key={row.label} style={{ borderBottom: i < section.rows.length - 1 ? "1px solid #f5f5f5" : undefined }}>
-                                        <td style={{ padding: "10px 18px" }}>
-                                            <Text type="secondary" style={{ fontSize: 13 }}>{row.label}</Text>
-                                        </td>
-                                        <td style={{ padding: "10px 18px", textAlign: "right" }}>
-                                            <Text strong style={{
-                                                fontSize: 15,
-                                                color: row.highlight === "green" ? "#52c41a"
-                                                    : row.highlight === "red" ? "#ff4d4f"
-                                                        : row.highlight === "orange" ? "#faad14"
-                                                            : undefined,
-                                            }}>
-                                                {row.value}
-                                            </Text>
-                                        </td>
-                                    </tr>
-                                ))}
-                                </tbody>
-                            </table>
+            <Row gutter={[16, 16]}>
+                {cards.map((card) => (
+                    <Col key={card.title} xs={12} sm={8} md={8} lg={4}>
+                        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #f0f0f0", padding: "16px 20px" }}>
+                            <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 6 }}>{card.title}</Text>
+                            <Text strong style={{ fontSize: 24, color: card.color, display: "block", lineHeight: 1.2 }}>{card.value}</Text>
+                            <Text type="secondary" style={{ fontSize: 11, marginTop: 4, display: "block" }}>{card.sub}</Text>
                         </div>
                     </Col>
                 ))}
             </Row>
 
             {stats.topCoursesByEnrollments.length > 0 && (
-                <div style={{ marginTop: 32 }}>
+                <div style={{ marginTop: 24 }}>
                     <Text strong style={{ fontSize: 14, display: "block", marginBottom: 12 }}>Топ курсов по записям</Text>
                     <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #f0f0f0", overflow: "hidden" }}>
                         <table style={{ width: "100%", borderCollapse: "collapse" }}>
                             <thead>
                             <tr style={{ background: "#fafafa", borderBottom: "1px solid #f0f0f0" }}>
-                                <th style={{ padding: "10px 18px", textAlign: "left", fontWeight: 500, fontSize: 13, color: "#888" }}>#</th>
-                                <th style={{ padding: "10px 18px", textAlign: "left", fontWeight: 500, fontSize: 13, color: "#888" }}>Курс</th>
-                                <th style={{ padding: "10px 18px", textAlign: "left", fontWeight: 500, fontSize: 13, color: "#888" }}>Автор</th>
-                                <th style={{ padding: "10px 18px", textAlign: "right", fontWeight: 500, fontSize: 13, color: "#888" }}>Студентов</th>
-                                <th style={{ padding: "10px 18px", textAlign: "right", fontWeight: 500, fontSize: 13, color: "#888" }}>Рейтинг</th>
+                                {["#", "Курс", "Автор", "Студентов", "Рейтинг"].map((h, i) => (
+                                    <th key={h} style={{ padding: "10px 16px", textAlign: i > 2 ? "right" : "left", fontWeight: 500, fontSize: 12, color: "#888" }}>{h}</th>
+                                ))}
                             </tr>
                             </thead>
                             <tbody>
-                            {stats.topCoursesByEnrollments.map((course, i) => (
-                                <tr key={course.id} style={{ borderBottom: i < stats.topCoursesByEnrollments.length - 1 ? "1px solid #f5f5f5" : undefined }}>
-                                    <td style={{ padding: "10px 18px" }}><Text type="secondary" style={{ fontSize: 13 }}>{i + 1}</Text></td>
-                                    <td style={{ padding: "10px 18px" }}><Text style={{ fontSize: 13 }}>{course.title}</Text></td>
-                                    <td style={{ padding: "10px 18px" }}><Text type="secondary" style={{ fontSize: 13 }}>{course.authorName}</Text></td>
-                                    <td style={{ padding: "10px 18px", textAlign: "right" }}><Text strong style={{ fontSize: 13 }}>{course.enrollmentCount}</Text></td>
-                                    <td style={{ padding: "10px 18px", textAlign: "right" }}>
-                                        <Text style={{ fontSize: 13, color: course.rating > 0 ? "#faad14" : "#ccc" }}>
-                                            {course.rating > 0 ? `★ ${Number(course.rating).toFixed(1)}` : "—"}
+                            {stats.topCoursesByEnrollments.map((c, i) => (
+                                <tr key={c.id} style={{ borderBottom: i < stats.topCoursesByEnrollments.length - 1 ? "1px solid #f5f5f5" : undefined }}>
+                                    <td style={{ padding: "10px 16px" }}><Text type="secondary" style={{ fontSize: 13 }}>{i + 1}</Text></td>
+                                    <td style={{ padding: "10px 16px" }}><Text style={{ fontSize: 13 }}>{c.title}</Text></td>
+                                    <td style={{ padding: "10px 16px" }}><Text type="secondary" style={{ fontSize: 13 }}>{c.authorName}</Text></td>
+                                    <td style={{ padding: "10px 16px", textAlign: "right" }}><Text strong style={{ fontSize: 13 }}>{c.enrollmentCount}</Text></td>
+                                    <td style={{ padding: "10px 16px", textAlign: "right" }}>
+                                        <Text style={{ fontSize: 13, color: c.rating > 0 ? "#faad14" : "#ccc" }}>
+                                            {c.rating > 0 ? `★ ${Number(c.rating).toFixed(1)}` : "—"}
                                         </Text>
                                     </td>
                                 </tr>
@@ -322,93 +186,49 @@ const CoursesTab = () => {
             const p = new URLSearchParams();
             if (search) p.append("searchTerm", search);
             p.append("includeDeleted", "true");
-            if (statusFilter === "deleted") {
-                p.append("onlyDeleted", "true");
-            } else if (statusFilter) {
-                p.append("status", statusFilter);
-            }
+            if (statusFilter === "deleted") p.append("onlyDeleted", "true");
+            else if (statusFilter) p.append("status", statusFilter);
             p.append("page", String(page));
             p.append("pageSize", String(pageSize));
-            p.append("pageSize", String(pageSize));
             const res = await fetch(`${API_URL}/Courses?${p}`, { headers: authStorage.getAuthHeaders() });
-            if (res.ok) {
-                const result = await res.json();
-                setCourses(result.items ?? []);
-                setTotal(result.totalCount ?? 0);
-            }
+            if (res.ok) { const r = await res.json(); setCourses(r.items ?? []); setTotal(r.totalCount ?? 0); }
             setLoading(false);
         };
         void load();
     }, [search, statusFilter, page]);
 
-    const handleOpenDelete = (course: CourseDto, e: React.MouseEvent) => {
-        e.stopPropagation();
-        setDeletingCourse(course);
-        setDeleteReason("");
-        setDeleteModalOpen(true);
-    };
-
     const handleDelete = async () => {
         if (!deletingCourse) return;
         setActionLoading(deletingCourse.id);
         const ok = await courseApi.deleteCourse(deletingCourse.id, deleteReason || undefined);
-        if (ok) {
-            message.success(`Курс «${deletingCourse.title}» удалён`);
-            setCourses((p) => p.map((c) => c.id === deletingCourse.id ? { ...c, isDeleted: true } : c));
-            setDeleteModalOpen(false);
-        } else {
-            message.error("Ошибка при удалении");
-        }
+        if (ok) { message.success(`Курс «${deletingCourse.title}» удалён`); setCourses(p => p.map(c => c.id === deletingCourse.id ? { ...c, isDeleted: true } : c)); setDeleteModalOpen(false); }
+        else message.error("Ошибка при удалении");
         setActionLoading(null);
     };
-
     const handleRestore = async (course: CourseDto, e: React.MouseEvent) => {
         e.stopPropagation();
         setActionLoading(course.id);
         const ok = await courseApi.restoreCourse(course.id);
-        if (ok) {
-            message.success(`Курс «${course.title}» восстановлен`);
-            setCourses((p) => p.map((c) => c.id === course.id ? { ...c, isDeleted: false } : c));
-        } else {
-            message.error("Ошибка при восстановлении");
-        }
+        if (ok) { message.success(`Курс «${course.title}» восстановлен`); setCourses(p => p.map(c => c.id === course.id ? { ...c, isDeleted: false } : c)); }
+        else message.error("Ошибка при восстановлении");
         setActionLoading(null);
     };
-
-    const handleOpenUnpublish = (course: CourseDto, e: React.MouseEvent) => {
-        e.stopPropagation();
-        setUnpublishingCourse(course);
-        setUnpublishReason("");
-        setUnpublishModalOpen(true);
-    };
-
     const handleUnpublish = async () => {
         if (!unpublishingCourse) return;
         setActionLoading(unpublishingCourse.id);
         const ok = await adminApi.unpublishCourse(unpublishingCourse.id, unpublishReason || undefined);
-        if (ok) {
-            message.success(`Курс «${unpublishingCourse.title}» снят с публикации`);
-            setCourses((p) => p.map((c) => c.id === unpublishingCourse.id ? { ...c, status: "Draft" as CourseStatus } : c));
-            setUnpublishModalOpen(false);
-        } else {
-            message.error("Ошибка при снятии с публикации");
-        }
+        if (ok) { message.success(`Курс «${unpublishingCourse.title}» снят с публикации`); setCourses(p => p.map(c => c.id === unpublishingCourse.id ? { ...c, status: "Draft" as CourseStatus } : c)); setUnpublishModalOpen(false); }
+        else message.error("Ошибка при снятии с публикации");
         setActionLoading(null);
     };
-
     const handleForceRelease = async (course: CourseDto, e: React.MouseEvent) => {
         e.stopPropagation();
         setActionLoading(course.id);
         const ok = await adminApi.forceReleaseCourse(course.id);
-        if (ok) {
-            message.success(`Захват курса «${course.title}» снят`);
-        } else {
-            message.error("Ошибка при снятии захвата");
-        }
+        if (ok) message.success(`Захват курса «${course.title}» снят`);
+        else message.error("Ошибка при снятии захвата");
         setActionLoading(null);
     };
-
-    const handleSearch = () => { setSearch(searchInput.trim()); setPage(1); };
 
     return (
         <div>
@@ -419,13 +239,13 @@ const CoursesTab = () => {
                         enterButton={<Button icon={<SearchOutlined />}>Найти</Button>}
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
-                        onSearch={handleSearch}
+                        onSearch={() => { setSearch(searchInput.trim()); setPage(1); }}
                         allowClear
                     />
                 </Col>
                 <Col>
-                    <Select placeholder="Статус" allowClear style={{ width: 180 }}
-                            value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }}>
+                    <Select placeholder="Статус" allowClear style={{ width: 180 }} value={statusFilter}
+                            onChange={(v) => { setStatusFilter(v); setPage(1); }}>
                         <Select.Option value="Draft">Черновик</Select.Option>
                         <Select.Option value="UnderReview">На проверке</Select.Option>
                         <Select.Option value="RejectedByModerator">Отклонён</Select.Option>
@@ -446,78 +266,48 @@ const CoursesTab = () => {
                             <Col key={course.id} xs={24} sm={12} md={8} lg={6}>
                                 <div
                                     onClick={() => navigate(`/course/${course.id}`)}
-                                    style={{
-                                        background: "#fff", borderRadius: 10,
-                                        border: "1px solid #f0f0f0",
-                                        cursor: "pointer", transition: "box-shadow 0.2s",
-                                        display: "flex", flexDirection: "column", height: "100%",
-                                        overflow: "hidden",
-                                    }}
+                                    style={{ background: "#fff", borderRadius: 10, border: "1px solid #f0f0f0", cursor: "pointer", transition: "box-shadow 0.2s", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}
                                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.1)"; }}
                                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
                                 >
-                                    {/* Индикатор удалённого */}
                                     {course.isDeleted && (
-                                        <div style={{ background: "#ff4d4f", color: "#fff", fontSize: 11, textAlign: "center", padding: "2px 0" }}>
-                                            Удалён
-                                        </div>
+                                        <div style={{ background: "#ff4d4f", color: "#fff", fontSize: 11, textAlign: "center", padding: "2px 0" }}>Удалён</div>
                                     )}
-                                    {/* Обложка */}
                                     <div style={{ height: 180, overflow: "hidden", flexShrink: 0 }}>
                                         {course.coverImageUrl
-                                            ? <img src={getImageUrl(course.coverImageUrl)} alt={course.title}
-                                                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                                            ? <img src={getImageUrl(course.coverImageUrl)} alt={course.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                                             : <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(0,100,0,0.15) 0%, rgba(0,100,0,0.35) 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, color: "rgba(0,100,0,0.4)" }}>🎓</div>
                                         }
                                     </div>
-                                    {/* Контент */}
                                     <div style={{ padding: 14, display: "flex", flexDirection: "column", flex: 1 }}>
-                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                                            <Tag color={statusColor[course.status]} style={{ fontSize: 11 }}>
-                                                {statusLabel[course.status] ?? course.status}
-                                            </Tag>
-                                            <Text type="secondary" style={{ fontSize: 11 }}>
-                                                {course.price === 0 ? "Бесплатно" : `${course.price} ₽`}
-                                            </Text>
+                                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                                            <Tag color={statusColor[course.status]} style={{ fontSize: 11 }}>{statusLabel[course.status] ?? course.status}</Tag>
+                                            <Text type="secondary" style={{ fontSize: 11 }}>{course.price === 0 ? "Бесплатно" : `${course.price} ₽`}</Text>
                                         </div>
-                                        <Text strong style={{ fontSize: 13, display: "block", marginBottom: 4, lineHeight: 1.4 }}>
-                                            {course.title}
-                                        </Text>
-                                        <Text type="secondary" style={{ fontSize: 12, marginBottom: 8, flex: 1 }}>
-                                            {course.author?.name ?? "—"}
-                                        </Text>
+                                        <Text strong style={{ fontSize: 13, display: "block", marginBottom: 4, lineHeight: 1.4 }}>{course.title}</Text>
+                                        <Text type="secondary" style={{ fontSize: 12, marginBottom: 8, flex: 1 }}>{course.author?.name ?? "—"}</Text>
                                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
                                             <Text type="secondary" style={{ fontSize: 11 }}>{course.enrollmentCount} студентов</Text>
-                                            {course.rating > 0 && (
-                                                <Text style={{ fontSize: 11, color: "#faad14" }}>★ {Number(course.rating).toFixed(1)}</Text>
-                                            )}
+                                            {course.rating > 0 && <Text style={{ fontSize: 11, color: "#faad14" }}>★ {Number(course.rating).toFixed(1)}</Text>}
                                         </div>
                                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }} onClick={(e) => e.stopPropagation()}>
-                                            <Button size="small" icon={<EyeOutlined />}
-                                                    onClick={(e) => { e.stopPropagation(); navigate(`/course/${course.id}`); }}>
-                                                Открыть
-                                            </Button>
+                                            <Button size="small" icon={<EyeOutlined />} onClick={(e) => { e.stopPropagation(); navigate(`/course/${course.id}`); }}>Открыть</Button>
                                             {course.status === "UnderReview" && course.reviewerId && (
-                                                <Popconfirm title="Снять захват?" description="Курс будет освобождён от модератора"
-                                                            onConfirm={(e) => handleForceRelease(course, e as React.MouseEvent)}
-                                                            okText="Снять" cancelText="Отмена">
+                                                <Popconfirm title="Снять захват?" onConfirm={(e) => handleForceRelease(course, e as React.MouseEvent)} okText="Снять" cancelText="Отмена">
                                                     <Button size="small" icon={<UnlockOutlined />} loading={actionLoading === course.id}>Снять захват</Button>
                                                 </Popconfirm>
                                             )}
                                             {course.status === "Published" && !course.isDeleted && (
                                                 <Button size="small" icon={<StopOutlined />} loading={actionLoading === course.id}
-                                                        onClick={(e) => handleOpenUnpublish(course, e)}>
+                                                        onClick={(e) => { e.stopPropagation(); setUnpublishingCourse(course); setUnpublishReason(""); setUnpublishModalOpen(true); }}>
                                                     Снять
                                                 </Button>
                                             )}
                                             {course.isDeleted ? (
-                                                <Button size="small" icon={<ReloadOutlined />} loading={actionLoading === course.id}
-                                                        onClick={(e) => handleRestore(course, e)}>
-                                                    Восстановить
-                                                </Button>
+                                                <Button size="small" icon={<ReloadOutlined />} loading={actionLoading === course.id} onClick={(e) => handleRestore(course, e)}>Восстановить</Button>
                                             ) : (
                                                 <Button size="small" danger icon={<DeleteOutlined />} loading={actionLoading === course.id}
-                                                        onClick={(e) => handleOpenDelete(course, e)} />
+                                                        onClick={(e) => { e.stopPropagation(); setDeletingCourse(course); setDeleteReason(""); setDeleteModalOpen(true); }} />
                                             )}
                                         </div>
                                     </div>
@@ -527,9 +317,7 @@ const CoursesTab = () => {
                     </Row>
                     {total > pageSize && (
                         <div style={{ textAlign: "center", marginTop: 32 }}>
-                            <Pagination current={page} pageSize={pageSize} total={total}
-                                        onChange={setPage} showSizeChanger={false}
-                                        showTotal={(t) => `Всего: ${t}`} />
+                            <Pagination current={page} pageSize={pageSize} total={total} onChange={setPage} showSizeChanger={false} showTotal={(t) => `Всего: ${t}`} />
                         </div>
                     )}
                 </>
@@ -537,25 +325,18 @@ const CoursesTab = () => {
 
             <Modal open={deleteModalOpen} title={`Удалить курс «${deletingCourse?.title}»?`}
                    onCancel={() => setDeleteModalOpen(false)} onOk={handleDelete}
-                   okText="Удалить" cancelText="Отмена"
-                   okButtonProps={{ danger: true, loading: actionLoading === deletingCourse?.id }}
-                   centered>
+                   okText="Удалить" cancelText="Отмена" okButtonProps={{ danger: true, loading: actionLoading === deletingCourse?.id }} centered>
                 <div style={{ marginTop: 8 }}>
                     <Text style={{ display: "block", marginBottom: 8 }}>Причина удаления (необязательно):</Text>
-                    <Input.TextArea rows={3} value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)}
-                                    placeholder="Нарушение правил, некачественный контент..." />
+                    <Input.TextArea rows={3} value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)} placeholder="Нарушение правил..." />
                 </div>
             </Modal>
-
             <Modal open={unpublishModalOpen} title={`Снять с публикации «${unpublishingCourse?.title}»?`}
                    onCancel={() => setUnpublishModalOpen(false)} onOk={handleUnpublish}
-                   okText="Снять" cancelText="Отмена"
-                   okButtonProps={{ danger: true, loading: actionLoading === unpublishingCourse?.id }}
-                   centered>
+                   okText="Снять" cancelText="Отмена" okButtonProps={{ danger: true, loading: actionLoading === unpublishingCourse?.id }} centered>
                 <div style={{ marginTop: 8 }}>
-                    <Text style={{ display: "block", marginBottom: 8 }}>Причина снятия с публикации (необязательно):</Text>
-                    <Input.TextArea rows={3} value={unpublishReason} onChange={(e) => setUnpublishReason(e.target.value)}
-                                    placeholder="Нарушение правил, жалобы пользователей..." />
+                    <Text style={{ display: "block", marginBottom: 8 }}>Причина (необязательно):</Text>
+                    <Input.TextArea rows={3} value={unpublishReason} onChange={(e) => setUnpublishReason(e.target.value)} placeholder="Нарушение правил..." />
                 </div>
             </Modal>
         </div>
@@ -568,12 +349,7 @@ const ModeratorsTab = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const load = async () => {
-            setLoading(true);
-            const data = await adminApi.getModeratorsStats();
-            setModerators(data);
-            setLoading(false);
-        };
+        const load = async () => { setLoading(true); setModerators(await adminApi.getModeratorsStats()); setLoading(false); };
         void load();
     }, []);
 
@@ -618,7 +394,6 @@ const UsersTab = () => {
     const [roleFilter, setRoleFilter] = useState<string | undefined>(undefined);
     const [includeDeleted, setIncludeDeleted] = useState(false);
     const pageSize = 20;
-
     const [roleModalOpen, setRoleModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<UserDto | null>(null);
     const [newRole, setNewRole] = useState<string>("");
@@ -640,53 +415,41 @@ const UsersTab = () => {
         void load();
     }, [search, roleFilter, includeDeleted, page]);
 
-    const handleSearch = () => { setSearch(searchInput.trim()); setPage(1); };
-
     const handleSetRole = async () => {
         if (!editingUser || !newRole) return;
         setActionLoading(editingUser.id);
         const ok = await usersApi.setRole(editingUser.id, newRole);
-        if (ok) {
-            message.success("Роль обновлена");
-            setUsers((p) => p.map((u) => u.id === editingUser.id ? { ...u, role: newRole } : u));
-            setRoleModalOpen(false);
-        } else { message.error("Ошибка при смене роли"); }
+        if (ok) { message.success("Роль обновлена"); setUsers(p => p.map(u => u.id === editingUser.id ? { ...u, role: newRole } : u)); setRoleModalOpen(false); }
+        else message.error("Ошибка при смене роли");
         setActionLoading(null);
     };
-
     const handleDelete = async (user: UserDto) => {
         setActionLoading(user.id);
         const ok = await usersApi.deleteUser(user.id);
-        if (ok) { message.success("Пользователь удалён"); setUsers((p) => p.map((u) => u.id === user.id ? { ...u, isDeleted: true } : u)); }
-        else { message.error("Ошибка при удалении"); }
+        if (ok) { message.success("Пользователь удалён"); setUsers(p => p.map(u => u.id === user.id ? { ...u, isDeleted: true } : u)); }
+        else message.error("Ошибка при удалении");
         setActionLoading(null);
     };
-
     const handleRestore = async (user: UserDto) => {
         setActionLoading(user.id);
         const ok = await usersApi.restoreUser(user.id);
-        if (ok) { message.success("Пользователь восстановлен"); setUsers((p) => p.map((u) => u.id === user.id ? { ...u, isDeleted: false } : u)); }
-        else { message.error("Ошибка при восстановлении"); }
+        if (ok) { message.success("Пользователь восстановлен"); setUsers(p => p.map(u => u.id === user.id ? { ...u, isDeleted: false } : u)); }
+        else message.error("Ошибка при восстановлении");
         setActionLoading(null);
     };
-
     const handleBlock = async () => {
         if (!blockingUser) return;
         setActionLoading(blockingUser.id);
         const ok = await adminApi.blockUser(blockingUser.id, blockReason || undefined);
-        if (ok) {
-            message.success("Пользователь заблокирован");
-            setUsers((p) => p.map((u) => u.id === blockingUser.id ? { ...u, isBlocked: true, blockReason } : u));
-            setBlockModalOpen(false);
-        } else { message.error("Ошибка при блокировке"); }
+        if (ok) { message.success("Пользователь заблокирован"); setUsers(p => p.map(u => u.id === blockingUser.id ? { ...u, isBlocked: true, blockReason } : u)); setBlockModalOpen(false); }
+        else message.error("Ошибка при блокировке");
         setActionLoading(null);
     };
-
     const handleUnblock = async (user: UserDto) => {
         setActionLoading(user.id);
         const ok = await adminApi.unblockUser(user.id);
-        if (ok) { message.success("Пользователь разблокирован"); setUsers((p) => p.map((u) => u.id === user.id ? { ...u, isBlocked: false, blockReason: null } : u)); }
-        else { message.error("Ошибка при разблокировке"); }
+        if (ok) { message.success("Пользователь разблокирован"); setUsers(p => p.map(u => u.id === user.id ? { ...u, isBlocked: false, blockReason: null } : u)); }
+        else message.error("Ошибка при разблокировке");
         setActionLoading(null);
     };
 
@@ -694,7 +457,7 @@ const UsersTab = () => {
         { title: "Пользователь", key: "user", render: (_: unknown, u: UserDto) => (<div><Text strong style={{ display: "block" }}>{u.name}</Text><Text type="secondary" style={{ fontSize: 12 }}>{u.email}</Text></div>) },
         { title: "Роль", key: "role", render: (_: unknown, u: UserDto) => <Tag color={roleColor[u.role] ?? "default"}>{roleLabel[u.role] ?? u.role}</Tag> },
         { title: "Статус", key: "status", render: (_: unknown, u: UserDto) => (<Space size={4} direction="vertical">{u.isDeleted ? <Tag color="error">Удалён</Tag> : <Tag color="success">Активен</Tag>}{u.isBlocked && <Tag color="warning">Заблокирован</Tag>}</Space>) },
-        { title: "Регистрация", key: "createdAt", render: (_: unknown, u: UserDto) => (<Text type="secondary" style={{ fontSize: 12 }}>{new Date(u.createdAt).toLocaleDateString("ru-RU")}</Text>) },
+        { title: "Регистрация", key: "createdAt", render: (_: unknown, u: UserDto) => <Text type="secondary" style={{ fontSize: 12 }}>{new Date(u.createdAt).toLocaleDateString("ru-RU")}</Text> },
         {
             title: "Действия", key: "actions",
             render: (_: unknown, u: UserDto) => (
@@ -725,27 +488,49 @@ const UsersTab = () => {
         <div>
             <Row gutter={8} style={{ marginBottom: 16 }} align="middle">
                 <Col flex="auto">
-                    <Input.Search
-                        placeholder="Поиск по имени или email..."
-                        enterButton={<Button icon={<SearchOutlined />}>Найти</Button>}
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        onSearch={handleSearch}
-                        allowClear
-                    />
+                    <Input.Search placeholder="Поиск по имени или email..."
+                                  enterButton={<Button icon={<SearchOutlined />}>Найти</Button>}
+                                  value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
+                                  onSearch={() => { setSearch(searchInput.trim()); setPage(1); }} allowClear />
                 </Col>
-                <Col><Select placeholder="Роль" allowClear style={{ width: 160 }} value={roleFilter} onChange={(v) => { setRoleFilter(v); setPage(1); }}><Select.Option value="Student">Студент</Select.Option><Select.Option value="Teacher">Преподаватель</Select.Option><Select.Option value="Moderator">Модератор</Select.Option><Select.Option value="Admin">Администратор</Select.Option></Select></Col>
-                <Col style={{ display: "flex", alignItems: "center", gap: 8 }}><Switch checked={includeDeleted} onChange={(v) => { setIncludeDeleted(v); setPage(1); }} size="small" /><Text style={{ fontSize: 13 }}>Показать удалённых</Text></Col>
+                <Col>
+                    <Select placeholder="Роль" allowClear style={{ width: 160 }} value={roleFilter} onChange={(v) => { setRoleFilter(v); setPage(1); }}>
+                        <Select.Option value="Student">Студент</Select.Option>
+                        <Select.Option value="Teacher">Преподаватель</Select.Option>
+                        <Select.Option value="Moderator">Модератор</Select.Option>
+                        <Select.Option value="Admin">Администратор</Select.Option>
+                    </Select>
+                </Col>
+                <Col style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Switch checked={includeDeleted} onChange={(v) => { setIncludeDeleted(v); setPage(1); }} size="small" />
+                    <Text style={{ fontSize: 13 }}>Показать удалённых</Text>
+                </Col>
             </Row>
-            <Table dataSource={users} columns={columns} rowKey="id" loading={loading} pagination={false} rowClassName={(u) => u.isDeleted ? "deleted-row" : ""} style={{ background: "#fff", borderRadius: 8 }} locale={{ emptyText: <Empty description="Пользователи не найдены" /> }} />
-            {total > pageSize && (<div style={{ textAlign: "center", marginTop: 16 }}><Pagination current={page} pageSize={pageSize} total={total} onChange={setPage} showSizeChanger={false} showTotal={(t) => `Всего: ${t}`} /></div>)}
-            <Modal open={roleModalOpen} title={`Сменить роль: ${editingUser?.name}`} onCancel={() => setRoleModalOpen(false)} onOk={handleSetRole} okText="Сохранить" cancelText="Отмена" okButtonProps={{ loading: actionLoading === editingUser?.id, style: { background: "rgba(0,100,0,0.8)" } }} centered>
+            <Table dataSource={users} columns={columns} rowKey="id" loading={loading} pagination={false}
+                   rowClassName={(u) => u.isDeleted ? "deleted-row" : ""}
+                   style={{ background: "#fff", borderRadius: 8 }}
+                   locale={{ emptyText: <Empty description="Пользователи не найдены" /> }} />
+            {total > pageSize && (
+                <div style={{ textAlign: "center", marginTop: 16 }}>
+                    <Pagination current={page} pageSize={pageSize} total={total} onChange={setPage} showSizeChanger={false} showTotal={(t) => `Всего: ${t}`} />
+                </div>
+            )}
+            <Modal open={roleModalOpen} title={`Сменить роль: ${editingUser?.name}`}
+                   onCancel={() => setRoleModalOpen(false)} onOk={handleSetRole} okText="Сохранить" cancelText="Отмена"
+                   okButtonProps={{ loading: actionLoading === editingUser?.id, style: { background: "rgba(0,100,0,0.8)" } }} centered>
                 <div style={{ marginTop: 8 }}>
                     <Text style={{ display: "block", marginBottom: 8 }}>Текущая роль: <Tag color={roleColor[editingUser?.role ?? ""]}>{roleLabel[editingUser?.role ?? ""] ?? editingUser?.role}</Tag></Text>
-                    <Select value={newRole} onChange={setNewRole} style={{ width: "100%" }} size="large"><Select.Option value="Student">Студент</Select.Option><Select.Option value="Teacher">Преподаватель</Select.Option><Select.Option value="Moderator">Модератор</Select.Option><Select.Option value="Admin">Администратор</Select.Option></Select>
+                    <Select value={newRole} onChange={setNewRole} style={{ width: "100%" }} size="large">
+                        <Select.Option value="Student">Студент</Select.Option>
+                        <Select.Option value="Teacher">Преподаватель</Select.Option>
+                        <Select.Option value="Moderator">Модератор</Select.Option>
+                        <Select.Option value="Admin">Администратор</Select.Option>
+                    </Select>
                 </div>
             </Modal>
-            <Modal open={blockModalOpen} title={`Заблокировать: ${blockingUser?.name}`} onCancel={() => setBlockModalOpen(false)} onOk={handleBlock} okText="Заблокировать" cancelText="Отмена" okButtonProps={{ danger: true, loading: actionLoading === blockingUser?.id }} centered>
+            <Modal open={blockModalOpen} title={`Заблокировать: ${blockingUser?.name}`}
+                   onCancel={() => setBlockModalOpen(false)} onOk={handleBlock} okText="Заблокировать" cancelText="Отмена"
+                   okButtonProps={{ danger: true, loading: actionLoading === blockingUser?.id }} centered>
                 <div style={{ marginTop: 8 }}>
                     <Text style={{ display: "block", marginBottom: 8 }}>Причина блокировки (необязательно):</Text>
                     <Input.TextArea rows={3} value={blockReason} onChange={(e) => setBlockReason(e.target.value)} placeholder="Нарушение правил, спам и т.д." />
@@ -766,32 +551,22 @@ const CategoriesTab = () => {
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
     useEffect(() => {
-        const load = async () => {
-            setLoading(true);
-            const data = await categoriesApi.getAll();
-            setCategories(data);
-            setLoading(false);
-        };
+        const load = async () => { setLoading(true); setCategories(await categoriesApi.getAll()); setLoading(false); };
         void load();
     }, []);
-
-    const openCreate = () => { setEditing(null); form.resetFields(); setModalOpen(true); };
-    const openEdit = (cat: CategoryDto) => { setEditing(cat); form.setFieldsValue({ name: cat.name }); setModalOpen(true); };
 
     const handleSave = async (values: { name: string }) => {
         setSaving(true);
         if (editing) {
             const ok = await categoriesApi.update(editing.id, values.name);
-            if (ok) { setCategories((p) => p.map((c) => c.id === editing.id ? { ...c, name: values.name } : c)); message.success("Категория обновлена"); setModalOpen(false); }
-            else { message.error("Ошибка при обновлении категории"); }
+            if (ok) { setCategories(p => p.map(c => c.id === editing.id ? { ...c, name: values.name } : c)); message.success("Категория обновлена"); setModalOpen(false); }
+            else message.error("Ошибка при обновлении");
         } else {
-            const { data: created, error } = await categoriesApi.create(values.name);
-            if (created) { setCategories((p) => [...p, created]); message.success("Категория создана"); setModalOpen(false); }
+            const { data, error } = await categoriesApi.create(values.name);
+            if (data) { setCategories(p => [...p, data]); message.success("Категория создана"); setModalOpen(false); }
             else {
-                const duplicate = categories.some((c) => c.name.toLowerCase() === values.name.trim().toLowerCase());
-                if (duplicate) { message.error(`Категория «${values.name}» уже существует`); }
-                else if (error) { message.error(error); }
-                else { message.error("Не удалось создать категорию. Попробуйте ещё раз"); }
+                const dup = categories.some(c => c.name.toLowerCase() === values.name.trim().toLowerCase());
+                message.error(dup ? `Категория «${values.name}» уже существует` : (error ?? "Не удалось создать категорию"));
             }
         }
         setSaving(false);
@@ -800,8 +575,8 @@ const CategoriesTab = () => {
     const handleDelete = async (id: string) => {
         setDeletingId(id);
         const ok = await categoriesApi.delete(id);
-        if (ok) { setCategories((p) => p.filter((c) => c.id !== id)); message.success("Категория удалена"); }
-        else { message.error("Ошибка при удалении категории"); }
+        if (ok) { setCategories(p => p.filter(c => c.id !== id)); message.success("Категория удалена"); }
+        else message.error("Ошибка при удалении");
         setDeletingId(null);
     };
 
@@ -810,7 +585,10 @@ const CategoriesTab = () => {
     return (
         <div>
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-                <Button type="primary" icon={<PlusOutlined />} style={{ background: "rgba(0,100,0,0.8)" }} onClick={openCreate}>Добавить категорию</Button>
+                <Button type="primary" icon={<PlusOutlined />} style={{ background: "rgba(0,100,0,0.8)" }}
+                        onClick={() => { setEditing(null); form.resetFields(); setModalOpen(true); }}>
+                    Добавить категорию
+                </Button>
             </div>
             {categories.length === 0 ? <Empty description="Категорий пока нет" /> : (
                 <Row gutter={[16, 16]}>
@@ -819,8 +597,8 @@ const CategoriesTab = () => {
                             <div style={{ background: "#fff", borderRadius: 8, border: "1px solid #f0f0f0", padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <Text strong>{cat.name}</Text>
                                 <Space>
-                                    <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(cat)} />
-                                    <Popconfirm title="Удалить категорию?" description="Курсы в этой категории останутся без категории" onConfirm={() => handleDelete(cat.id)} okText="Удалить" cancelText="Отмена" okButtonProps={{ danger: true }}>
+                                    <Button size="small" icon={<EditOutlined />} onClick={() => { setEditing(cat); form.setFieldsValue({ name: cat.name }); setModalOpen(true); }} />
+                                    <Popconfirm title="Удалить категорию?" description="Курсы останутся без категории" onConfirm={() => handleDelete(cat.id)} okText="Удалить" cancelText="Отмена" okButtonProps={{ danger: true }}>
                                         <Button size="small" danger icon={<DeleteOutlined />} loading={deletingId === cat.id} />
                                     </Popconfirm>
                                 </Space>
@@ -858,11 +636,12 @@ const AdminPage = () => {
     if (userData.role !== "Admin") return null;
 
     const tabs: { key: AdminTab; label: string; icon: React.ReactNode }[] = [
-        { key: "stats", label: "Статистика", icon: <BarChartOutlined /> },
-        { key: "users", label: "Пользователи", icon: <UserOutlined /> },
-        { key: "courses", label: "Курсы", icon: <BookOutlined /> },
-        { key: "moderators", label: "Модераторы", icon: <TeamOutlined /> },
-        { key: "categories", label: "Категории", icon: <EditOutlined /> },
+        { key: "stats",        label: "Статистика",   icon: <BarChartOutlined /> },
+        { key: "users",        label: "Пользователи", icon: <UserOutlined /> },
+        { key: "courses",      label: "Курсы",        icon: <BookOutlined /> },
+        { key: "moderators",   label: "Модераторы",   icon: <TeamOutlined /> },
+        { key: "categories",   label: "Категории",    icon: <EditOutlined /> },
+        { key: "transactions", label: "Транзакции",   icon: <DollarOutlined /> },
     ];
 
     return (
@@ -884,11 +663,12 @@ const AdminPage = () => {
                         ))}
                     </div>
                     <Divider style={{ margin: "0 0 24px" }} />
-                    {activeTab === "stats" && <StatsTab />}
-                    {activeTab === "users" && <UsersTab />}
-                    {activeTab === "courses" && <CoursesTab />}
-                    {activeTab === "moderators" && <ModeratorsTab />}
-                    {activeTab === "categories" && <CategoriesTab />}
+                    {activeTab === "stats"        && <StatsTab />}
+                    {activeTab === "users"        && <UsersTab />}
+                    {activeTab === "courses"      && <CoursesTab />}
+                    {activeTab === "moderators"   && <ModeratorsTab />}
+                    {activeTab === "categories"   && <CategoriesTab />}
+                    {activeTab === "transactions" && <AdminTransactionsTab />}
                 </Content>
             </Layout>
             <style>{`.deleted-row td { opacity: 0.5; }`}</style>

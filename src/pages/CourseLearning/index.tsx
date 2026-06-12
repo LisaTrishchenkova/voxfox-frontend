@@ -44,6 +44,9 @@ import Footer from "../../components/Footer.tsx";
 import leoProfanity from "leo-profanity";
 import CertificateView from "../../components/CertificateView.tsx";
 import remarkGfm from "remark-gfm";
+import AchievementPopup from "../../components/AchievementPopup.tsx";
+import type { NewAchievement } from "../../components/AchievementPopup.tsx";
+import { achievementApi } from "../../api/achievementApi.ts";
 
 leoProfanity.loadDictionary("ru");
 
@@ -51,12 +54,7 @@ const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
 const TaskCard = ({
-                    task,
-                    answer,
-                    submissions,
-                    submitting,
-                    onAnswerChange,
-                    onSubmit,
+                    task, answer, submissions, submitting, onAnswerChange, onSubmit,
                   }: {
   task: TaskStudentDto;
   answer?: SubmitTaskRequest;
@@ -88,11 +86,10 @@ const TaskCard = ({
   return (
       <div style={{ background: "#fff", borderRadius: 12, padding: 24, marginTop: 16, border: "1px solid #f0f0f0" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          {isCorrect ? (
-              <CheckCircleFilled style={{ color: "#52c41a", fontSize: 16 }} />
-          ) : (
-              <CheckCircleOutlined style={{ color: "#d9d9d9", fontSize: 16 }} />
-          )}
+          {isCorrect
+              ? <CheckCircleFilled style={{ color: "#52c41a", fontSize: 16 }} />
+              : <CheckCircleOutlined style={{ color: "#d9d9d9", fontSize: 16 }} />
+          }
           <Text type="secondary" style={{ fontSize: 13 }}>
             {task.isRequired ? "Обязательное" : "Необязательное"} · {task.points} очков
           </Text>
@@ -290,6 +287,13 @@ const CourseLearningPage = () => {
   const [certModalOpen, setCertModalOpen] = useState(false);
   const [downloadingCert, setDownloadingCert] = useState(false);
 
+  // ачивки
+  const [newAchievements, setNewAchievements] = useState<NewAchievement[]>([]);
+  // флаг — после закрытия попапа ачивок нужно перейти на страницу курса
+  const [pendingFinishNavigate, setPendingFinishNavigate] = useState(false);
+  // коды ачивок уже показанных — чтобы не дублировать
+  const shownAchievementsRef = useRef<Set<string>>(new Set());
+
   const scrolledRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -430,6 +434,15 @@ const CourseLearningPage = () => {
         setCompletedLessons(newCompleted);
         setProgressPercent(data.progressPercent);
         localStorage.setItem(COMPLETED_KEY, JSON.stringify([...newCompleted]));
+
+        // показываем попап если получены новые ачивки
+        if (data.newAchievements && data.newAchievements.length > 0) {
+          const fresh = (data.newAchievements as NewAchievement[]).filter(
+              (a) => !shownAchievementsRef.current.has(a.code)
+          );
+          fresh.forEach((a) => shownAchievementsRef.current.add(a.code));
+          if (fresh.length > 0) setNewAchievements(fresh);
+        }
       }
     } catch (e) { console.error(e); }
   };
@@ -516,18 +529,38 @@ const CourseLearningPage = () => {
     setNavigating(true);
     await completeCurrentLesson();
     localStorage.removeItem(LAST_LESSON_KEY);
+    setNavigating(false);
 
-    // проверяем получил ли пользователь сертификат
+    // проверяем сертификат — показываем модалку если есть
     try {
       const certs = await certificateApi.getMyCertificates();
       const cert = certs.find((c) => c.courseId === id);
       if (cert) {
         setCertificate(cert);
         setCertModalOpen(true);
-        setNavigating(false);
-        return; // остаёмся — показываем модалку
+        return; // navigate будет при закрытии модалки
       }
     } catch { /* если не удалось — просто переходим */ }
+
+    // подгружаем все ачивки и показываем те которые ещё не показывали
+    try {
+      const allAchievements = await achievementApi.getMyAchievements();
+      const freshEarned = allAchievements
+          .filter((a) => a.isEarned && !shownAchievementsRef.current.has(a.code))
+          .map((a) => ({
+            code: a.code,
+            title: a.title,
+            description: a.description,
+            icon: a.icon,
+            earnedAt: a.earnedAt ?? new Date().toISOString(),
+          }));
+      freshEarned.forEach((a) => shownAchievementsRef.current.add(a.code));
+      if (freshEarned.length > 0) {
+        setNewAchievements(freshEarned);
+        setPendingFinishNavigate(true);
+        return;
+      }
+    } catch { /* игнорируем */ }
 
     navigate(`/course/${id}`);
   };
@@ -547,11 +580,10 @@ const CourseLearningPage = () => {
       key: lesson.id,
       label: (
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {completedLessons.has(lesson.id) ? (
-                <CheckCircleFilled style={{ color: "#52c41a", fontSize: 13, flexShrink: 0 }} />
-            ) : (
-                <CheckCircleOutlined style={{ color: "#d9d9d9", fontSize: 13, flexShrink: 0 }} />
-            )}
+            {completedLessons.has(lesson.id)
+                ? <CheckCircleFilled style={{ color: "#52c41a", fontSize: 13, flexShrink: 0 }} />
+                : <CheckCircleOutlined style={{ color: "#d9d9d9", fontSize: 13, flexShrink: 0 }} />
+            }
             <span>{lesson.title}</span>
           </div>
       ),
@@ -704,22 +736,17 @@ const CourseLearningPage = () => {
         </Layout>
         <Footer />
 
+        {/* Модалка сертификата */}
         {certificate && (
             <Modal
                 open={certModalOpen}
                 onCancel={() => { setCertModalOpen(false); navigate(`/course/${id}`); }}
-                footer={null}
-                width={620}
-                centered
+                footer={null} width={620} centered
                 styles={{ body: { padding: 24 } }}
             >
               <div style={{ textAlign: "center", marginBottom: 20 }}>
-                <Title level={3} style={{ color: "#16a34a", margin: 0 }}>
-                  Поздравляем!
-                </Title>
-                <Text type="secondary" style={{ fontSize: 14 }}>
-                  Вы получили сертификат о прохождении курса
-                </Text>
+                <Title level={3} style={{ color: "#16a34a", margin: 0 }}>Поздравляем!</Title>
+                <Text type="secondary" style={{ fontSize: 14 }}>Вы получили сертификат о прохождении курса</Text>
               </div>
               <CertificateView
                   certificate={certificate}
@@ -736,6 +763,21 @@ const CourseLearningPage = () => {
                   }
               />
             </Modal>
+        )}
+
+        {/* Попап достижений */}
+        {newAchievements.length > 0 && (
+            <AchievementPopup
+                key={newAchievements.map(a => a.code).join(",")}
+                achievements={newAchievements}
+                onClose={() => {
+                  setNewAchievements([]);
+                  if (pendingFinishNavigate) {
+                    setPendingFinishNavigate(false);
+                    navigate(`/course/${id}`);
+                  }
+                }}
+            />
         )}
       </>
   );

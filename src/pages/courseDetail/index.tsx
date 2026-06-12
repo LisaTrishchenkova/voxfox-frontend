@@ -1,4 +1,4 @@
-import {Button, Col, Collapse, Divider, Form, Input, Rate, Row, Skeleton, Tag, Typography, Avatar, message} from "antd";
+import {Button, Col, Collapse, Divider, Form, Input, Modal, Rate, Row, Skeleton, Tag, Typography, Avatar, message} from "antd";
 import {useEffect, useState} from "react";
 import {useNavigate, useParams} from "react-router-dom";
 import type {CourseDto, SectionDto, LessonDto} from "../../api/types/course";
@@ -8,10 +8,12 @@ import {
   ClockCircleOutlined,
   HeartFilled,
   HeartOutlined,
+  ShoppingCartOutlined,
   StarOutlined,
   TeamOutlined,
   TrophyOutlined,
   UserOutlined,
+  WalletOutlined,
 } from "@ant-design/icons";
 import Header from "../../components/Header";
 import ReactMarkdown from "react-markdown";
@@ -23,6 +25,7 @@ import {favoriteApi} from "../../api/favoriteApi.ts";
 import {reviewApi} from "../../api/reviewApi.ts";
 import type {ReviewDto} from "../../api/types/review.ts";
 import {useUserStore} from "../../stores/userStore.ts";
+import {balanceApi} from "../../api/balanceApi.ts";
 import leoProfanity from "leo-profanity";
 import { getImageUrl } from "../../utils/imageUtils";
 
@@ -58,11 +61,15 @@ const CourseDetailPage = () => {
   const [reviewForm] = Form.useForm();
   const [userReview, setUserReview] = useState<ReviewDto | null>(null);
 
+  // Баланс и покупка
+  const [balance, setBalance] = useState<number>(0);
+  const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
+
   const isAuth = authStorage.isAuthenticated();
   const currentUserId = authStorage.getUserData<string>();
-
-  // курс опубликован — только тогда можно записаться и добавить в избранное
   const isPublished = course?.status === "Published";
+  const isPaid = (course?.price ?? 0) > 0;
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -86,6 +93,11 @@ const CourseDetailPage = () => {
     const checkFavorite = async () => {
       const favs = await favoriteApi.getMyFavorites();
       setIsFavorite(favs.some(f => f.courseId === id));
+    };
+
+    const fetchBalance = async () => {
+      const data = await balanceApi.getBalance();
+      if (data) setBalance(data.balance);
     };
 
     const fetchSections = async () => {
@@ -130,14 +142,12 @@ const CourseDetailPage = () => {
     if (isAuth) {
       checkEnrollment();
       checkFavorite();
+      fetchBalance();
     }
   }, [id, isAuth]);
 
   const toggleFavorite = async () => {
-    if (!isAuth) {
-      navigate(`/login?redirect=/course/${id}`);
-      return;
-    }
+    if (!isAuth) { navigate(`/login?redirect=/course/${id}`); return; }
     setFavoriteLoading(true);
     if (isFavorite) {
       const ok = await favoriteApi.remove(id!);
@@ -149,28 +159,39 @@ const CourseDetailPage = () => {
     setFavoriteLoading(false);
   };
 
-  const handleSubmitReview = async (values: {rating: number; comment: string}) => {
-    if (!isAuth) {
-      navigate(`/login?redirect=/course/${id}`);
-      return;
-    }
+  // ─── Покупка курса ─────────────────────────────────────
+  const handlePurchase = async () => {
+    setPurchaseLoading(true);
+    const { data, error } = await balanceApi.purchaseCourse(id!);
+    if (data) {
+      // Бэк создал enrollment — получаем его
+      const enrollments = await enrollmentApi.getMyEnrollments();
+      const found = enrollments.find(e => e.courseId === id);
+      setEnrollment(found ?? null);
 
+      // Обновляем баланс
+      const balanceData = await balanceApi.getBalance();
+      if (balanceData) setBalance(balanceData.balance);
+
+      message.success("Курс куплен! Приятного обучения");
+      setPurchaseModalOpen(false);
+    } else {
+      message.error(error ?? "Ошибка при покупке курса");
+    }
+    setPurchaseLoading(false);
+  };
+
+  const handleSubmitReview = async (values: {rating: number; comment: string}) => {
+    if (!isAuth) { navigate(`/login?redirect=/course/${id}`); return; }
     const commentText = values.comment ?? "";
     if (leoProfanity.check(commentText)) {
       message.error("Комментарий содержит недопустимые слова. Пожалуйста, используйте корректные выражения.");
       return;
     }
-
     setSubmittingReview(true);
-    const result = await reviewApi.createReview(id!, {
-      rating: values.rating,
-      comment: commentText,
-    });
+    const result = await reviewApi.createReview(id!, { rating: values.rating, comment: commentText });
     if (result) {
-      const reviewWithName: ReviewDto = {
-        ...result,
-        userName: result.userName ?? userData?.name ?? "Аноним",
-      };
+      const reviewWithName: ReviewDto = { ...result, userName: result.userName ?? userData?.name ?? "Аноним" };
       setReviews(prev => [reviewWithName, ...prev]);
       setUserReview(reviewWithName);
       reviewForm.resetFields();
@@ -191,29 +212,18 @@ const CourseDetailPage = () => {
   };
 
   const avgRating = reviews.length > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-      : 0;
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
 
   const totalLessons = Object.values(lessonsBySection).reduce((sum, arr) => sum + arr.length, 0);
 
   if (loading)
-    return (
-        <>
-          <Header/>
-          <Skeleton active style={{padding: 40}}/>
-        </>
-    );
+    return (<><Header/><Skeleton active style={{padding: 40}}/></>);
   if (!course)
-    return (
-        <>
-          <Header/>
-          <div style={{padding: 40}}>Курс не найден!</div>
-        </>
-    );
+    return (<><Header/><div style={{padding: 40}}>Курс не найден!</div></>);
 
-  // кнопка записи — что показывать
+  // ─── Кнопка записи/покупки ────────────────────────────
   const renderEnrollButton = () => {
-    // уже записан — показываем кнопку "Начать курс" независимо от статуса
+    // Уже записан — показываем "Продолжить"
     if (isAuth && enrollment) {
       return (
           <Button type="primary" size="large" block
@@ -224,28 +234,39 @@ const CourseDetailPage = () => {
       );
     }
 
-    // курс не опубликован — запись недоступна
+    // Курс не опубликован
     if (!isPublished) {
       return (
-          <Button size="large" block disabled
-                  style={{marginTop: 12, height: 48, fontSize: 16}}>
+          <Button size="large" block disabled style={{marginTop: 12, height: 48, fontSize: 16}}>
             Запись недоступна
           </Button>
       );
     }
 
-    // не авторизован
+    // Не авторизован
     if (!isAuth) {
       return (
           <Button type="primary" size="large" block
                   style={{marginTop: 12, height: 48, fontSize: 16, background: "rgba(0,100,0,0.8)"}}
                   onClick={() => navigate(`/login?redirect=/course/${id}`)}>
-            Войти чтобы записаться
+            {isPaid ? `Войти чтобы купить` : "Войти чтобы записаться"}
           </Button>
       );
     }
 
-    // авторизован, не записан, курс опубликован
+    // Авторизован, не записан, курс платный
+    if (isPaid) {
+      return (
+          <Button type="primary" size="large" block
+                  icon={<ShoppingCartOutlined />}
+                  style={{marginTop: 12, height: 48, fontSize: 16, background: "rgba(0,100,0,0.8)"}}
+                  onClick={() => setPurchaseModalOpen(true)}>
+            Купить за {course.price.toLocaleString("ru-RU")} ₽
+          </Button>
+      );
+    }
+
+    // Авторизован, не записан, курс бесплатный
     return (
         <Button type="primary" size="large" block loading={enrollLoading}
                 style={{marginTop: 12, height: 48, fontSize: 16, background: "rgba(0,100,0,0.8)"}}
@@ -255,10 +276,12 @@ const CourseDetailPage = () => {
                   if (result) setEnrollment(result);
                   setEnrollLoading(false);
                 }}>
-          Записаться на курс
+          Записаться бесплатно
         </Button>
     );
   };
+
+  const hasEnoughBalance = balance >= (course?.price ?? 0);
 
   return (
       <>
@@ -272,10 +295,7 @@ const CourseDetailPage = () => {
                 {course.certificateEnabled && (
                     <Tag color="gold" icon={<TrophyOutlined/>}>Сертификат</Tag>
                 )}
-                {/* показываем статус если курс не опубликован */}
-                {!isPublished && (
-                    <Tag color="warning">Курс ещё не опубликован</Tag>
-                )}
+                {!isPublished && <Tag color="warning">Курс ещё не опубликован</Tag>}
               </div>
 
               <Title level={1} style={{margin: 0, lineHeight: 1.2}}>{course.title}</Title>
@@ -290,59 +310,47 @@ const CourseDetailPage = () => {
                 <Text style={{fontSize: 14}}>
                   <StarOutlined style={{color: "#faad14", marginRight: 6}}/>
                   {avgRating > 0 ? avgRating.toFixed(1) : course.rating.toFixed(1)}
-                  <Text type="secondary" style={{fontSize: 12, marginLeft: 4}}>
-                    ({reviews.length} отзывов)
-                  </Text>
+                  <Text type="secondary" style={{fontSize: 12, marginLeft: 4}}>({reviews.length} отзывов)</Text>
                 </Text>
                 <Text style={{fontSize: 14}}>
-                  <TeamOutlined style={{color: "#1677ff", marginRight: 6}}/>
-                  {course.enrollmentCount} студентов
+                  <TeamOutlined style={{color: "#1677ff", marginRight: 6}}/>{course.enrollmentCount} студентов
                 </Text>
                 <Text style={{fontSize: 14}}>
-                  <ClockCircleOutlined style={{color: "#52c41a", marginRight: 6}}/>
-                  {course.durationMinutes} мин
+                  <ClockCircleOutlined style={{color: "#52c41a", marginRight: 6}}/>{course.durationMinutes} мин
                 </Text>
                 <Text style={{fontSize: 14}}>
-                  <BookOutlined style={{marginRight: 6}}/>
-                  {course.author?.name}
+                  <BookOutlined style={{marginRight: 6}}/>{course.author?.name}
                 </Text>
               </div>
 
               {course.tags && course.tags.length > 0 && (
                   <div style={{marginTop: 20}}>
                     {course.tags.map(tag => (
-                        <Tag key={tag.name} color="#3b7159" style={{margin: 4, fontSize: 13}}>
-                          {tag.name}
-                        </Tag>
+                        <Tag key={tag.name} color="#3b7159" style={{margin: 4, fontSize: 13}}>{tag.name}</Tag>
                     ))}
                   </div>
               )}
             </Col>
 
             <Col xs={24} md={8} style={{textAlign: "center"}}>
-              <div style={{ width: "100%", borderRadius: 12, overflow: "hidden", marginBottom: 16 }}>
+              <div style={{width: "100%", borderRadius: 12, overflow: "hidden", marginBottom: 16}}>
                 {course.coverImageUrl
                     ? <img src={getImageUrl(course.coverImageUrl)} alt={course.title}
-                           style={{ width: "100%", maxHeight: 280, objectFit: "cover", display: "block" }} />
-                    : <div style={{ height: 200, background: "linear-gradient(135deg, rgba(0,100,0,0.15) 0%, rgba(0,100,0,0.35) 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64, color: "rgba(0,100,0,0.4)" }}>🎓</div>
+                           style={{width: "100%", maxHeight: 280, objectFit: "cover", display: "block"}} />
+                    : <div style={{height: 200, background: "linear-gradient(135deg, rgba(0,100,0,0.15) 0%, rgba(0,100,0,0.35) 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64, color: "rgba(0,100,0,0.4)"}}>🎓</div>
                 }
               </div>
 
               <div style={{marginTop: 16}}>
                 <Title level={3} style={{margin: 0}}>
-                  {course.isFree ? "Бесплатно" : `${course.price} ₽`}
+                  {course.price === 0 ? "Бесплатно" : `${course.price.toLocaleString("ru-RU")} ₽`}
                 </Title>
 
-                {/* кнопка записи */}
                 {renderEnrollButton()}
 
-                {/* кнопка избранного — только если курс опубликован */}
                 {isPublished && (
                     <Button size="large" block loading={favoriteLoading}
-                            icon={isFavorite
-                                ? <HeartFilled style={{color: "#AC2724"}}/>
-                                : <HeartOutlined style={{color: "#AC2724"}}/>
-                            }
+                            icon={isFavorite ? <HeartFilled style={{color: "#AC2724"}}/> : <HeartOutlined style={{color: "#AC2724"}}/>}
                             style={{marginTop: 8, height: 48, fontSize: 16}}
                             onClick={toggleFavorite}>
                       {isFavorite ? "В избранном" : "В избранное"}
@@ -353,6 +361,7 @@ const CourseDetailPage = () => {
           </Row>
         </div>
 
+        {/* Основной контент */}
         <div style={{padding: "40px 60px", maxWidth: 1200, margin: "0 auto"}}>
           <Row gutter={[48, 32]}>
             <Col xs={24} md={16}>
@@ -397,16 +406,8 @@ const CourseDetailPage = () => {
                                     </Text>
                                 )}
                                 {(lessonsBySection[section.id] ?? []).map((lesson, idx) => (
-                                    <div key={lesson.id} style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 10,
-                                      padding: "8px 0",
-                                      borderBottom: "1px solid #f0f0f0",
-                                    }}>
-                                      <Text type="secondary" style={{fontSize: 12, minWidth: 20}}>
-                                        {idx + 1}
-                                      </Text>
+                                    <div key={lesson.id} style={{display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #f0f0f0"}}>
+                                      <Text type="secondary" style={{fontSize: 12, minWidth: 20}}>{idx + 1}</Text>
                                       <BookOutlined style={{color: "#52c41a", fontSize: 14}}/>
                                       <Text style={{flex: 1}}>{lesson.title}</Text>
                                     </div>
@@ -422,47 +423,26 @@ const CourseDetailPage = () => {
               <Divider style={{margin: "12px 0"}}/>
 
               {reviews.length > 0 && (
-                  <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 16,
-                    padding: "16px 20px",
-                    background: "rgba(0,100,0,0.05)",
-                    borderRadius: 12,
-                    marginBottom: 24,
-                  }}>
+                  <div style={{display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", background: "rgba(0,100,0,0.05)", borderRadius: 12, marginBottom: 24}}>
                     <div style={{textAlign: "center"}}>
-                      <div style={{fontSize: 40, fontWeight: 700, color: "#389e0d", lineHeight: 1}}>
-                        {avgRating.toFixed(1)}
-                      </div>
+                      <div style={{fontSize: 40, fontWeight: 700, color: "#389e0d", lineHeight: 1}}>{avgRating.toFixed(1)}</div>
                       <Rate disabled allowHalf value={avgRating} style={{fontSize: 14}}/>
-                      <div style={{fontSize: 12, color: "#888", marginTop: 4}}>
-                        {reviews.length} отзывов
-                      </div>
+                      <div style={{fontSize: 12, color: "#888", marginTop: 4}}>{reviews.length} отзывов</div>
                     </div>
                   </div>
               )}
 
               {isAuth && enrollment && !userReview && (
-                  <div style={{
-                    background: "#fff",
-                    borderRadius: 12,
-                    padding: 24,
-                    border: "1px solid #f0f0f0",
-                    marginBottom: 24,
-                  }}>
+                  <div style={{background: "#fff", borderRadius: 12, padding: 24, border: "1px solid #f0f0f0", marginBottom: 24}}>
                     <Title level={5} style={{marginBottom: 16}}>Оставить отзыв</Title>
                     <Form form={reviewForm} onFinish={handleSubmitReview} layout="vertical">
-                      <Form.Item name="rating" label="Оценка"
-                                 rules={[{required: true, message: "Поставьте оценку"}]}>
+                      <Form.Item name="rating" label="Оценка" rules={[{required: true, message: "Поставьте оценку"}]}>
                         <Rate/>
                       </Form.Item>
-                      <Form.Item name="comment" label="Комментарий"
-                                 rules={[{max: 1000, message: "Максимум 1000 символов"}]}>
+                      <Form.Item name="comment" label="Комментарий" rules={[{max: 1000, message: "Максимум 1000 символов"}]}>
                         <Input.TextArea rows={4} placeholder="Расскажите о курсе..." maxLength={1000} showCount/>
                       </Form.Item>
-                      <Button type="primary" htmlType="submit" loading={submittingReview}
-                              style={{background: "rgba(0,100,0,0.8)"}}>
+                      <Button type="primary" htmlType="submit" loading={submittingReview} style={{background: "rgba(0,100,0,0.8)"}}>
                         Отправить отзыв
                       </Button>
                     </Form>
@@ -471,7 +451,7 @@ const CourseDetailPage = () => {
 
               {isAuth && !enrollment && (
                   <Text type="secondary" style={{display: "block", marginBottom: 24}}>
-                    Запишитесь на курс чтобы оставить отзыв
+                    {isPaid ? "Купите курс чтобы оставить отзыв" : "Запишитесь на курс чтобы оставить отзыв"}
                   </Text>
               )}
 
@@ -482,39 +462,25 @@ const CourseDetailPage = () => {
               ) : (
                   <div style={{display: "flex", flexDirection: "column", gap: 16}}>
                     {reviews.map(review => (
-                        <div key={review.id} style={{
-                          background: "#fff",
-                          borderRadius: 12,
-                          padding: 20,
-                          border: "1px solid #f0f0f0",
-                        }}>
+                        <div key={review.id} style={{background: "#fff", borderRadius: 12, padding: 20, border: "1px solid #f0f0f0"}}>
                           <div style={{display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8}}>
                             <div style={{display: "flex", alignItems: "center", gap: 10}}>
                               <Avatar icon={<UserOutlined/>} style={{background: "#52c41a"}}/>
                               <div>
-                                <Text strong style={{display: "block"}}>
-                                  {review.userName ?? "Аноним"}
-                                </Text>
+                                <Text strong style={{display: "block"}}>{review.userName ?? "Аноним"}</Text>
                                 <Text type="secondary" style={{fontSize: 12}}>
-                                  {new Date(review.createdAt).toLocaleDateString("ru-RU", {
-                                    day: "numeric", month: "long", year: "numeric",
-                                  })}
+                                  {new Date(review.createdAt).toLocaleDateString("ru-RU", {day: "numeric", month: "long", year: "numeric"})}
                                 </Text>
                               </div>
                             </div>
                             <div style={{display: "flex", alignItems: "center", gap: 8}}>
                               <Rate disabled value={review.rating} style={{fontSize: 14}}/>
                               {review.userId === currentUserId && (
-                                  <Button size="small" danger
-                                          onClick={() => handleDeleteReview(review.id)}>
-                                    Удалить
-                                  </Button>
+                                  <Button size="small" danger onClick={() => handleDeleteReview(review.id)}>Удалить</Button>
                               )}
                             </div>
                           </div>
-                          {review.comment && (
-                              <Text style={{fontSize: 14}}>{review.comment}</Text>
-                          )}
+                          {review.comment && <Text style={{fontSize: 14}}>{review.comment}</Text>}
                         </div>
                     ))}
                   </div>
@@ -522,21 +488,12 @@ const CourseDetailPage = () => {
             </Col>
 
             <Col xs={24} md={8}>
-              <div style={{
-                position: "sticky",
-                top: 24,
-                backgroundColor: "rgba(0,100,0,0.1)",
-                borderRadius: 12,
-                padding: "24px",
-                border: "1px solid #eee",
-              }}>
+              <div style={{position: "sticky", top: 24, backgroundColor: "rgba(0,100,0,0.1)", borderRadius: 12, padding: "24px", border: "1px solid #eee"}}>
                 <Title level={4} style={{marginBottom: 16}}>Информация</Title>
                 <div style={{display: "flex", flexDirection: "column", gap: 14}}>
                   <div style={{display: "flex", alignItems: "center", gap: 10}}>
                     <StarOutlined style={{color: "#faad14", fontSize: 16}}/>
-                    <Text>Рейтинг: <strong>
-                      {avgRating > 0 ? avgRating.toFixed(1) : course.rating.toFixed(1)}
-                    </strong></Text>
+                    <Text>Рейтинг: <strong>{avgRating > 0 ? avgRating.toFixed(1) : course.rating.toFixed(1)}</strong></Text>
                   </div>
                   <div style={{display: "flex", alignItems: "center", gap: 10}}>
                     <TeamOutlined style={{color: "#1677ff", fontSize: 16}}/>
@@ -558,9 +515,7 @@ const CourseDetailPage = () => {
                       <div style={{display: "flex", alignItems: "center", gap: 10}}>
                         <Text type="secondary">
                           Опубликован:{" "}
-                          {new Date(course.publishedAt).toLocaleDateString("ru-RU", {
-                            day: "numeric", month: "long", year: "numeric",
-                          })}
+                          {new Date(course.publishedAt).toLocaleDateString("ru-RU", {day: "numeric", month: "long", year: "numeric"})}
                         </Text>
                       </div>
                   )}
@@ -575,6 +530,75 @@ const CourseDetailPage = () => {
             </Col>
           </Row>
         </div>
+
+        {/* Модалка подтверждения покупки */}
+        <Modal
+            open={purchaseModalOpen}
+            title="Подтверждение покупки"
+            onCancel={() => setPurchaseModalOpen(false)}
+            onOk={handlePurchase}
+            okText="Оплатить"
+            cancelText="Отмена"
+            okButtonProps={{
+              loading: purchaseLoading,
+              disabled: !hasEnoughBalance,
+              style: hasEnoughBalance ? { background: "rgba(0,100,0,0.8)" } : undefined,
+            }}
+            centered
+        >
+          <div style={{display: "flex", flexDirection: "column", gap: 16, marginTop: 8}}>
+            {/* Что покупаем */}
+            <div style={{background: "#fafafa", borderRadius: 8, padding: "12px 16px", border: "1px solid #f0f0f0"}}>
+              <Text strong style={{display: "block", marginBottom: 4}}>{course.title}</Text>
+              <Text type="secondary" style={{fontSize: 13}}>{course.description}</Text>
+            </div>
+
+            {/* Сумма */}
+            <div style={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
+              <Text>Стоимость курса:</Text>
+              <Text strong style={{fontSize: 18}}>{course.price.toLocaleString("ru-RU")} ₽</Text>
+            </div>
+
+            {/* Баланс */}
+            <div style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              padding: "10px 14px", borderRadius: 8,
+              background: hasEnoughBalance ? "rgba(0,100,0,0.05)" : "rgba(255,77,79,0.05)",
+              border: `1px solid ${hasEnoughBalance ? "rgba(0,100,0,0.15)" : "rgba(255,77,79,0.2)"}`,
+            }}>
+              <div style={{display: "flex", alignItems: "center", gap: 8}}>
+                <WalletOutlined style={{color: hasEnoughBalance ? "rgba(0,100,0,0.8)" : "#ff4d4f"}}/>
+                <Text>Ваш баланс:</Text>
+              </div>
+              <Text strong style={{color: hasEnoughBalance ? "rgba(0,100,0,0.8)" : "#ff4d4f", fontSize: 16}}>
+                {balance.toLocaleString("ru-RU", {minimumFractionDigits: 2})} ₽
+              </Text>
+            </div>
+
+            {/* Недостаточно средств */}
+            {!hasEnoughBalance && (
+                <div style={{background: "rgba(255,77,79,0.05)", borderRadius: 8, padding: "10px 14px", border: "1px solid rgba(255,77,79,0.2)"}}>
+                  <Text type="danger" style={{fontSize: 13}}>
+                    Недостаточно средств. Пополните баланс на{" "}
+                    <Text strong type="danger">
+                      {(course.price - balance).toLocaleString("ru-RU", {minimumFractionDigits: 2})} ₽
+                    </Text>
+                  </Text>
+                </div>
+            )}
+
+            {/* Остаток после покупки */}
+            {hasEnoughBalance && (
+                <div style={{display: "flex", justifyContent: "space-between"}}>
+                  <Text type="secondary" style={{fontSize: 13}}>Остаток после оплаты:</Text>
+                  <Text type="secondary" style={{fontSize: 13}}>
+                    {(balance - course.price).toLocaleString("ru-RU", {minimumFractionDigits: 2})} ₽
+                  </Text>
+                </div>
+            )}
+          </div>
+        </Modal>
+
         <Footer/>
       </>
   );
