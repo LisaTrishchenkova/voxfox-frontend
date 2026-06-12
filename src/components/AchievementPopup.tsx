@@ -1,5 +1,5 @@
 import { Modal, Typography } from "antd";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const { Text, Title } = Typography;
 
@@ -16,12 +16,9 @@ interface Props {
     onClose: () => void;
 }
 
+// key пробрасывается снаружи чтобы сбрасывать current при новом наборе ачивок
 const AchievementPopup = ({ achievements, onClose }: Props) => {
     const [current, setCurrent] = useState(0);
-
-    useEffect(() => {
-        setCurrent(0);
-    }, [achievements]);
 
     if (achievements.length === 0) return null;
 
@@ -42,10 +39,8 @@ const AchievementPopup = ({ achievements, onClose }: Props) => {
             width={380}
             styles={{ body: { padding: "32px 28px 24px", textAlign: "center" } }}
         >
-            {/* Иконка */}
             <div style={{ fontSize: 64, marginBottom: 16, lineHeight: 1 }}>{achievement.icon}</div>
 
-            {/* Бейдж */}
             <div style={{
                 display: "inline-block",
                 background: "rgba(0,100,0,0.08)",
@@ -68,7 +63,6 @@ const AchievementPopup = ({ achievements, onClose }: Props) => {
                 {achievement.description}
             </Text>
 
-            {/* Счётчик если несколько */}
             {achievements.length > 1 && (
                 <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 20 }}>
                     {achievements.map((_, i) => (

@@ -768,6 +768,7 @@ const CourseLearningPage = () => {
         {/* Попап достижений */}
         {newAchievements.length > 0 && (
             <AchievementPopup
+                key={newAchievements.map(a => a.code).join(",")}
                 achievements={newAchievements}
                 onClose={() => {
                   setNewAchievements([]);
