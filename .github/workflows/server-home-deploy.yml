@@ -1,0 +1,38 @@
+name: Deploy Frontend To Server Home
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    environment: env-server-home
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install & Build
+        run: |
+          npm ci
+          cat > .env << EOF
+          VITE_API_URL=${{ vars.API_URL }}
+          EOF
+          npm run build
+
+      - name: Deploy to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "dist/*"
+          target: "/var/www/voxfox"
+          strip_components: 1
+          rm: true
