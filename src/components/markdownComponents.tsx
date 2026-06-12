@@ -1,32 +1,23 @@
 import type { Components } from "react-markdown";
 
 function toEmbedUrl(url: string): string | null {
-    // YouTube short
     const ytShort = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
     if (ytShort) return `https://www.youtube.com/embed/${ytShort[1]}`;
 
-    // YouTube long
     const ytLong = url.match(/youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]+)/);
     if (ytLong) return `https://www.youtube.com/embed/${ytLong[1]}`;
 
-    // YouTube embed already
     if (url.match(/youtube\.com\/embed\//)) return url;
 
-    // Vimeo
     const vimeo = url.match(/vimeo\.com\/(\d+)/);
     if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
 
-    // ВКонтакте — новый домен vkvideo.ru (embed)
     if (url.includes("vkvideo.ru/video_ext.php")) return url;
-
-    // ВКонтакте — старый домен vk.com (embed)
     if (url.includes("vk.com/video_ext.php")) return url;
 
-    // ВКонтакте — ссылка на видео вида vk.com/video-123_456
     const vkVideo = url.match(/vk\.com\/video(-?\d+)_(\d+)/);
     if (vkVideo) return `https://vkvideo.ru/video_ext.php?oid=${vkVideo[1]}&id=${vkVideo[2]}`;
 
-    // Прямые видео-файлы
     if (url.match(/\.(mp4|webm|ogg)(\?.*)?$/i)) return url;
 
     return null;
@@ -45,13 +36,31 @@ function isVideoUrl(href: string): boolean {
 }
 
 export const markdownComponents: Components = {
+    img({ src, alt }) {
+        if (!src) return null;
+        return (
+            <div style={{ margin: "12px 0" }}>
+                <img
+                    src={src}
+                    alt={alt ?? ""}
+                    style={{
+                        maxWidth: "100%",
+                        maxHeight: 400,
+                        borderRadius: 8,
+                        objectFit: "contain",
+                        display: "block",
+                    }}
+                />
+            </div>
+        );
+    },
+
     a({ href, children }) {
         if (!href) return <a href={href}>{children}</a>;
 
         if (isVideoUrl(href)) {
             const embedUrl = toEmbedUrl(href);
 
-            // iframe-плееры: YouTube, Vimeo, ВКонтакте
             if (embedUrl && (
                 embedUrl.includes("youtube.com/embed") ||
                 embedUrl.includes("player.vimeo.com") ||
@@ -73,7 +82,6 @@ export const markdownComponents: Components = {
                 );
             }
 
-            // Прямые видео-файлы
             if (embedUrl && /\.(mp4|webm|ogg)/i.test(embedUrl)) {
                 return (
                     <div style={{ margin: "16px 0" }}>

@@ -1,6 +1,5 @@
-import { useRef, useState } from "react";
-import { Button, Modal, Input, Tooltip, Typography } from "antd";
-import { VideoCameraOutlined } from "@ant-design/icons";
+import { useRef } from "react";
+import { Button, Tooltip, Typography } from "antd";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { markdownComponents } from "./markdownComponents";
@@ -20,43 +19,28 @@ interface ToolbarItem {
 }
 
 const TOOLBAR: ToolbarItem[] = [
-    { label: "B",         title: "Жирный текст",               action: (sel) => ({ text: `**${sel || "жирный текст"}**`, offset: sel ? 0 : 2 }) },
-    { label: "I",         title: "Курсив",                     action: (sel) => ({ text: `*${sel || "курсив"}*`, offset: sel ? 0 : 1 }) },
-    { label: "S",         title: "Зачёркнутый текст",          action: (sel) => ({ text: `~~${sel || "зачёркнутый"}~~`, offset: sel ? 0 : 2 }) },
-    { label: "H1",        title: "Заголовок 1",                action: (sel) => ({ text: `# ${sel || "Заголовок"}`, offset: sel ? 0 : 2 }) },
-    { label: "H2",        title: "Заголовок 2",                action: (sel) => ({ text: `## ${sel || "Заголовок"}`, offset: sel ? 0 : 3 }) },
-    { label: "H3",        title: "Заголовок 3",                action: (sel) => ({ text: `### ${sel || "Заголовок"}`, offset: sel ? 0 : 4 }) },
-    { label: "—",         title: "Горизонтальный разделитель", action: () => ({ text: "\n---\n", offset: 0 }) },
-    { label: "• Список",  title: "Маркированный список",       action: (sel) => ({ text: sel ? sel.split("\n").map((l) => `- ${l}`).join("\n") : "- Пункт 1\n- Пункт 2\n- Пункт 3", offset: sel ? 0 : 2 }) },
-    { label: "1. Список", title: "Нумерованный список",        action: (sel) => ({ text: sel ? sel.split("\n").map((l, i) => `${i + 1}. ${l}`).join("\n") : "1. Пункт\n2. Пункт\n3. Пункт", offset: sel ? 0 : 3 }) },
-    { label: "> Цитата",  title: "Цитата",                     action: (sel) => ({ text: `> ${sel || "цитата"}`, offset: sel ? 0 : 2 }) },
-    { label: "`код`",     title: "Строчный код",               action: (sel) => ({ text: `\`${sel || "код"}\``, offset: sel ? 0 : 1 }) },
-    { label: "```блок```",title: "Блок кода",                  action: (sel) => ({ text: `\`\`\`\n${sel || "код"}\n\`\`\``, offset: sel ? 0 : 4 }) },
-    { label: "🔗 Ссылка", title: "Ссылка",                     action: (sel) => ({ text: `[${sel || "текст ссылки"}](url)`, offset: sel ? 0 : 1 }) },
+    { label: "B",          title: "Жирный текст",               action: (sel) => ({ text: `**${sel || "жирный текст"}**`, offset: sel ? 0 : 2 }) },
+    { label: "I",          title: "Курсив",                     action: (sel) => ({ text: `*${sel || "курсив"}*`, offset: sel ? 0 : 1 }) },
+    { label: "S",          title: "Зачёркнутый текст",          action: (sel) => ({ text: `~~${sel || "зачёркнутый"}~~`, offset: sel ? 0 : 2 }) },
+    { label: "H1",         title: "Заголовок 1",                action: (sel) => ({ text: `# ${sel || "Заголовок"}`, offset: sel ? 0 : 2 }) },
+    { label: "H2",         title: "Заголовок 2",                action: (sel) => ({ text: `## ${sel || "Заголовок"}`, offset: sel ? 0 : 3 }) },
+    { label: "H3",         title: "Заголовок 3",                action: (sel) => ({ text: `### ${sel || "Заголовок"}`, offset: sel ? 0 : 4 }) },
+    { label: "—",          title: "Горизонтальный разделитель", action: () => ({ text: "\n---\n", offset: 0 }) },
+    { label: "• Список",   title: "Маркированный список",       action: (sel) => ({ text: sel ? sel.split("\n").map((l) => `- ${l}`).join("\n") : "- Пункт 1\n- Пункт 2\n- Пункт 3", offset: sel ? 0 : 2 }) },
+    { label: "1. Список",  title: "Нумерованный список",        action: (sel) => ({ text: sel ? sel.split("\n").map((l, i) => `${i + 1}. ${l}`).join("\n") : "1. Пункт\n2. Пункт\n3. Пункт", offset: sel ? 0 : 3 }) },
+    { label: "> Цитата",   title: "Цитата",                     action: (sel) => ({ text: `> ${sel || "цитата"}`, offset: sel ? 0 : 2 }) },
+    { label: "`код`",      title: "Строчный код",               action: (sel) => ({ text: `\`${sel || "код"}\``, offset: sel ? 0 : 1 }) },
+    { label: "```блок```", title: "Блок кода",                  action: (sel) => ({ text: `\`\`\`\n${sel || "код"}\n\`\`\``, offset: sel ? 0 : 4 }) },
+    { label: "🔗 Ссылка",  title: "Ссылка",                     action: (sel) => ({ text: `[${sel || "текст ссылки"}](url)`, offset: sel ? 0 : 1 }) },
 ];
+
+// Определяем является ли строка ссылкой на изображение
+const IMAGE_EXTENSIONS = /\.(jpg|jpeg|png|webp|gif|svg|bmp|avif)(\?.*)?$/i;
+const isImageUrl = (url: string) =>
+    IMAGE_EXTENSIONS.test(url.trim()) && /^https?:\/\//i.test(url.trim());
 
 const MarkdownEditor = ({ value, onChange, minHeight = 320 }: MarkdownEditorProps) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const [videoModalOpen, setVideoModalOpen] = useState(false);
-    const [videoUrl, setVideoUrl] = useState("");
-    const [videoLabel, setVideoLabel] = useState("");
-
-    const insertAtCursor = (text: string, cursorOffset?: number) => {
-        const ta = textareaRef.current;
-        if (!ta) return;
-        const start = ta.selectionStart;
-        const end = ta.selectionEnd;
-        const before = value.slice(0, start);
-        const after = value.slice(end);
-        const needsNewline = before.length > 0 && !before.endsWith("\n");
-        const prefix = needsNewline ? "\n" : "";
-        onChange(before + prefix + text + after);
-        requestAnimationFrame(() => {
-            ta.focus();
-            const pos = start + prefix.length + (cursorOffset ?? text.length);
-            ta.setSelectionRange(pos, pos);
-        });
-    };
 
     const insertText = (item: ToolbarItem) => {
         const ta = textareaRef.current;
@@ -85,25 +69,64 @@ const MarkdownEditor = ({ value, onChange, minHeight = 320 }: MarkdownEditorProp
         });
     };
 
-    const handleInsertVideo = () => {
-        const url = videoUrl.trim();
-        if (!url) return;
-        const label = videoLabel.trim() || "Видео";
-        insertAtCursor(`\n[${label}](${url})\n`);
-        setVideoUrl("");
-        setVideoLabel("");
-        setVideoModalOpen(false);
+    // При вставке (paste) — если вставляют ссылку на картинку, оборачиваем в ![]()
+    const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+        const pasted = e.clipboardData.getData("text");
+        if (!isImageUrl(pasted)) return;
+
+        e.preventDefault();
+        const ta = textareaRef.current;
+        if (!ta) return;
+
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+        const before = value.slice(0, start);
+        const after = value.slice(end);
+        const needsNewline = before.length > 0 && !before.endsWith("\n");
+        const prefix = needsNewline ? "\n" : "";
+        const imageMarkdown = `![](${pasted.trim()})`;
+        const newValue = before + prefix + imageMarkdown + "\n" + after;
+        onChange(newValue);
+
+        requestAnimationFrame(() => {
+            ta.focus();
+            const pos = start + prefix.length + imageMarkdown.length + 1;
+            ta.setSelectionRange(pos, pos);
+        });
     };
 
-    const detectPlatform = (url: string): string => {
-        if (url.includes("youtube.com") || url.includes("youtu.be")) return "YouTube";
-        if (url.includes("vimeo.com")) return "Vimeo";
-        if (url.includes("vkvideo.ru") || url.includes("vk.com")) return "ВКонтакте";
-        if (/\.(mp4|webm|ogg)/i.test(url)) return "Видео-файл";
-        return "";
-    };
+    // При каждом изменении — конвертируем голые URL картинок в markdown-изображения
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const newValue = e.target.value;
+        const ta = textareaRef.current;
+        const cursorPos = ta?.selectionStart ?? 0;
 
-    const platform = detectPlatform(videoUrl.trim());
+        // Ищем строки которые являются голым URL картинки (не обёрнуты в ![] или [])
+        const converted = newValue.replace(
+            /^(https?:\/\/\S+\.(?:jpg|jpeg|png|webp|gif|svg|bmp|avif)(?:\?[^\s]*)?)$/gim,
+            (match) => {
+                // Не трогаем если уже обёрнуто в markdown
+                const index = newValue.indexOf(match);
+                const before = newValue.slice(0, index);
+                if (before.endsWith("](") || before.endsWith("![")) return match;
+                return `![](${match})`;
+            }
+        );
+
+        if (converted !== newValue) {
+            onChange(converted);
+            // Восстанавливаем позицию курсора
+            requestAnimationFrame(() => {
+                if (ta) {
+                    const diff = converted.length - newValue.length;
+                    const newPos = cursorPos + diff;
+                    ta.setSelectionRange(newPos, newPos);
+                }
+            });
+        } else {
+            onChange(newValue);
+        }
+    };
 
     return (
         <div style={{ border: "1px solid #d9d9d9", borderRadius: 8, overflow: "hidden" }}>
@@ -133,20 +156,6 @@ const MarkdownEditor = ({ value, onChange, minHeight = 320 }: MarkdownEditorProp
                         </Button>
                     </Tooltip>
                 ))}
-
-                <div style={{ width: 1, height: 20, background: "#e8e8e8", margin: "0 4px" }} />
-
-                <Tooltip title="Вставить видео" mouseEnterDelay={0.4} color="#333333">
-                    <Button
-                        size="small"
-                        type="text"
-                        icon={<VideoCameraOutlined />}
-                        style={{ height: 26, color: "#389e0d", fontWeight: 500 }}
-                        onMouseDown={(e) => { e.preventDefault(); setVideoModalOpen(true); }}
-                    >
-                        Видео
-                    </Button>
-                </Tooltip>
             </div>
 
             {/* Split-panel */}
@@ -158,7 +167,8 @@ const MarkdownEditor = ({ value, onChange, minHeight = 320 }: MarkdownEditorProp
                     <textarea
                         ref={textareaRef}
                         value={value}
-                        onChange={(e) => onChange(e.target.value)}
+                        onChange={handleChange}
+                        onPaste={handlePaste}
                         style={{
                             flex: 1, padding: "12px 14px", border: "none", outline: "none",
                             resize: "none",
@@ -168,14 +178,12 @@ const MarkdownEditor = ({ value, onChange, minHeight = 320 }: MarkdownEditorProp
                         placeholder={
                             "# Мой первый заголовок\n\n" +
                             "Привет! Вот как пользоваться редактором:\n\n" +
-                            "## Быстрое форматирование, используйте кнопки на панели чтобы сделать разработку проще:\n" +
                             "**жирный текст** | *курсив* | `код` | ~~зачёркнутый~~\n\n" +
-                            "## Списки:\n" +
-                            "- Маркированный список (кнопка • Список)\n" +
-                            "1. Нумерованный список (кнопка 1. Список)\n\n" +
-                            "## Ссылки (можете вставлять или напряму или использовать панель для вставки видео или ссылок)\n\n\n" +
+                            "## Изображения\n" +
+                            "Вставьте ссылку на картинку — она автоматически отобразится как изображение\n\n" +
                             "💡 Совет: Выделите текст и нажмите нужную кнопку!"
-                        }                        spellCheck={false}
+                        }
+                        spellCheck={false}
                     />
                 </div>
 
@@ -202,70 +210,6 @@ const MarkdownEditor = ({ value, onChange, minHeight = 320 }: MarkdownEditorProp
             <div style={{ padding: "4px 12px", background: "#fafafa", borderTop: "1px solid #e8e8e8", fontSize: 11, color: "#aaa", textAlign: "right" }}>
                 {value.length} символов
             </div>
-
-            <Modal
-                open={videoModalOpen}
-                title="Вставить видео"
-                onCancel={() => { setVideoModalOpen(false); setVideoUrl(""); setVideoLabel(""); }}
-                onOk={handleInsertVideo}
-                okText="Вставить"
-                cancelText="Отмена"
-                centered
-                okButtonProps={{ style: { background: "rgba(0,100,0,0.8)" }, disabled: !videoUrl.trim() }}
-            >
-                <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
-                    <div>
-                        <Text strong style={{ display: "block", marginBottom: 6 }}>Ссылка на видео</Text>
-                        <Input
-                            placeholder="https://youtu.be/... или https://vkvideo.ru/... или .mp4"
-                            value={videoUrl}
-                            onChange={(e) => setVideoUrl(e.target.value)}
-                            onPressEnter={handleInsertVideo}
-                        />
-                        <Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: "block" }}>
-                            Поддерживаются: YouTube, ВКонтакте, прямые ссылки на mp4/webm
-                        </Text>
-                    </div>
-
-                    <div>
-                        <Text strong style={{ display: "block", marginBottom: 6 }}>Подпись (необязательно)</Text>
-                        <Input
-                            placeholder="Название видео"
-                            value={videoLabel}
-                            onChange={(e) => setVideoLabel(e.target.value)}
-                        />
-                    </div>
-
-                    {videoUrl.trim() && (
-                        <div style={{
-                            background: "#f6ffed", border: "1px solid #b7eb8f",
-                            borderRadius: 6, padding: "10px 12px",
-                        }}>
-                            {platform && (
-                                <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 4 }}>
-                                    Определено: <strong>{platform}</strong>
-                                </Text>
-                            )}
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                                В тексте: <code>[{videoLabel || "Видео"}]({videoUrl.trim()})</code>
-                            </Text>
-                            {(videoUrl.includes("vk.com/video") || videoUrl.includes("vkvideo.ru/video-")) &&
-                                !videoUrl.includes("video_ext.php") && (
-                                    <div style={{
-                                        marginTop: 8, padding: "6px 10px",
-                                        background: "#fffbe6", border: "1px solid #ffe58f",
-                                        borderRadius: 4,
-                                    }}>
-                                        <Text style={{ fontSize: 11, color: "#ad6800" }}>
-                                            ⚠️ Для ВКонтакте используйте embed-ссылку:
-                                            Нажмите "Поделиться" → "Код для встраивания" → скопируйте src из iframe
-                                        </Text>
-                                    </div>
-                                )}
-                        </div>
-                    )}
-                </div>
-            </Modal>
         </div>
     );
 };
