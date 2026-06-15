@@ -4,8 +4,8 @@ import {
 } from "antd";
 import {
   BookOutlined, EditOutlined, HeartOutlined, LockOutlined,
-  LogoutOutlined, SafetyCertificateOutlined, TrophyOutlined,
-  UserOutlined, WalletOutlined,
+  LogoutOutlined, MailOutlined, SafetyCertificateOutlined,
+  ToolOutlined, TrophyOutlined, UserOutlined, WalletOutlined,
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -179,6 +179,7 @@ const UserProfilePage = () => {
   const [balance, setBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [topUpOpen, setTopUpOpen] = useState(false);
+  const [verifyEmailModalOpen, setVerifyEmailModalOpen] = useState(false);
 
   const [editingProfile, setEditingProfile] = useState(false);
   const [editingPassword, setEditingPassword] = useState(false);
@@ -355,6 +356,9 @@ const UserProfilePage = () => {
                           <Button icon={<LockOutlined />} onClick={() => { setEditingPassword(true); setEditingProfile(false); }}>
                             Сменить пароль
                           </Button>
+                          <Button icon={<MailOutlined />} onClick={() => setVerifyEmailModalOpen(true)}>
+                            Подтвердить почту
+                          </Button>
                         </div>
                       </div>
                   ) : (
@@ -486,6 +490,41 @@ const UserProfilePage = () => {
             onClose={() => setTopUpOpen(false)}
             onSuccess={(newBalance) => setBalance(newBalance)}
         />
+
+        {/* Модалка — подтверждение почты недоступно */}
+        <Modal
+            open={verifyEmailModalOpen}
+            onCancel={() => setVerifyEmailModalOpen(false)}
+            footer={
+              <Button type="primary" block onClick={() => setVerifyEmailModalOpen(false)}
+                      style={{ background: "rgba(0,100,0,0.8)" }}>
+                Понятно
+              </Button>
+            }
+            centered
+            width={420}
+            styles={{ body: { padding: "8px 0 16px" } }}
+        >
+          <div style={{ textAlign: "center", padding: "16px 0 8px" }}>
+            <div style={{
+              width: 64, height: 64,
+              background: "linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%)",
+              borderRadius: 16,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 20px",
+            }}>
+              <ToolOutlined style={{ fontSize: 28, color: "#d46b08" }} />
+            </div>
+            <Title level={4} style={{ margin: "0 0 8px" }}>
+              Сервис временно недоступен
+            </Title>
+            <Text type="secondary" style={{ fontSize: 14 }}>
+              Подтверждение почты сейчас на обслуживании.
+              <br />
+              Пожалуйста, попробуйте позже.
+            </Text>
+          </div>
+        </Modal>
 
         <Footer />
       </>
