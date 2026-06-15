@@ -18,7 +18,6 @@ import {
 } from "antd";
 import { useEffect, useState, type MouseEventHandler } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import logo from "../assets/logo.jpg";
 import { balanceApi } from "../api/balanceApi";
 import { authStorage } from "../services/auth-storage.service";
 import { getAvatarUrl, useUserStore } from "../stores/userStore";
@@ -127,7 +126,7 @@ const Header = () => {
                         <Row align="middle" gutter={8}>
                             <Col>
                                 <Image
-                                    src={logo}
+                                    src="/Logo3.png"
                                     alt="VoxFox"
                                     preview={false}
                                     style={{ height: 40, width: "auto", objectFit: "contain" }}

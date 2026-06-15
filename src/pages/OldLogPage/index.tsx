@@ -7,12 +7,14 @@ import {
     Typography,
     Space,
     Alert,
+    Modal,
     type FormProps,
 } from "antd";
 import {
     MailOutlined,
     LockOutlined,
     ArrowRightOutlined,
+    ToolOutlined,
 } from "@ant-design/icons";
 import { useState } from "react";
 import type { LoginFormData } from "../../api/types/auth.ts";
@@ -22,6 +24,13 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useUserStore } from "../../stores/userStore.ts";
 
 const { Title, Text, Link } = Typography;
+
+const DEMO_USERS = [
+    { label: "Админ",        email: "admin@gmail.com",       password: "Admin123",    color: "#6B21A8", bg: "rgba(107,33,168,0.08)", border: "rgba(107,33,168,0.25)" },
+    { label: "Модератор",    email: "moderator1@gmail.com",  password: "Moder123",    color: "#D46B08", bg: "rgba(212,107,8,0.08)",  border: "rgba(212,107,8,0.25)"  },
+    { label: "Преподаватель",email: "teacher1@gmail.com",    password: "Teacher123",  color: "rgba(0,100,0,0.9)", bg: "rgba(0,100,0,0.07)", border: "rgba(0,100,0,0.2)" },
+    { label: "Студент",      email: "student1@gmail.com",    password: "Student123",  color: "#1565C0", bg: "rgba(21,101,192,0.08)", border: "rgba(21,101,192,0.25)" },
+];
 
 const LoginPage = () => {
     const navigate = useNavigate();
@@ -36,6 +45,8 @@ const LoginPage = () => {
         description?: string;
     } | null>(null);
     const [loading, setLoading] = useState(false);
+    const [demoLoading, setDemoLoading] = useState<string | null>(null);
+    const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
     const onFinish: FormProps<LoginFormData>["onFinish"] = async (values) => {
         setLoginError(null);
@@ -84,6 +95,19 @@ const LoginPage = () => {
         await fetchUser();
         navigate(redirect, { replace: true });
         setLoading(false);
+    };
+
+    const handleDemoLogin = async (email: string, password: string, label: string) => {
+        setLoginError(null);
+        setDemoLoading(label);
+        const result = await authApi.login(email, password);
+        if (result.success) {
+            await fetchUser();
+            navigate(redirect, { replace: true });
+        } else {
+            setLoginError({ code: "UNKNOWN", type: "error", message: "Ошибка демо-входа", description: "Проверьте что тестовые данные загружены в БД." });
+        }
+        setDemoLoading(null);
     };
 
     const onFinishFailed: FormProps<LoginFormData>["onFinishFailed"] = () => {
@@ -157,7 +181,7 @@ const LoginPage = () => {
                             </Text>
                         </div>
 
-                        {/* Блок ошибки — показывается только при проблемах с входом */}
+                        {/* Блок ошибки */}
                         {loginError && loginError.code !== 'INVALID_CREDENTIALS' && (
                             <Alert
                                 type={loginError.type}
@@ -181,14 +205,7 @@ const LoginPage = () => {
                         >
                             <Form.Item<LoginFormData>
                                 label={
-                                    <div
-                                        style={{
-                                            fontSize: "16px",
-                                            fontWeight: 600,
-                                            color: "#262626",
-                                            marginBottom: "8px",
-                                        }}
-                                    >
+                                    <div style={{ fontSize: "16px", fontWeight: 600, color: "#262626", marginBottom: "8px" }}>
                                         Email
                                     </div>
                                 }
@@ -208,22 +225,16 @@ const LoginPage = () => {
 
                             <Form.Item<LoginFormData>
                                 label={
-                                    <div
-                                        style={{
-                                            fontSize: "16px",
-                                            fontWeight: 600,
-                                            color: "#262626",
-                                            marginBottom: "8px",
-                                        }}
-                                    >
+                                    <div style={{ fontSize: "16px", fontWeight: 600, color: "#262626", marginBottom: "8px" }}>
                                         Пароль
                                     </div>
                                 }
                                 name="password"
-                                rules={[
-                                    { required: true, message: "Пожалуйста, введите ваш пароль" },
-                                    { min: 6, message: "Пароль должен содержать минимум 6 символов" },
-                                ]}
+                                rules={
+                                    [
+                                        { required: true, message: "Пожалуйста, введите ваш пароль" },
+                                        { min: 6, message: "Пароль должен содержать минимум 6 символов" },
+                                    ]}
                             >
                                 <Input.Password
                                     size="large"
@@ -252,12 +263,13 @@ const LoginPage = () => {
                                     )}
                                 </div>
                                 <Link
-                                    onClick={() => navigate("/forgot-password")}
+                                    onClick={() => setForgotModalOpen(true)}
                                     style={{ color: "#52c41a", fontWeight: 500, flexShrink: 0 }}
                                 >
                                     Забыли пароль?
                                 </Link>
                             </div>
+
                             <Form.Item>
                                 <Button
                                     type="primary"
@@ -269,7 +281,6 @@ const LoginPage = () => {
                                     Войти <ArrowRightOutlined style={{ marginLeft: "8px" }} />
                                 </Button>
                             </Form.Item>
-
                         </Form>
 
                         <Space direction="vertical" align="center" style={{ width: "100%" }} size="large">
@@ -282,85 +293,56 @@ const LoginPage = () => {
                                 </Text>
                             </div>
                         </Space>
+
+                        {/* Демо-кнопки быстрого входа */}
+                        <div style={{ marginTop: 20, display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+                            {DEMO_USERS.map((u) => (
+                                <button
+                                    key={u.label}
+                                    onClick={() => handleDemoLogin(u.email, u.password, u.label)}
+                                    disabled={demoLoading !== null}
+                                    style={{
+                                        padding: "4px 14px",
+                                        borderRadius: 20,
+                                        border: "1px solid rgba(82,196,26,0.2)",
+                                        background: demoLoading === u.label ? "rgba(82,196,26,0.12)" : "rgba(82,196,26,0.06)",
+                                        color: "rgba(82,196,26,0.7)",
+                                        fontSize: 12,
+                                        fontWeight: 500,
+                                        cursor: demoLoading !== null ? "not-allowed" : "pointer",
+                                        opacity: demoLoading !== null && demoLoading !== u.label ? 0.4 : 1,
+                                        transition: "all 0.15s",
+                                        outline: "none",
+                                    }}
+                                >
+                                    {demoLoading === u.label ? "..." : u.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </Col>
 
                 {/* Правая часть */}
                 <Col xs={24} md={12} lg={14}>
                     <div style={commonStyles.authSide}>
-                        <div
-                            style={{
-                                ...commonStyles.decorativeCircle,
-                                top: -100,
-                                right: -100,
-                                width: 400,
-                                height: 400,
-                            }}
-                        />
-                        <div
-                            style={{
-                                ...commonStyles.decorativeCircle,
-                                bottom: -150,
-                                left: -150,
-                                width: 500,
-                                height: 500,
-                                background: "rgba(255, 255, 255, 0.05)",
-                            }}
-                        />
-                        <div
-                            style={{
-                                position: "relative",
-                                zIndex: 2,
-                                textAlign: "center",
-                                color: "#fff",
-                            }}
-                        >
-                            <Title
-                                level={1}
-                                style={{
-                                    color: "#fff",
-                                    marginBottom: "24px",
-                                    fontSize: "48px",
-                                    fontWeight: 800,
-                                }}
-                            >
+                        <div style={{ ...commonStyles.decorativeCircle, top: -100, right: -100, width: 400, height: 400 }} />
+                        <div style={{ ...commonStyles.decorativeCircle, bottom: -150, left: -150, width: 500, height: 500, background: "rgba(255, 255, 255, 0.05)" }} />
+                        <div style={{ position: "relative", zIndex: 2, textAlign: "center", color: "#fff" }}>
+                            <Title level={1} style={{ color: "#fff", marginBottom: "24px", fontSize: "48px", fontWeight: 800 }}>
                                 Добро пожаловать в VoxFox!
                             </Title>
-                            <div
-                                style={{
-                                    fontSize: "20px",
-                                    lineHeight: 1.6,
-                                    marginBottom: "48px",
-                                    maxWidth: "600px",
-                                    opacity: 0.9,
-                                }}
-                            >
+                            <div style={{ fontSize: "20px", lineHeight: 1.6, marginBottom: "48px", maxWidth: "600px", opacity: 0.9 }}>
                                 Присоединяйтесь к сообществу разработчиков, которые уже
                                 осваивают новые технологии и строят успешную карьеру
                             </div>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "center",
-                                    gap: "40px",
-                                    flexWrap: "wrap",
-                                    marginBottom: "60px",
-                                }}
-                            >
+                            <div style={{ display: "flex", justifyContent: "center", gap: "40px", flexWrap: "wrap", marginBottom: "60px" }}>
                                 {[
                                     { emoji: "🚀", text: "Быстрый старт" },
                                     { emoji: "💡", text: "Практика" },
                                     { emoji: "👥", text: "Сообщество" },
                                 ].map((item, idx) => (
                                     <div key={idx} style={commonStyles.textCenter}>
-                                        <div
-                                            style={{
-                                                ...commonStyles.iconBox,
-                                                background: "rgba(255, 255, 255, 0.2)",
-                                                backdropFilter: "blur(10px)",
-                                                marginBottom: 16,
-                                            }}
-                                        >
+                                        <div style={{ ...commonStyles.iconBox, background: "rgba(255, 255, 255, 0.2)", backdropFilter: "blur(10px)", marginBottom: 16 }}>
                                             <span style={{ fontSize: 40 }}>{item.emoji}</span>
                                         </div>
                                         <Text {...componentProps.text.whiteStrong}>{item.text}</Text>
@@ -371,6 +353,43 @@ const LoginPage = () => {
                     </div>
                 </Col>
             </Row>
+
+            {/* Модалка — сервис временно недоступен */}
+            <Modal
+                open={forgotModalOpen}
+                onCancel={() => setForgotModalOpen(false)}
+                footer={
+                    <Button type="primary" block onClick={() => setForgotModalOpen(false)}>
+                        Понятно
+                    </Button>
+                }
+                centered
+                width={420}
+                styles={{ body: { padding: "8px 0 16px" } }}
+            >
+                <div style={{ textAlign: "center", padding: "16px 0 8px" }}>
+                    <div style={{
+                        width: 64,
+                        height: 64,
+                        background: "linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%)",
+                        borderRadius: 16,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        margin: "0 auto 20px",
+                    }}>
+                        <ToolOutlined style={{ fontSize: 28, color: "#d46b08" }} />
+                    </div>
+                    <Title level={4} style={{ margin: "0 0 8px" }}>
+                        Сервис временно недоступен
+                    </Title>
+                    <Text type="secondary" style={{ fontSize: 14 }}>
+                        Восстановление пароля сейчас на обслуживании.
+                        <br />
+                        Пожалуйста, попробуйте позже.
+                    </Text>
+                </div>
+            </Modal>
         </div>
     );
 };
