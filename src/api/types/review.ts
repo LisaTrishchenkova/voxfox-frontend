@@ -1,3 +1,5 @@
+import type { NewAchievement } from "../../components/AchievementPopup.tsx";
+
 export interface ReviewDto {
     id: string;
     courseId: string;
@@ -7,6 +9,7 @@ export interface ReviewDto {
     comment: string | null;
     createdAt: string;
     updatedAt: string | null;
+    newAchievements?: NewAchievement[] | null;
 }
 
 export interface CreateReviewDto {

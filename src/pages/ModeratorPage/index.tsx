@@ -21,7 +21,7 @@ import {
     EditOutlined,
 } from "@ant-design/icons";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Header from "../../components/Header.tsx";
 import Footer from "../../components/Footer.tsx";
 import { courseApi } from "../../api/courseApi.ts";
@@ -45,7 +45,6 @@ const levelLabel: Record<string, string> = {
     Advanced: "Продвинутый",
 };
 
-// ─── API для черновиков (модератор) ─────────────────────────
 const draftModerationApi = {
     getPendingDrafts: async (): Promise<CourseDraftDto[]> => {
         try {
@@ -77,13 +76,13 @@ const draftModerationApi = {
     },
 };
 
-// ─── Unified item type ───────────────────────────────────────
 type QueueItem =
     | { kind: "course"; data: CourseDto }
     | { kind: "draft"; data: CourseDraftDto };
 
-const DraftCard = ({ draft, actionLoading, onApprove, onReject }: {
+const DraftCard = ({ draft, currentUserId, actionLoading, onApprove, onReject }: {
     draft: CourseDraftDto;
+    currentUserId: string;
     actionLoading: string | null;
     onApprove: (draft: CourseDraftDto) => void;
     onReject: (draft: CourseDraftDto) => void;
@@ -103,6 +102,12 @@ const DraftCard = ({ draft, actionLoading, onApprove, onReject }: {
                     <Tag color="processing" style={{ fontSize: 11 }}>На проверке</Tag>
                     <Tag style={{ fontSize: 11 }}>{levelLabel[draft.level] ?? draft.level}</Tag>
                 </div>
+                {draft.reviewerId && draft.reviewerId !== currentUserId && (
+                    <Tag color="warning" style={{ fontSize: 11, marginBottom: 6 }}>🔒 {draft.reviewerName}</Tag>
+                )}
+                {draft.reviewerId && draft.reviewerId === currentUserId && (
+                    <Tag color="success" style={{ fontSize: 11, marginBottom: 6 }}>✓ Вы проверяете</Tag>
+                )}
                 <Title level={5} style={{ margin: "0 0 4px" }}>{draft.title}</Title>
                 <Tag icon={<EditOutlined />} style={{ fontSize: 11, marginBottom: 6 }}>Изменения курса</Tag>
                 <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 8 }}>
@@ -118,17 +123,21 @@ const DraftCard = ({ draft, actionLoading, onApprove, onReject }: {
                             onClick={() => navigate(`/moderator/review/${draft.courseId}?draftId=${draft.id}`)}>
                         Проверить
                     </Button>
-                    <Button size="small" type="primary" icon={<CheckOutlined />}
-                            loading={actionLoading === draft.id}
-                            style={{ background: "rgba(0,100,0,0.8)" }}
-                            onClick={() => onApprove(draft)}>
-                        Одобрить
-                    </Button>
-                    <Button size="small" danger icon={<CloseOutlined />}
-                            loading={actionLoading === draft.id}
-                            onClick={() => onReject(draft)}>
-                        Отклонить
-                    </Button>
+                    {(!draft.reviewerId || draft.reviewerId === currentUserId) && (
+                        <>
+                            <Button size="small" type="primary" icon={<CheckOutlined />}
+                                    loading={actionLoading === draft.id}
+                                    style={{ background: "rgba(0,100,0,0.8)" }}
+                                    onClick={() => onApprove(draft)}>
+                                Одобрить
+                            </Button>
+                            <Button size="small" danger icon={<CloseOutlined />}
+                                    loading={actionLoading === draft.id}
+                                    onClick={() => onReject(draft)}>
+                                Отклонить
+                            </Button>
+                        </>
+                    )}
                 </div>
             </div>
         </Card>
@@ -160,7 +169,12 @@ const CourseCard = ({ course, currentUserId, actionLoading, onApprove, onReject 
             </div>
             <div style={{ padding: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                    <Tag color="processing" style={{ fontSize: 11 }}>На проверке</Tag>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                        <Tag color="processing" style={{ fontSize: 11 }}>На проверке</Tag>
+                        {course.status === "PublishedUnderReview" && (
+                            <Tag color="orange" style={{ fontSize: 11 }}>🔄 Повторная</Tag>
+                        )}
+                    </div>
                     <Tag style={{ fontSize: 11 }}>{levelLabel[course.level] ?? course.level}</Tag>
                 </div>
                 <Title level={5} style={{ margin: "0 0 6px" }}>{course.title}</Title>
@@ -201,9 +215,9 @@ const CourseCard = ({ course, currentUserId, actionLoading, onApprove, onReject 
     );
 };
 
-// ─── ModeratorPage ──────────────────────────────────────────
 const ModeratorPage = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { userData } = useUserStore();
 
     const [activeTab, setActiveTab] = useState<ModTab>("free");
@@ -249,26 +263,24 @@ const ModeratorPage = () => {
         setStatsLoading(false);
     }, []);
 
+    // Перезагружаем при каждом заходе на страницу (в т.ч. после возврата из проверки курса)
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        loadCourses(page).catch(console.error);
-    }, [page, loadCourses]);
-
-    useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        loadDrafts().catch(console.error);
-    }, [loadDrafts]);
+        const reload = async () => {
+            setPage(1);
+            setStats(undefined);
+            await Promise.all([loadCourses(1), loadDrafts()]);
+        };
+        reload().catch(console.error);
+    }, [location.key, loadCourses, loadDrafts]);
 
     useEffect(() => {
         if (activeTab !== "my" || stats != null) return;
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        loadStats().catch(console.error);
+        const load = async () => { await loadStats(); };
+        load().catch(console.error);
     }, [activeTab, stats, loadStats]);
 
     const handleTabChange = (tab: ModTab) => {
         setActiveTab(tab);
-        void loadCourses(1);
-        setPage(1);
         if (tab === "my") setStats(null);
     };
 
@@ -322,23 +334,37 @@ const ModeratorPage = () => {
     const freeCourses = allCourses.filter((c) => !c.reviewerId);
     const inReviewCourses = allCourses.filter((c) => !!c.reviewerId && c.reviewerId !== userData.id);
     const myCourses = allCourses.filter((c) => c.reviewerId === userData.id);
+    // Черновики взятые этим модератором
+    const myDraftItems: QueueItem[] = drafts
+        .filter(d => d.reviewerId === userData.id)
+        .map(d => ({ kind: "draft" as const, data: d }));
+    // Черновики занятые другими модераторами
+    const inReviewDraftItems: QueueItem[] = drafts
+        .filter(d => !!d.reviewerId && d.reviewerId !== userData.id)
+        .map(d => ({ kind: "draft" as const, data: d }));
+    const myDraftIds = new Set(myDraftItems.map(i => i.data.id));
+    const inReviewDraftIds = new Set(inReviewDraftItems.map(i => i.data.id));
 
-    // Объединяем курсы и черновики в одну очередь
     const buildQueue = (courses: CourseDto[]): QueueItem[] => [
         ...courses.map((c): QueueItem => ({ kind: "course", data: c })),
-        ...drafts.map((d): QueueItem => ({ kind: "draft", data: d })),
+        // Только свободные черновики (не взятые никем)
+        ...drafts.filter(d => !myDraftIds.has(d.id) && !inReviewDraftIds.has(d.id))
+            .map((d): QueueItem => ({ kind: "draft", data: d })),
     ];
 
     const tabs: { key: ModTab; label: string; count: number }[] = [
-        { key: "free", label: "Свободные", count: freeCourses.length + drafts.length },
-        { key: "inReview", label: "На проверке", count: inReviewCourses.length },
-        { key: "my", label: "Мои курсы", count: myCourses.length },
+        { key: "free", label: "Свободные", count: freeCourses.length + drafts.filter(d => !d.reviewerId).length },
+        { key: "inReview", label: "На проверке", count: inReviewCourses.length + inReviewDraftItems.length },
+        { key: "my", label: "Мои курсы", count: myCourses.length + myDraftItems.length },
     ];
 
     const visibleItems: QueueItem[] =
         activeTab === "free" ? buildQueue(freeCourses) :
-            activeTab === "inReview" ? inReviewCourses.map((c): QueueItem => ({ kind: "course", data: c })) :
-                myCourses.map((c): QueueItem => ({ kind: "course", data: c }));
+            activeTab === "inReview" ? [
+                    ...inReviewCourses.map((c): QueueItem => ({ kind: "course", data: c })),
+                    ...inReviewDraftItems,
+                ] :
+                [...myCourses.map((c): QueueItem => ({ kind: "course", data: c })), ...myDraftItems];
 
     return (
         <>
@@ -417,18 +443,13 @@ const ModeratorPage = () => {
                                } />
                     ) : (
                         <>
-                            {activeTab === "free" && drafts.length > 0 && (
-                                <div style={{ marginBottom: 8 }}>
-                                    <Text type="secondary" style={{ fontSize: 12 }}>
-                                    </Text>
-                                </div>
-                            )}
                             <Row gutter={[24, 24]}>
                                 {visibleItems.map((item) =>
                                     item.kind === "draft" ? (
                                         <Col key={item.data.id} xs={24} sm={12} md={8} lg={6}>
                                             <DraftCard
                                                 draft={item.data}
+                                                currentUserId={userData.id}
                                                 actionLoading={actionLoading}
                                                 onApprove={handleApproveDraft}
                                                 onReject={handleOpenRejectDraft}

@@ -1,7 +1,7 @@
 import { authStorage } from "../services/auth-storage.service";
 import { API_URL } from "../config";
 
-// ─── DTO types (соответствуют бэкенду) ──────────────────────
+// ─── DTO types ───────────────────────────────────────────────
 
 export interface DraftTaskDto {
     id: string;
@@ -51,11 +51,15 @@ export interface CourseDraftDto {
     status: string;
     createdAt: string;
     updatedAt: string;
+    // Модератор который взял черновик на проверку
+    reviewerId?: string | null;
+    reviewerName?: string | null;
+    reviewStartedAt?: string | null;
     sections: DraftSectionDto[];
     tags: string[];
 }
 
-// ─── Create DTO types (то что отправляем на PUT) ─────────────
+// ─── Create DTO types ────────────────────────────────────────
 
 export interface CreateDraftTaskDto {
     originalTaskId?: string;
@@ -100,8 +104,6 @@ export interface CreateCourseDraftDto {
     tags: string[];
     sections: CreateDraftSectionDto[];
 }
-
-// ─── Конвертация DraftDto → CreateDto (для отправки на PUT) ──
 
 export function draftToCreateDto(draft: CourseDraftDto): CreateCourseDraftDto {
     return {
@@ -153,12 +155,9 @@ export const courseDraftApi = {
             });
             if (!res.ok) return null;
             return res.json();
-        } catch {
-            return null;
-        }
+        } catch { return null; }
     },
 
-    // Отправляет весь черновик целиком (metadata + sections + lessons + tasks)
     updateDraftFull: async (courseId: string, draftId: string, data: CreateCourseDraftDto): Promise<CourseDraftDto | null> => {
         try {
             const res = await fetch(`${API_URL}/courses/${courseId}/draft/${draftId}`, {
@@ -168,9 +167,7 @@ export const courseDraftApi = {
             });
             if (!res.ok) return null;
             return res.json();
-        } catch {
-            return null;
-        }
+        } catch { return null; }
     },
 
     submitDraft: async (courseId: string, draftId: string): Promise<boolean> => {
@@ -180,9 +177,7 @@ export const courseDraftApi = {
                 headers: authStorage.getAuthHeaders(),
             });
             return res.ok;
-        } catch {
-            return false;
-        }
+        } catch { return false; }
     },
 
     deleteDraft: async (courseId: string, draftId: string): Promise<boolean> => {
@@ -192,9 +187,7 @@ export const courseDraftApi = {
                 headers: authStorage.getAuthHeaders(),
             });
             return res.ok;
-        } catch {
-            return false;
-        }
+        } catch { return false; }
     },
 
     getOrCreateDraft: async (courseId: string): Promise<CourseDraftDto | null> => {
@@ -207,18 +200,33 @@ export const courseDraftApi = {
                 headers: authStorage.getAuthHeaders(),
             });
 
-            if (createRes.status === 409)
-                return courseDraftApi.getDraft(courseId);
-
+            if (createRes.status === 409) return courseDraftApi.getDraft(courseId);
             if (!createRes.ok) return null;
 
-            try {
-                return await createRes.json();
-            } catch {
-                return courseDraftApi.getDraft(courseId);
-            }
-        } catch {
-            return null;
-        }
+            try { return await createRes.json(); }
+            catch { return courseDraftApi.getDraft(courseId); }
+        } catch { return null; }
+    },
+
+    // Модератор берёт черновик на проверку
+    claimDraft: async (draftId: string): Promise<boolean> => {
+        try {
+            const res = await fetch(`${API_URL}/moderation/drafts/${draftId}/claim`, {
+                method: "POST",
+                headers: authStorage.getAuthHeaders(),
+            });
+            return res.ok;
+        } catch { return false; }
+    },
+
+    // Модератор освобождает черновик
+    releaseDraft: async (draftId: string): Promise<boolean> => {
+        try {
+            const res = await fetch(`${API_URL}/moderation/drafts/${draftId}/release`, {
+                method: "POST",
+                headers: authStorage.getAuthHeaders(),
+            });
+            return res.ok;
+        } catch { return false; }
     },
 };

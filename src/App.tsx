@@ -15,6 +15,7 @@ import AdminPage from "./pages/AdminPage";
 import CourseReviewPage from "./pages/CourseReview";
 import TeacherProfilePage from "./pages/TeacherProfilePage";
 import CommunityPage from "./pages/CommunityPage";
+import LegalPage from "./pages/legal";
 
 const ThemeContext = createContext(true);
 
@@ -42,6 +43,7 @@ function App() {
                         <Route path="/teacher/:id" element={<TeacherProfilePage />} />
                         <Route path="/community" element={<CommunityPage />} />
                         <Route path="/admin" element={<AdminPage />} />
+                        <Route path="/legal/:page" element={<LegalPage />} />
                         <Route
                             path="/debug"
                             element={

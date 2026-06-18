@@ -51,7 +51,7 @@ export interface CreateTextInputTaskDto {
 export const taskTeacherApi = {
     getLessonTasks: async (lessonId: string): Promise<TaskTeacherDto[]> => {
         try {
-            const res = await fetch(`${API_URL}/lessons/${lessonId}/tasks`, {
+            const res = await fetch(`${API_URL}/lessons/${lessonId}/tasks?isTeacher=true`, {
                 headers: authStorage.getAuthHeaders(),
             });
             if (!res.ok) return [];

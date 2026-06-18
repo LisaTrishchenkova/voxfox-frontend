@@ -3,7 +3,7 @@ import {
   Layout, Menu, Modal, Row, Spin, Tag, Typography, message,
 } from "antd";
 import {
-  BookOutlined, EditOutlined, HeartOutlined, LockOutlined,
+  BookOutlined, CheckCircleOutlined, EditOutlined, HeartOutlined, LockOutlined,
   LogoutOutlined, MailOutlined, SafetyCertificateOutlined,
   ToolOutlined, TrophyOutlined, UserOutlined, WalletOutlined,
 } from "@ant-design/icons";
@@ -32,7 +32,7 @@ import TopUpModal from "../../components/TopUpModal.tsx";
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
-type Section = "profile" | "courses" | "favorites" | "certificates" | "wallet" | "achievements";
+type Section = "profile" | "courses" | "completed" | "favorites" | "certificates" | "wallet" | "achievements";
 
 const roleLabels: Record<string, string> = {
   Student: "Студент",
@@ -105,8 +105,6 @@ const AchievementsTab = () => {
       <div>
         <Title level={3}>Достижения</Title>
         <Divider />
-
-        {/* Прогресс */}
         <div style={{ marginBottom: 28 }}>
           <Text type="secondary" style={{ fontSize: 13 }}>
             Получено <Text strong style={{ color: "rgba(0,100,0,0.85)" }}>{earned.length}</Text> из <Text strong>{achievements.length}</Text>
@@ -115,8 +113,6 @@ const AchievementsTab = () => {
             <div style={{ height: "100%", borderRadius: 3, background: "rgba(0,100,0,0.75)", width: achievements.length > 0 ? `${Math.round(earned.length / achievements.length * 100)}%` : "0%", transition: "width 0.4s" }} />
           </div>
         </div>
-
-        {/* Полученные */}
         {earned.length > 0 && (
             <>
               <Text strong style={{ fontSize: 13, display: "block", marginBottom: 14 }}>Получены</Text>
@@ -138,8 +134,6 @@ const AchievementsTab = () => {
               </Row>
             </>
         )}
-
-        {/* Заблокированные */}
         {locked.length > 0 && (
             <>
               <Text strong style={{ fontSize: 13, display: "block", marginBottom: 14, color: "#999" }}>Ещё не получены</Text>
@@ -156,7 +150,6 @@ const AchievementsTab = () => {
               </Row>
             </>
         )}
-
         {achievements.length === 0 && (
             <Empty description="Не удалось загрузить достижения" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         )}
@@ -209,7 +202,7 @@ const UserProfilePage = () => {
   useEffect(() => {
     const fetchSectionData = async () => {
       try {
-        if (activeSection === "courses") {
+        if (activeSection === "courses" || activeSection === "completed") {
           setEnrollments(await enrollmentApi.getMyEnrollments());
         } else if (activeSection === "favorites") {
           setFavorites(await favoriteApi.getMyFavorites());
@@ -279,9 +272,14 @@ const UserProfilePage = () => {
     setSavingPassword(false);
   };
 
+  // Разделяем enrollment по статусу
+  const activeEnrollments = enrollments.filter(e => e.status !== "Completed");
+  const completedEnrollments = enrollments.filter(e => e.status === "Completed");
+
   const menuItems = [
     { key: "profile",      icon: <UserOutlined />,              label: "Мои данные" },
     { key: "courses",      icon: <BookOutlined />,              label: "Мои курсы" },
+    { key: "completed",    icon: <CheckCircleOutlined />,       label: "Пройденные курсы" },
     { key: "favorites",    icon: <HeartOutlined />,             label: "Избранное" },
     { key: "certificates", icon: <SafetyCertificateOutlined />, label: "Сертификаты" },
     { key: "achievements", icon: <TrophyOutlined />,            label: "Достижения" },
@@ -406,16 +404,42 @@ const UserProfilePage = () => {
                 </div>
             )}
 
-            {/* Мои курсы */}
+            {/* Мои курсы — только активные */}
             {activeSection === "courses" && (
                 <div>
                   <Title level={3}>Мои курсы</Title>
                   <Divider />
-                  {enrollments.length === 0 ? (
+                  {activeEnrollments.length === 0 ? (
                       <Empty description={<Text type="secondary">Вы ещё не записаны ни на один курс</Text>} image={Empty.PRESENTED_IMAGE_SIMPLE} />
                   ) : (
                       <Row gutter={[24, 24]}>
-                        {enrollments.map((e) => e.course && (<Col key={e.id} xs={24} sm={12} lg={6}><CardCourse course={e.course} /></Col>))}
+                        {activeEnrollments.map((e) => e.course && (<Col key={e.id} xs={24} sm={12} lg={6}><CardCourse course={e.course} /></Col>))}
+                      </Row>
+                  )}
+                </div>
+            )}
+
+            {/* Пройденные курсы */}
+            {activeSection === "completed" && (
+                <div>
+                  <Title level={3}>Пройденные курсы</Title>
+                  <Divider />
+                  {completedEnrollments.length === 0 ? (
+                      <Empty description={<Text type="secondary">Вы пока не завершили ни одного курса</Text>} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                  ) : (
+                      <Row gutter={[24, 24]}>
+                        {completedEnrollments.map((e) => e.course && (
+                            <Col key={e.id} xs={24} sm={12} lg={6}>
+                              <div style={{ position: "relative" }}>
+                                <CardCourse course={e.course} />
+                                <div style={{
+                                  position: "absolute", top: 8, left: 8,
+                                  background: "rgba(0,100,0,0.85)", color: "#fff",
+                                  borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 600,
+                                }}>✓ Завершён</div>
+                              </div>
+                            </Col>
+                        ))}
                       </Row>
                   )}
                 </div>
@@ -491,7 +515,6 @@ const UserProfilePage = () => {
             onSuccess={(newBalance) => setBalance(newBalance)}
         />
 
-        {/* Модалка — подтверждение почты недоступно */}
         <Modal
             open={verifyEmailModalOpen}
             onCancel={() => setVerifyEmailModalOpen(false)}
@@ -501,27 +524,15 @@ const UserProfilePage = () => {
                 Понятно
               </Button>
             }
-            centered
-            width={420}
-            styles={{ body: { padding: "8px 0 16px" } }}
+            centered width={420} styles={{ body: { padding: "8px 0 16px" } }}
         >
           <div style={{ textAlign: "center", padding: "16px 0 8px" }}>
-            <div style={{
-              width: 64, height: 64,
-              background: "linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%)",
-              borderRadius: 16,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 20px",
-            }}>
+            <div style={{ width: 64, height: 64, background: "linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
               <ToolOutlined style={{ fontSize: 28, color: "#d46b08" }} />
             </div>
-            <Title level={4} style={{ margin: "0 0 8px" }}>
-              Сервис временно недоступен
-            </Title>
+            <Title level={4} style={{ margin: "0 0 8px" }}>Сервис временно недоступен</Title>
             <Text type="secondary" style={{ fontSize: 14 }}>
-              Подтверждение почты сейчас на обслуживании.
-              <br />
-              Пожалуйста, попробуйте позже.
+              Подтверждение почты сейчас на обслуживании.<br />Пожалуйста, попробуйте позже.
             </Text>
           </div>
         </Modal>

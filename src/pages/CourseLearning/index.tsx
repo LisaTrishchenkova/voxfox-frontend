@@ -12,6 +12,7 @@ import {
   Space,
   Spin,
   Tag,
+  Tooltip,
   Typography,
   message,
 } from "antd";
@@ -36,6 +37,7 @@ import {
   CheckCircleOutlined,
   MessageOutlined,
   SendOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import ReactMarkdown from "react-markdown";
 import { markdownComponents } from "../../components/markdownComponents";
@@ -46,7 +48,7 @@ import CertificateView from "../../components/CertificateView.tsx";
 import remarkGfm from "remark-gfm";
 import AchievementPopup from "../../components/AchievementPopup.tsx";
 import type { NewAchievement } from "../../components/AchievementPopup.tsx";
-import { achievementApi } from "../../api/achievementApi.ts";
+import { useAchievementPopup } from "../../hooks/useAchievementPopup.ts";
 
 leoProfanity.loadDictionary("ru");
 
@@ -91,7 +93,7 @@ const TaskCard = ({
               : <CheckCircleOutlined style={{ color: "#d9d9d9", fontSize: 16 }} />
           }
           <Text type="secondary" style={{ fontSize: 13 }}>
-            {task.isRequired ? "Обязательное" : "Необязательное"} · {task.points} очков
+            {task.points} очков
           </Text>
         </div>
         <Title level={5} style={{ marginTop: 8, marginBottom: 16 }}>{task.question}</Title>
@@ -278,6 +280,7 @@ const CourseLearningPage = () => {
   const [progressPercent, setProgressPercent] = useState(0);
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
   const [navigating, setNavigating] = useState(false);
+  const [enrollmentStatus, setEnrollmentStatus] = useState<"Active" | "Completed" | "Cancelled" | null>(null);
   const [questions, setQuestions] = useState<QuestionDto[]>([]);
   const [newQuestion, setNewQuestion] = useState("");
   const [submittingQuestion, setSubmittingQuestion] = useState(false);
@@ -287,14 +290,24 @@ const CourseLearningPage = () => {
   const [certModalOpen, setCertModalOpen] = useState(false);
   const [downloadingCert, setDownloadingCert] = useState(false);
 
-  // ачивки
-  const [newAchievements, setNewAchievements] = useState<NewAchievement[]>([]);
-  // флаг — после закрытия попапа ачивок нужно перейти на страницу курса
+  // ачивки — через хук
+  const { newAchievements, handleAchievements, clearAchievements } = useAchievementPopup();
   const [pendingFinishNavigate, setPendingFinishNavigate] = useState(false);
-  // коды ачивок уже показанных — чтобы не дублировать
-  const shownAchievementsRef = useRef<Set<string>>(new Set());
+
 
   const scrolledRef = useRef<string | null>(null);
+
+  // Все задания и сабмишены по всему курсу (накапливаются при переходе между уроками)
+  const [allTasksAcrossCourse, setAllTasksAcrossCourse] = useState<Record<string, TaskStudentDto[]>>({});
+  const [allSubmissionsAcrossCourse, setAllSubmissionsAcrossCourse] = useState<Record<string, TaskSubmissionDto[]>>({});
+
+  // Проверка: все обязательные задания по всему курсу выполнены
+  const allRequiredTasksDone = Object.values(allTasksAcrossCourse)
+      .flat()
+      .filter((t) => t.isRequired)
+      .every((t) => allSubmissionsAcrossCourse[t.id]?.some((s) => s.isCorrect));
+
+  const hasRequiredTasks = Object.values(allTasksAcrossCourse).flat().some((t) => t.isRequired);
 
   useEffect(() => {
     if (!targetQuestionId || questions.length === 0) return;
@@ -333,8 +346,8 @@ const CourseLearningPage = () => {
       const tasksData: TaskStudentDto[] = tasksRes.ok ? await tasksRes.json() : [];
       setTasks(tasksData);
 
+      const submissionsMap: Record<string, TaskSubmissionDto[]> = {};
       if (tasksData.length > 0) {
-        const submissionsMap: Record<string, TaskSubmissionDto[]> = {};
         await Promise.all(
             tasksData.map(async (task) => {
               try {
@@ -351,6 +364,10 @@ const CourseLearningPage = () => {
 
       const qs = await questionApi.getLessonQuestions(lessonId);
       setQuestions(qs);
+
+      // Накапливаем задания и сабмишены по всему курсу
+      setAllTasksAcrossCourse((prev) => ({ ...prev, [lessonId]: tasksData }));
+      setAllSubmissionsAcrossCourse((prev) => ({ ...prev, ...submissionsMap }));
     } catch (e) {
       console.error(e);
     } finally {
@@ -378,9 +395,12 @@ const CourseLearningPage = () => {
         if (enrollmentRes.ok) {
           const enrollments = await enrollmentRes.json();
           const enrollment = enrollments.find(
-              (e: { courseId: string; progressPercent: number }) => e.courseId === id
+              (e: { courseId: string; progressPercent: number; status: string }) => e.courseId === id
           );
-          if (enrollment) setProgressPercent(enrollment.progressPercent);
+          if (enrollment) {
+            setProgressPercent(enrollment.progressPercent);
+            setEnrollmentStatus(enrollment.status);
+          }
         }
 
         const allLessonsData: Record<string, LessonDto[]> = {};
@@ -397,10 +417,66 @@ const CourseLearningPage = () => {
           if (saved) setCompletedLessons(new Set(JSON.parse(saved) as string[]));
         } catch { /* ignore */ }
 
+        // Загружаем задания и сабмишены для ВСЕХ уроков курса
+        const allLessons = Object.values(allLessonsData).flat();
+        const initTasksMap: Record<string, TaskStudentDto[]> = {};
+        const initSubsMap: Record<string, TaskSubmissionDto[]> = {};
+        await Promise.all(
+            allLessons.map(async (lesson) => {
+              try {
+                const tRes = await fetch(`${API_URL}/lessons/${lesson.id}/tasks`, { headers: authStorage.getAuthHeaders() });
+                if (!tRes.ok) return;
+                const lessonTasks: TaskStudentDto[] = await tRes.json();
+                initTasksMap[lesson.id] = lessonTasks;
+                await Promise.all(
+                    lessonTasks.map(async (task) => {
+                      try {
+                        const sRes = await fetch(`${API_URL}/tasks/${task.id}/my-submission`, { headers: authStorage.getAuthHeaders() });
+                        if (sRes.ok) {
+                          const sub: TaskSubmissionDto = await sRes.json();
+                          initSubsMap[task.id] = [sub];
+                        }
+                      } catch { /* нет submission */ }
+                    })
+                );
+              } catch { /* игнорируем */ }
+            })
+        );
+        setAllTasksAcrossCourse(initTasksMap);
+        setAllSubmissionsAcrossCourse(initSubsMap);
+
+        // Отмечаем уроки как завершённые если все обязательные задания уже выполнены
+        const autoCompleted = new Set<string>();
+        for (const [lessonId, lessonTasks] of Object.entries(initTasksMap)) {
+          const required = lessonTasks.filter((t) => t.isRequired);
+          if (required.length === 0) continue; // уроки без заданий не трогаем
+          const allDone = required.every((t) => initSubsMap[t.id]?.some((s) => s.isCorrect));
+          if (allDone) autoCompleted.add(lessonId);
+        }
+        if (autoCompleted.size > 0) {
+          setCompletedLessons((prev) => {
+            const next = new Set([...prev, ...autoCompleted]);
+            localStorage.setItem(`voxfox_${currentUserId}_completed_${id}`, JSON.stringify([...next]));
+            return next;
+          });
+        }
+
+        // Открываем последний урок или первый урок курса
         const savedLessonId = localStorage.getItem(LAST_LESSON_KEY);
         if (savedLessonId) {
           const lessonExists = Object.values(allLessonsData).flat().some((l) => l.id === savedLessonId);
-          if (lessonExists) await fetchLesson(savedLessonId);
+          if (lessonExists) {
+            await fetchLesson(savedLessonId);
+            return;
+          }
+        }
+        // Если сохранённого урока нет — открываем первый урок первого раздела
+        const firstSection = fetchedSections[0];
+        if (firstSection) {
+          const firstLessons = allLessonsData[firstSection.id] ?? [];
+          if (firstLessons.length > 0) {
+            await fetchLesson(firstLessons[0].id);
+          }
         }
       } catch (e) {
         console.error(e);
@@ -423,6 +499,13 @@ const CourseLearningPage = () => {
 
   const completeCurrentLesson = async () => {
     if (!selectedLessonId || completedLessons.has(selectedLessonId)) return;
+    // Проверяем что все обязательные задания этого урока выполнены
+    const lessonTasks = allTasksAcrossCourse[selectedLessonId] ?? [];
+    const lessonSubs = allSubmissionsAcrossCourse;
+    const requiredDone = lessonTasks
+        .filter((t) => t.isRequired)
+        .every((t) => lessonSubs[t.id]?.some((s) => s.isCorrect));
+    if (!requiredDone) return; // не завершаем если задания не выполнены
     try {
       const res = await fetch(`${API_URL}/Lessons/${selectedLessonId}/complete`, {
         method: "POST",
@@ -435,14 +518,7 @@ const CourseLearningPage = () => {
         setProgressPercent(data.progressPercent);
         localStorage.setItem(COMPLETED_KEY, JSON.stringify([...newCompleted]));
 
-        // показываем попап если получены новые ачивки
-        if (data.newAchievements && data.newAchievements.length > 0) {
-          const fresh = (data.newAchievements as NewAchievement[]).filter(
-              (a) => !shownAchievementsRef.current.has(a.code)
-          );
-          fresh.forEach((a) => shownAchievementsRef.current.add(a.code));
-          if (fresh.length > 0) setNewAchievements(fresh);
-        }
+        handleAchievements(data.newAchievements as NewAchievement[]);
       }
     } catch (e) { console.error(e); }
   };
@@ -460,6 +536,35 @@ const CourseLearningPage = () => {
       if (!res.ok) return;
       const data: TaskSubmissionDto = await res.json();
       setSubmissions((prev) => ({ ...prev, [taskId]: [...(prev[taskId] ?? []), data] }));
+      const updatedSubs = { ...allSubmissionsAcrossCourse, [taskId]: [...(allSubmissionsAcrossCourse[taskId] ?? []), data] };
+      setAllSubmissionsAcrossCourse(updatedSubs);
+
+      // Если ответ верный — проверяем все ли обязательные задания урока теперь выполнены
+      if (data.isCorrect && selectedLessonId && !completedLessons.has(selectedLessonId)) {
+        const lessonTasks = allTasksAcrossCourse[selectedLessonId] ?? [];
+        const allRequiredNowDone = lessonTasks
+            .filter((t) => t.isRequired)
+            .every((t) => updatedSubs[t.id]?.some((s) => s.isCorrect));
+        if (allRequiredNowDone) {
+          try {
+            const res2 = await fetch(`${API_URL}/Lessons/${selectedLessonId}/complete`, {
+              method: "POST",
+              headers: authStorage.getAuthHeaders(),
+            });
+            if (res2.ok) {
+              const d = await res2.json();
+              setCompletedLessons((prev) => {
+                const next = new Set([...prev, selectedLessonId]);
+                localStorage.setItem(COMPLETED_KEY, JSON.stringify([...next]));
+                return next;
+              });
+              setProgressPercent(d.progressPercent);
+              handleAchievements(d.newAchievements);
+            }
+          } catch { /* игнорируем */ }
+        }
+      }
+
       if (!data.isCorrect) {
         setAnswers((prev) => { const next = { ...prev }; delete next[taskId]; return next; });
       }
@@ -531,36 +636,17 @@ const CourseLearningPage = () => {
     localStorage.removeItem(LAST_LESSON_KEY);
     setNavigating(false);
 
-    // проверяем сертификат — показываем модалку если есть
+    setEnrollmentStatus("Completed");
+
     try {
       const certs = await certificateApi.getMyCertificates();
       const cert = certs.find((c) => c.courseId === id);
       if (cert) {
         setCertificate(cert);
         setCertModalOpen(true);
-        return; // navigate будет при закрытии модалки
-      }
-    } catch { /* если не удалось — просто переходим */ }
-
-    // подгружаем все ачивки и показываем те которые ещё не показывали
-    try {
-      const allAchievements = await achievementApi.getMyAchievements();
-      const freshEarned = allAchievements
-          .filter((a) => a.isEarned && !shownAchievementsRef.current.has(a.code))
-          .map((a) => ({
-            code: a.code,
-            title: a.title,
-            description: a.description,
-            icon: a.icon,
-            earnedAt: a.earnedAt ?? new Date().toISOString(),
-          }));
-      freshEarned.forEach((a) => shownAchievementsRef.current.add(a.code));
-      if (freshEarned.length > 0) {
-        setNewAchievements(freshEarned);
-        setPendingFinishNavigate(true);
         return;
       }
-    } catch { /* игнорируем */ }
+    } catch { /* если не удалось — просто переходим */ }
 
     navigate(`/course/${id}`);
   };
@@ -589,6 +675,9 @@ const CourseLearningPage = () => {
       ),
     })),
   }));
+
+  // Кнопка завершить: неактивна если есть невыполненные обязательные задания
+  const finishDisabled = hasRequiredTasks && !allRequiredTasksDone;
 
   return (
       <>
@@ -669,13 +758,38 @@ const CourseLearningPage = () => {
                       </div>
                   )}
 
-                  <div style={{ marginTop: 48, display: "flex", justifyContent: "flex-end" }}>
+                  {/* Предупреждение о незавершённых заданиях */}
+                  {isLastLesson() && finishDisabled && (
+                      <Alert
+                          style={{ marginTop: 24 }}
+                          type="warning"
+                          icon={<WarningOutlined />}
+                          showIcon
+                          message="Выполните все обязательные задания"
+                          description="Чтобы завершить курс и получить сертификат, нужно правильно ответить на все обязательные задания этого урока."
+                      />
+                  )}
+
+                  <div style={{ marginTop: 24, display: "flex", justifyContent: "flex-end" }}>
                     {isLastLesson() ? (
-                        <Button type="primary" size="large" loading={navigating}
-                                style={{ background: "rgba(0,100,0,0.8)", minWidth: 200 }}
-                                onClick={handleFinishCourse}>
-                          Завершить курс
-                        </Button>
+                        enrollmentStatus === "Completed" ? (
+                            <Button size="large" disabled style={{ minWidth: 200 }}>
+                              ✓ Курс завершён
+                            </Button>
+                        ) : (
+                            <Tooltip title={finishDisabled ? "Сначала выполните все обязательные задания" : ""}>
+                              <Button
+                                  type="primary"
+                                  size="large"
+                                  loading={navigating}
+                                  disabled={finishDisabled}
+                                  style={{ background: finishDisabled ? undefined : "rgba(0,100,0,0.8)", minWidth: 200 }}
+                                  onClick={handleFinishCourse}
+                              >
+                                Завершить курс
+                              </Button>
+                            </Tooltip>
+                        )
                     ) : (
                         <Button type="primary" size="large" loading={navigating}
                                 style={{ background: "rgba(0,100,0,0.8)", minWidth: 200 }}
@@ -729,7 +843,7 @@ const CourseLearningPage = () => {
             ) : (
                 <div style={{ textAlign: "center", paddingTop: 120, display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
                   <BookOutlined style={{ fontSize: 56, color: "#bbb" }} />
-                  <Text style={{ fontSize: 16, color: "#bbb" }}>Выберите урок из меню слева</Text>
+                  <Text style={{ fontSize: 16, color: "#bbb" }}>Загрузка урока...</Text>
                 </div>
             )}
           </Content>
@@ -771,7 +885,7 @@ const CourseLearningPage = () => {
                 key={newAchievements.map(a => a.code).join(",")}
                 achievements={newAchievements}
                 onClose={() => {
-                  setNewAchievements([]);
+                  clearAchievements();
                   if (pendingFinishNavigate) {
                     setPendingFinishNavigate(false);
                     navigate(`/course/${id}`);

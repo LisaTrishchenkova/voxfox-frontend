@@ -24,13 +24,14 @@ import { favoriteApi } from "../../api/favoriteApi.ts";
 import { courseApi } from "../../api/courseApi.ts";
 import Footer from "../../components/Footer.tsx";
 
-type SortBy = "Title" | "Relevance" | "Date" | "DateDesc" | "Price";
+type SortBy = "Title" | "Relevance" | "Popular" | "Date" | "DateDesc" | "Price";
 
 const sortOptions = [
-  { label: "По популярности", value: "Relevance" },
+  { label: "По популярности", value: "Popular" },
+  { label: "По релевантности", value: "Relevance" },
   { label: "По заголовку", value: "Title" },
-  { label: "По дате (новые)", value: "Date" },
-  { label: "По дате (старые)", value: "DateDesc" },
+  { label: "По дате (новые)", value: "DateDesc" },
+  { label: "По дате (старые)", value: "Date" },
   { label: "По цене", value: "Price" },
 ];
 
@@ -50,7 +51,7 @@ const HomePage = () => {
   const [totalCourse, setTotalCourse] = useState<number>();
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(10);
-  const [currentSortBy, setCurrentSortBy] = useState<SortBy>("Relevance");
+  const [currentSortBy, setCurrentSortBy] = useState<SortBy>("Popular");
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [categoryId, setCategoryId] = useState<string>();
   const [isLoadingCourses, setIsLoadingCourses] = useState(false);
@@ -129,7 +130,7 @@ const HomePage = () => {
     setMinPrice(undefined);
     setMaxPrice(undefined);
     setCategoryId(undefined);
-    setCurrentSortBy("Relevance");
+    setCurrentSortBy("Popular");
     setCurrentPage(1);
     setSearch("");
     setSearchParams((prev) => {

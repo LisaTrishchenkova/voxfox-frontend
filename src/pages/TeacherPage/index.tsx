@@ -358,7 +358,7 @@ const TaskForm = ({ lessonId, onCreated, onCancel, draftMode = false }: { lesson
                 <Form.Item label="Объяснение" name="explanation"><Input.TextArea rows={2} /></Form.Item>
                 <div style={{ display: "flex", gap: 8 }}>
                     <Button type="primary" htmlType="submit" loading={saving} style={{ background: "rgba(0,100,0,0.8)" }}>Создать задание</Button>
-                    <Button onClick={onCancel}>Отмена</Button>
+                    <Button onClick={draftMode ? () => setShowForm(false) : onCancel}>Отмена</Button>
                 </div>
             </Form>
         </div>
