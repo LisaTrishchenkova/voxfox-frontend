@@ -28,6 +28,8 @@ import {useUserStore} from "../../stores/userStore.ts";
 import {balanceApi} from "../../api/balanceApi.ts";
 import leoProfanity from "leo-profanity";
 import { getImageUrl } from "../../utils/imageUtils";
+import AchievementPopup from "../../components/AchievementPopup.tsx";
+import { useAchievementPopup } from "../../hooks/useAchievementPopup.ts";
 
 leoProfanity.loadDictionary("ru");
 
@@ -65,6 +67,9 @@ const CourseDetailPage = () => {
   const [balance, setBalance] = useState<number>(0);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
+
+  // Ачивки
+  const { newAchievements, handleAchievements, clearAchievements } = useAchievementPopup();
 
   const isAuth = authStorage.isAuthenticated();
   const currentUserId = authStorage.getUserData<string>();
@@ -164,12 +169,13 @@ const CourseDetailPage = () => {
     setPurchaseLoading(true);
     const { data, error } = await balanceApi.purchaseCourse(id!);
     if (data) {
-      // Бэк создал enrollment — получаем его
       const enrollments = await enrollmentApi.getMyEnrollments();
       const found = enrollments.find(e => e.courseId === id);
-      setEnrollment(found ?? null);
+      if (found) {
+        setEnrollment(found);
+        handleAchievements(found.newAchievements);
+      }
 
-      // Обновляем баланс
       const balanceData = await balanceApi.getBalance();
       if (balanceData) setBalance(balanceData.balance);
 
@@ -195,6 +201,7 @@ const CourseDetailPage = () => {
       setReviews(prev => [reviewWithName, ...prev]);
       setUserReview(reviewWithName);
       reviewForm.resetFields();
+      handleAchievements(result.newAchievements);
       message.success("Отзыв добавлен!");
     } else {
       message.error("Не удалось добавить отзыв");
@@ -223,18 +230,17 @@ const CourseDetailPage = () => {
 
   // ─── Кнопка записи/покупки ────────────────────────────
   const renderEnrollButton = () => {
-    // Уже записан — показываем "Продолжить"
     if (isAuth && enrollment) {
+      const isCompleted = enrollment.status === "Completed";
       return (
           <Button type="primary" size="large" block
-                  style={{marginTop: 12, height: 48, fontSize: 16, background: "rgba(0,100,0,0.8)"}}
+                  style={{marginTop: 12, height: "auto", minHeight: 48, fontSize: 15, background: "rgba(0,100,0,0.8)", whiteSpace: "normal", lineHeight: 1.4, padding: "10px 16px"}}
                   onClick={() => navigate(`/course/${id}/learn`)}>
-            Продолжить курс
+            {isCompleted ? "✓ Вы завершили этот курс - можете его повторно просмотреть" : "Продолжить курс"}
           </Button>
       );
     }
 
-    // Курс не опубликован
     if (!isPublished) {
       return (
           <Button size="large" block disabled style={{marginTop: 12, height: 48, fontSize: 16}}>
@@ -243,7 +249,6 @@ const CourseDetailPage = () => {
       );
     }
 
-    // Не авторизован
     if (!isAuth) {
       return (
           <Button type="primary" size="large" block
@@ -254,7 +259,6 @@ const CourseDetailPage = () => {
       );
     }
 
-    // Авторизован, не записан, курс платный
     if (isPaid) {
       return (
           <Button type="primary" size="large" block
@@ -266,14 +270,16 @@ const CourseDetailPage = () => {
       );
     }
 
-    // Авторизован, не записан, курс бесплатный
     return (
         <Button type="primary" size="large" block loading={enrollLoading}
                 style={{marginTop: 12, height: 48, fontSize: 16, background: "rgba(0,100,0,0.8)"}}
                 onClick={async () => {
                   setEnrollLoading(true);
                   const result = await enrollmentApi.enroll(id!);
-                  if (result) setEnrollment(result);
+                  if (result) {
+                    setEnrollment(result);
+                    handleAchievements(result.newAchievements);
+                  }
                   setEnrollLoading(false);
                 }}>
           Записаться бесплатно
@@ -547,19 +553,16 @@ const CourseDetailPage = () => {
             centered
         >
           <div style={{display: "flex", flexDirection: "column", gap: 16, marginTop: 8}}>
-            {/* Что покупаем */}
             <div style={{background: "#fafafa", borderRadius: 8, padding: "12px 16px", border: "1px solid #f0f0f0"}}>
               <Text strong style={{display: "block", marginBottom: 4}}>{course.title}</Text>
               <Text type="secondary" style={{fontSize: 13}}>{course.description}</Text>
             </div>
 
-            {/* Сумма */}
             <div style={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
               <Text>Стоимость курса:</Text>
               <Text strong style={{fontSize: 18}}>{course.price.toLocaleString("ru-RU")} ₽</Text>
             </div>
 
-            {/* Баланс */}
             <div style={{
               display: "flex", justifyContent: "space-between", alignItems: "center",
               padding: "10px 14px", borderRadius: 8,
@@ -575,7 +578,6 @@ const CourseDetailPage = () => {
               </Text>
             </div>
 
-            {/* Недостаточно средств */}
             {!hasEnoughBalance && (
                 <div style={{background: "rgba(255,77,79,0.05)", borderRadius: 8, padding: "10px 14px", border: "1px solid rgba(255,77,79,0.2)"}}>
                   <Text type="danger" style={{fontSize: 13}}>
@@ -587,7 +589,6 @@ const CourseDetailPage = () => {
                 </div>
             )}
 
-            {/* Остаток после покупки */}
             {hasEnoughBalance && (
                 <div style={{display: "flex", justifyContent: "space-between"}}>
                   <Text type="secondary" style={{fontSize: 13}}>Остаток после оплаты:</Text>
@@ -598,6 +599,15 @@ const CourseDetailPage = () => {
             )}
           </div>
         </Modal>
+
+        {/* Попап достижений */}
+        {newAchievements.length > 0 && (
+            <AchievementPopup
+                key={newAchievements.map(a => a.code).join(",")}
+                achievements={newAchievements}
+                onClose={clearAchievements}
+            />
+        )}
 
         <Footer/>
       </>

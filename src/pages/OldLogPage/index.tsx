@@ -20,7 +20,7 @@ import { useState } from "react";
 import type { LoginFormData } from "../../api/types/auth.ts";
 import { authApi } from "../../api/authApi.ts";
 import { gradients, commonStyles, componentProps } from "../../theme.ts";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link as RouterLink } from "react-router-dom";
 import { useUserStore } from "../../stores/userStore.ts";
 
 const { Title, Text, Link } = Typography;
@@ -62,7 +62,7 @@ const LoginPage = () => {
                     code: "ACCOUNT_DELETED",
                     type: "error",
                     message: "Аккаунт удалён",
-                    description: "Ваш аккаунт был деактивирован. Если вы считаете это ошибкой — свяжитесь с администратором.",
+                    description: "Ваш аккаунт был деактивирован. Если вы считаете это ошибкой, напишите на почту voxfox@gmail.com.",
                 });
             } else if (error.code === "ACCOUNT_BLOCKED") {
                 setLoginError({
@@ -71,7 +71,7 @@ const LoginPage = () => {
                     message: "Аккаунт заблокирован",
                     description: error.reason
                         ? `Причина блокировки: ${error.reason}`
-                        : "Ваш аккаунт заблокирован. Обратитесь к администратору для уточнения причины.",
+                        : "Ваш аккаунт заблокирован. Напишите на почту voxfox@gmail.com для уточнения причин.",
                 });
             } else if (error.code === "INVALID_CREDENTIALS") {
                 setLoginError({
@@ -84,7 +84,7 @@ const LoginPage = () => {
                     code: "UNKNOWN",
                     type: "error",
                     message: "Произошла ошибка",
-                    description: "Попробуйте ещё раз или обратитесь в поддержку.",
+                    description: "Попробуйте ещё раз или обратитесь в поддержку (напишите на почту voxfox@gmail.com).",
                 });
             }
 
@@ -115,74 +115,53 @@ const LoginPage = () => {
     };
 
     return (
-        <div
-            style={{
-                minHeight: "100vh",
-                background: gradients.primaryBackground,
-                ...commonStyles.flexCenter,
-                padding: "40px 20px",
-            }}
-        >
-            <Row
-                gutter={0}
-                style={{
-                    maxWidth: 1200,
-                    width: "100%",
-                    borderRadius: 24,
-                    overflow: "hidden",
-                    boxShadow: "0 20px 60px rgba(82, 196, 26, 0.15)",
-                    background: "#fff",
-                }}
-            >
+        <div style={{
+            minHeight: "100vh",
+            background: gradients.primaryBackground,
+            ...commonStyles.flexCenter,
+            padding: "40px 20px",
+        }}>
+            <Row gutter={0} style={{
+                maxWidth: 1200,
+                width: "100%",
+                borderRadius: 24,
+                overflow: "hidden",
+                boxShadow: "0 20px 60px rgba(82, 196, 26, 0.15)",
+                background: "#fff",
+            }}>
                 {/* Левая часть - форма входа */}
                 <Col xs={24} md={12} lg={10}>
                     <div style={{ padding: "60px 48px" }}>
                         <div style={{ textAlign: "center", marginBottom: 40 }}>
-                            <div
-                                style={{
-                                    width: 64,
-                                    height: 64,
-                                    background: gradients.primary,
-                                    borderRadius: 16,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    margin: "0 auto 20px",
-                                }}
-                            >
+                            <div style={{
+                                width: 64, height: 64,
+                                background: gradients.primary,
+                                borderRadius: 16,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                margin: "0 auto 20px",
+                            }}>
                                 <LockOutlined style={commonStyles.iconWhite} />
                             </div>
-                            <Title
-                                level={2}
-                                style={{
-                                    background: gradients.primaryText,
-                                    WebkitBackgroundClip: "text",
-                                    WebkitTextFillColor: "transparent",
-                                    marginBottom: 12,
-                                    fontWeight: 700,
-                                }}
-                            >
+                            <Title level={2} style={{
+                                background: gradients.primaryText,
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                                marginBottom: 12,
+                                fontWeight: 700,
+                            }}>
                                 Вход в аккаунт
                             </Title>
                             <Text type="secondary" style={{ fontSize: 16 }}>
                                 Если вы вдруг не зарегистрировались
                                 <br />
                                 Можете сделать это здесь{" "}
-                                <Link
-                                    onClick={() => navigate("/registration")}
-                                    style={{
-                                        color: "#52c41a",
-                                        fontWeight: 600,
-                                        borderBottom: "1px dashed #52c41a",
-                                    }}
-                                >
+                                <Link onClick={() => navigate("/registration")} style={{ color: "#52c41a", fontWeight: 600, borderBottom: "1px dashed #52c41a" }}>
                                     Зарегистрироваться!
                                 </Link>
                             </Text>
                         </div>
 
-                        {/* Блок ошибки */}
-                        {loginError && loginError.code !== 'INVALID_CREDENTIALS' && (
+                        {loginError && loginError.code !== "INVALID_CREDENTIALS" && (
                             <Alert
                                 type={loginError.type}
                                 message={loginError.message}
@@ -204,80 +183,50 @@ const LoginPage = () => {
                             requiredMark={false}
                         >
                             <Form.Item<LoginFormData>
-                                label={
-                                    <div style={{ fontSize: "16px", fontWeight: 600, color: "#262626", marginBottom: "8px" }}>
-                                        Email
-                                    </div>
-                                }
+                                label={<div style={{ fontSize: "16px", fontWeight: 600, color: "#262626", marginBottom: "8px" }}>Email</div>}
                                 name="email"
                                 rules={[
                                     { required: true, message: "Пожалуйста, введите вашу почту" },
                                     { type: "email", message: "Пожалуйста, введите корректный email" },
                                 ]}
                             >
-                                <Input
-                                    size="large"
-                                    placeholder="Введите вашу почту"
-                                    prefix={<MailOutlined style={commonStyles.iconPrimary} />}
-                                    onChange={() => setLoginError(null)}
-                                />
+                                <Input size="large" placeholder="Введите вашу почту"
+                                       prefix={<MailOutlined style={commonStyles.iconPrimary} />}
+                                       onChange={() => setLoginError(null)} />
                             </Form.Item>
 
                             <Form.Item<LoginFormData>
-                                label={
-                                    <div style={{ fontSize: "16px", fontWeight: 600, color: "#262626", marginBottom: "8px" }}>
-                                        Пароль
-                                    </div>
-                                }
+                                label={<div style={{ fontSize: "16px", fontWeight: 600, color: "#262626", marginBottom: "8px" }}>Пароль</div>}
                                 name="password"
-                                rules={
-                                    [
-                                        { required: true, message: "Пожалуйста, введите ваш пароль" },
-                                        { min: 6, message: "Пароль должен содержать минимум 6 символов" },
-                                    ]}
+                                rules={[
+                                    { required: true, message: "Пожалуйста, введите ваш пароль" },
+                                    { min: 6, message: "Пароль должен содержать минимум 6 символов" },
+                                ]}
                             >
-                                <Input.Password
-                                    size="large"
-                                    placeholder="Введите ваш пароль"
-                                    prefix={<LockOutlined style={commonStyles.iconPrimary} />}
-                                    onChange={() => setLoginError(null)}
-                                />
+                                <Input.Password size="large" placeholder="Введите ваш пароль"
+                                                prefix={<LockOutlined style={commonStyles.iconPrimary} />}
+                                                onChange={() => setLoginError(null)} />
                             </Form.Item>
 
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
                                 <div style={{ flex: 1 }}>
-                                    {loginError?.code === 'INVALID_CREDENTIALS' && (
+                                    {loginError?.code === "INVALID_CREDENTIALS" && (
                                         <div style={{
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            gap: 6,
-                                            padding: "4px 12px",
-                                            border: "1px solid #ffccc7",
-                                            borderRadius: 6,
-                                            background: "#fff2f0",
+                                            display: "inline-flex", alignItems: "center", gap: 6,
+                                            padding: "4px 12px", border: "1px solid #ffccc7",
+                                            borderRadius: 6, background: "#fff2f0",
                                         }}>
-                                            <Text type="danger" style={{ fontSize: 13 }}>
-                                                Неверный email или пароль
-                                            </Text>
+                                            <Text type="danger" style={{ fontSize: 13 }}>Неверный email или пароль</Text>
                                         </div>
                                     )}
                                 </div>
-                                <Link
-                                    onClick={() => setForgotModalOpen(true)}
-                                    style={{ color: "#52c41a", fontWeight: 500, flexShrink: 0 }}
-                                >
+                                <Link onClick={() => setForgotModalOpen(true)} style={{ color: "#52c41a", fontWeight: 500, flexShrink: 0 }}>
                                     Забыли пароль?
                                 </Link>
                             </div>
 
                             <Form.Item>
-                                <Button
-                                    type="primary"
-                                    htmlType="submit"
-                                    size="large"
-                                    block
-                                    loading={loading}
-                                >
+                                <Button type="primary" htmlType="submit" size="large" block loading={loading}>
                                     Войти <ArrowRightOutlined style={{ marginLeft: "8px" }} />
                                 </Button>
                             </Form.Item>
@@ -287,14 +236,18 @@ const LoginPage = () => {
                             <div style={{ textAlign: "center" }}>
                                 <Text type="secondary">
                                     Нажимая кнопку "Войти", вы соглашаетесь с{" "}
-                                    <Link style={{ color: "#52c41a" }}>политикой конфиденциальности</Link>{" "}
+                                    <RouterLink to="/legal/privacy" style={{ color: "#52c41a" }}>
+                                        политикой конфиденциальности
+                                    </RouterLink>{" "}
                                     и{" "}
-                                    <Link style={{ color: "#52c41a" }}>условиями использования</Link>
+                                    <RouterLink to="/legal/terms" style={{ color: "#52c41a" }}>
+                                        условиями использования
+                                    </RouterLink>
                                 </Text>
                             </div>
                         </Space>
 
-                        {/* Демо-кнопки быстрого входа */}
+                        {/* Демо-кнопки */}
                         <div style={{ marginTop: 20, display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
                             {DEMO_USERS.map((u) => (
                                 <button
@@ -358,35 +311,23 @@ const LoginPage = () => {
             <Modal
                 open={forgotModalOpen}
                 onCancel={() => setForgotModalOpen(false)}
-                footer={
-                    <Button type="primary" block onClick={() => setForgotModalOpen(false)}>
-                        Понятно
-                    </Button>
-                }
-                centered
-                width={420}
+                footer={<Button type="primary" block onClick={() => setForgotModalOpen(false)}>Понятно</Button>}
+                centered width={420}
                 styles={{ body: { padding: "8px 0 16px" } }}
             >
                 <div style={{ textAlign: "center", padding: "16px 0 8px" }}>
                     <div style={{
-                        width: 64,
-                        height: 64,
+                        width: 64, height: 64,
                         background: "linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%)",
                         borderRadius: 16,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        display: "flex", alignItems: "center", justifyContent: "center",
                         margin: "0 auto 20px",
                     }}>
                         <ToolOutlined style={{ fontSize: 28, color: "#d46b08" }} />
                     </div>
-                    <Title level={4} style={{ margin: "0 0 8px" }}>
-                        Сервис временно недоступен
-                    </Title>
+                    <Title level={4} style={{ margin: "0 0 8px" }}>Сервис временно недоступен</Title>
                     <Text type="secondary" style={{ fontSize: 14 }}>
-                        Восстановление пароля сейчас на обслуживании.
-                        <br />
-                        Пожалуйста, попробуйте позже.
+                        Восстановление пароля сейчас на обслуживании.<br />Пожалуйста, попробуйте позже.
                     </Text>
                 </div>
             </Modal>

@@ -58,7 +58,13 @@ export interface PaginatedResponse {
   pageSize: number;
 }
 
-export type CourseStatus = "Draft" | "UnderReview" | "RejectedByModerator" | "Published";
+export type CourseStatus =
+    | "Draft"
+    | "UnderReview"
+    | "RejectedByModerator"
+    | "Published"
+    | "PublishedUnderReview";
+
 export type CourseLevel = "Beginner" | "Intermediate" | "Advanced";
 
 export interface LessonDto {

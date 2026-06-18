@@ -82,6 +82,7 @@ export const moderationApi = {
         try {
             const res = await fetch(`${API_URL}/moderation/courses/${courseId}`, {
                 headers: authStorage.getAuthHeaders(),
+                cache: "no-store",
             });
             if (!res.ok) return null;
             return res.json();
@@ -92,6 +93,7 @@ export const moderationApi = {
         try {
             const res = await fetch(`${API_URL}/moderation/stats/my`, {
                 headers: authStorage.getAuthHeaders(),
+                cache: "no-store",
             });
             if (!res.ok) return null;
             return res.json();
@@ -106,6 +108,7 @@ export const adminApi = {
         try {
             const res = await fetch(`${API_URL}/admin/stats`, {
                 headers: authStorage.getAuthHeaders(),
+                cache: "no-store",
             });
             if (!res.ok) return null;
             return res.json();
@@ -116,6 +119,7 @@ export const adminApi = {
         try {
             const res = await fetch(`${API_URL}/admin/moderators/stats`, {
                 headers: authStorage.getAuthHeaders(),
+                cache: "no-store",
             });
             if (!res.ok) return [];
             return res.json();

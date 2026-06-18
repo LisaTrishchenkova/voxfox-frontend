@@ -13,7 +13,7 @@ export interface CourseSearchParams {
   page?: number;
   pageSize?: number;
   categoryId?: string;
-  sortBy?: "Relevance" | "Title" | "Date" | "DateDesc" | "Price";
+  sortBy?: "Relevance" | "Title" | "Date" | "DateDesc" | "Price" | "Popular";
   level?: CourseLevel;
   minPrice?: number;
   maxPrice?: number;
