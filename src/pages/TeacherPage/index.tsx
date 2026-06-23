@@ -439,23 +439,23 @@ const TeacherStatsTab = () => {
 
 // ─── CourseForm ─────────────────────────────────────────────
 const CourseForm = ({
-  form,
-  categories,
-  initialTags = [],
-  onFinish,
-  onCancel,
-  submitLabel,
-  loading,
-  courseId,
-  onCoverUploaded,
-}: {
+                      form,
+                      categories,
+                      initialTags = [],
+                      onFinish,
+                      onCancel,
+                      submitLabel,
+                      loading,
+                      courseId,
+                      onCoverUploaded,
+                    }: {
   form: ReturnType<typeof Form.useForm<CourseFormValues>>[0];
   categories: CategoryDto[];
   initialTags?: string[];
   onFinish: (
-    values: CourseFormValues,
-    tags: string[],
-    coverFile?: File | null,
+      values: CourseFormValues,
+      tags: string[],
+      coverFile?: File | null,
   ) => void;
   onCancel: () => void;
   submitLabel: string;
@@ -468,8 +468,10 @@ const CourseForm = ({
   const [uploadingCover, setUploadingCover] = useState(false);
   const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string>(
-    form.getFieldValue("coverImageUrl") ?? "",
+      form.getFieldValue("coverImageUrl") ?? "",
   );
+  const [uploadProgress, setUploadProgress] = useState(0);
+
   const addTag = () => {
     const t = tagInput.trim();
     if (t && !tags.includes(t)) setTags((p) => [...p, t]);
@@ -477,270 +479,292 @@ const CourseForm = ({
   };
 
   const isImageUrl = (url: string) =>
-    /^https?:\/\/.+\.(jpg|jpeg|png|webp|gif|svg)(\?.*)?$/i.test(url.trim());
+      /^https?:\/\/.+\.(jpg|jpeg|png|webp|gif|svg)(\?.*)?$/i.test(url.trim());
+
+  // Функция загрузки изображения через /api/images
+  const uploadImageToServer = async (file: File): Promise<string | null> => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      // Удаляем Content-Type для FormData
+      const headers = authStorage.getAuthHeaders() as Record<string, string>;
+      const { "Content-Type": _, ...cleanHeaders } = headers;
+
+      const res = await fetch(`${API_URL}/images`, {
+        method: "POST",
+        headers: cleanHeaders,
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const error = await res.text();
+        console.error("Ошибка загрузки:", res.status, error);
+        return null;
+      }
+
+      const data = await res.json();
+      return data.url; // /api/images/{guid}
+    } catch (error) {
+      console.error("Ошибка при загрузке изображения:", error);
+      return null;
+    }
+  };
+
+  // Обработчик выбора файла для обложки
+  const handleCoverFileSelect = async (file: File) => {
+    // Валидация
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowedTypes.includes(file.type)) {
+      message.error("Поддерживаются только JPEG, PNG, WEBP и GIF");
+      return false;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      message.error("Файл не должен превышать 10MB");
+      return false;
+    }
+
+    setUploadingCover(true);
+    setUploadProgress(0);
+
+    try {
+      if (courseId) {
+        // Если есть courseId - загружаем напрямую на курс
+        const fd = new FormData();
+        fd.append("file", file);
+
+        const headers = authStorage.getAuthHeaders() as Record<string, string>;
+        const { "Content-Type": _, ...cleanHeaders } = headers;
+
+        const res = await fetch(`${API_URL}/Courses/${courseId}/cover`, {
+          method: "POST",
+          headers: cleanHeaders,
+          body: fd,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          form.setFieldValue("coverImageUrl", data.coverImageUrl);
+          setCoverPreview(data.coverImageUrl);
+          onCoverUploaded?.(data.coverImageUrl);
+          message.success("Обложка загружена");
+        } else {
+          message.error("Ошибка при загрузке обложки");
+        }
+      } else {
+        // Если курс ещё не создан - загружаем через /api/images
+        const imageUrl = await uploadImageToServer(file);
+        if (imageUrl) {
+          // Сохраняем URL в поле формы
+          form.setFieldValue("coverImageUrl", imageUrl);
+          setCoverPreview(imageUrl);
+          // Сохраняем файл как pending - он не нужен, так как уже загружен
+          setPendingCoverFile(null);
+          message.success("Обложка загружена");
+        } else {
+          message.error("Не удалось загрузить обложку");
+        }
+      }
+    } catch (error) {
+      console.error("Ошибка:", error);
+      message.error("Ошибка при загрузке обложки");
+    } finally {
+      setUploadingCover(false);
+      setUploadProgress(0);
+    }
+
+    return false; // Предотвращаем автоматическую загрузку
+  };
 
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      onFinish={(values) => onFinish(values, tags, pendingCoverFile)}
-    >
-      <Row gutter={16}>
-        <Col span={16}>
-          <Form.Item
-            label="Название"
-            name="title"
-            rules={[{ required: true }, { min: 2 }, { max: 200 }]}
-          >
-            <Input />
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item label="Уровень" name="level" initialValue="Beginner">
-            <Select>
-              <Select.Option value="Beginner">Начинающий</Select.Option>
-              <Select.Option value="Intermediate">Средний</Select.Option>
-              <Select.Option value="Advanced">Продвинутый</Select.Option>
-            </Select>
-          </Form.Item>
-        </Col>
-      </Row>
-      <Form.Item
-        label="Краткое описание"
-        name="description"
-        rules={[{ required: true }, { min: 10 }, { max: 500 }]}
+      <Form
+          form={form}
+          layout="vertical"
+          onFinish={(values) => onFinish(values, tags, pendingCoverFile)}
       >
-        <Input.TextArea rows={2} />
-      </Form.Item>
-      <Form.Item label="Полное описание" name="fullDescription">
-        <Input.TextArea rows={4} />
-      </Form.Item>
-      <Row gutter={16}>
-        <Col span={12}>
-          <Form.Item label="Категория" name="categoryId">
-            <Select placeholder="Выберите категорию" allowClear>
-              {categories.map((c) => (
-                <Select.Option key={c.id} value={c.id}>
-                  {c.name}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <Form.Item label="Цена" name="price" initialValue={0}>
-            <InputNumber
-              min={0}
-              max={1000000}
-              style={{ width: "100%" }}
-              addonAfter="₽"
-              onChange={(val) => {
-                // триггерит ре-рендер через форму
-              }}
-            />
-          </Form.Item>
-          <Form.Item
-            noStyle
-            shouldUpdate={(prev, cur) => prev.price !== cur.price}
-          >
-            {({ getFieldValue }) => {
-              const price = getFieldValue("price") ?? 0;
-              const earn = Math.round(price * 0.85);
-              return (
-                <div style={{ marginTop: -20, marginBottom: 16 }}>
-                  {price === 0 ? (
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      Бесплатный курс
-                    </Text>
-                  ) : (
-                    <Text style={{ fontSize: 12, color: "rgba(0,100,0,0.85)" }}>
-                      Вы получите:{" "}
-                      <strong>{earn.toLocaleString("ru-RU")} ₽</strong>
-                    </Text>
-                  )}
-                </div>
-              );
-            }}
-          </Form.Item>
-        </Col>
-      </Row>
-      <Form.Item label="Обложка курса">
-        <div style={{ display: "flex", gap: 16 }}>
-          {/* Превью */}
-          <div style={{ width: 160, flexShrink: 0 }}>
-            <div
-              style={{
-                width: 160,
-                height: 90,
-                borderRadius: 8,
-                overflow: "hidden",
-                border: "1px solid #f0f0f0",
-                background: "#fafafa",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+        <Row gutter={16}>
+          <Col span={16}>
+            <Form.Item
+                label="Название"
+                name="title"
+                rules={[{ required: true }, { min: 2 }, { max: 200 }]}
             >
-              {coverPreview && isImageUrl(coverPreview) ? (
-                <img
-                  src={coverPreview}
-                  alt="Обложка"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    display: "block",
-                  }}
-                  onError={() => setCoverPreview("")}
+              <Input />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item label="Уровень" name="level" initialValue="Beginner">
+              <Select>
+                <Select.Option value="Beginner">Начинающий</Select.Option>
+                <Select.Option value="Intermediate">Средний</Select.Option>
+                <Select.Option value="Advanced">Продвинутый</Select.Option>
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
+        <Form.Item
+            label="Краткое описание"
+            name="description"
+            rules={[{ required: true }, { min: 10 }, { max: 500 }]}
+        >
+          <Input.TextArea rows={2} />
+        </Form.Item>
+        <Form.Item label="Полное описание" name="fullDescription">
+          <Input.TextArea rows={4} />
+        </Form.Item>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item label="Категория" name="categoryId">
+              <Select placeholder="Выберите категорию" allowClear>
+                {categories.map((c) => (
+                    <Select.Option key={c.id} value={c.id}>
+                      {c.name}
+                    </Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="Цена" name="price" initialValue={0}>
+              <InputNumber
+                  min={0}
+                  max={1000000}
+                  style={{ width: "100%" }}
+                  addonAfter="₽"
+              />
+            </Form.Item>
+            <Form.Item
+                noStyle
+                shouldUpdate={(prev, cur) => prev.price !== cur.price}
+            >
+              {({ getFieldValue }) => {
+                const price = getFieldValue("price") ?? 0;
+                const earn = Math.round(price * 0.85);
+                return (
+                    <div style={{ marginTop: -20, marginBottom: 16 }}>
+                      {price === 0 ? (
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            Бесплатный курс
+                          </Text>
+                      ) : (
+                          <Text style={{ fontSize: 12, color: "rgba(0,100,0,0.85)" }}>
+                            Вы получите:{" "}
+                            <strong>{earn.toLocaleString("ru-RU")} ₽</strong>
+                          </Text>
+                      )}
+                    </div>
+                );
+              }}
+            </Form.Item>
+          </Col>
+        </Row>
+        <Form.Item label="Обложка курса">
+          <div style={{ display: "flex", gap: 16 }}>
+            {/* Поля */}
+            <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                }}
+            >
+              <Form.Item name="coverImageUrl" noStyle>
+                <Input
+                    placeholder="Вставьте ссылку на изображение..."
+                    onChange={(e) => setCoverPreview(e.target.value)}
+                    allowClear
+                    onClear={() => setCoverPreview("")}
                 />
-              ) : (
-                <span style={{ fontSize: 28, opacity: 0.3 }}>🖼️</span>
+              </Form.Item>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Или загрузите файл:
+              </Text>
+              <Upload
+                  accept=".jpg,.jpeg,.png,.webp"
+                  showUploadList={false}
+                  beforeUpload={handleCoverFileSelect}
+                  disabled={uploadingCover}
+              >
+                <Button
+                    icon={<UploadOutlined />}
+                    loading={uploadingCover}
+                    size="small"
+                >
+                  {uploadingCover
+                      ? "Загрузка..."
+                      : pendingCoverFile
+                          ? `Файл: ${pendingCoverFile.name}`
+                          : "Выбрать файл обложки"}
+                </Button>
+              </Upload>
+              {pendingCoverFile && !courseId && (
+                  <Text type="secondary" style={{ fontSize: 11 }}>
+                    Файл будет загружен после создания курса
+                  </Text>
               )}
             </div>
           </div>
-
-          {/* Поля */}
+        </Form.Item>
+        <Form.Item label="Теги">
           <div
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-            }}
+              style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}
           >
-            <Form.Item name="coverImageUrl" noStyle>
-              <Input
-                placeholder="Вставьте ссылку на изображение..."
-                onChange={(e) => setCoverPreview(e.target.value)}
-                allowClear
-                onClear={() => setCoverPreview("")}
-              />
-            </Form.Item>
-            {courseId && (
-              <Upload
-                accept=".jpg,.jpeg,.png,.webp"
-                showUploadList={false}
-                beforeUpload={async (file) => {
-                  setUploadingCover(true);
-                  const formData = new FormData();
-                  formData.append("file", file);
-                  try {
-                    const authHeaders = authStorage.getAuthHeaders() as Record<
-                      string,
-                      string
-                    >;
-                    const { "Content-Type": _, ...h } = authHeaders;
-                    const res = await fetch(
-                      `${API_URL}/Courses/${courseId}/cover`,
-                      { method: "POST", headers: h, body: formData },
-                    );
-                    if (res.ok) {
-                      const data = await res.json();
-                      form.setFieldValue("coverImageUrl", data.coverImageUrl);
-                      setCoverPreview(data.coverImageUrl);
-                      onCoverUploaded?.(data.coverImageUrl);
-                      message.success("Обложка загружена");
-                    } else {
-                      message.error("Ошибка при загрузке обложки");
-                    }
-                  } catch {
-                    message.error("Ошибка при загрузке обложки");
-                  }
-                  setUploadingCover(false);
-                  return false;
-                }}
-              >
-                <Button
-                  icon={<UploadOutlined />}
-                  loading={uploadingCover}
-                  size="small"
-                >
-                  Загрузить файл
-                </Button>
-              </Upload>
-            )}
-            {!courseId && (
-              <Upload
-                accept=".jpg,.jpeg,.png,.webp"
-                showUploadList={false}
-                beforeUpload={(file) => {
-                  setPendingCoverFile(file);
-                  const previewUrl = URL.createObjectURL(file);
-                  setCoverPreview(previewUrl);
-                  message.info(
-                    `Файл «${file.name}» будет загружен после создания`,
-                  );
-                  return false;
-                }}
-              >
-                <Button icon={<UploadOutlined />} size="small">
-                  {pendingCoverFile
-                    ? `Файл: ${pendingCoverFile.name}`
-                    : "Выбрать файл обложки"}
-                </Button>
-              </Upload>
+            {tags.length === 0 ? (
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Теги не добавлены
+                </Text>
+            ) : (
+                tags.map((t) => (
+                    <Tag
+                        key={t}
+                        closable
+                        onClose={() => setTags((p) => p.filter((x) => x !== t))}
+                        color="green"
+                    >
+                      {t}
+                    </Tag>
+                ))
             )}
           </div>
-        </div>
-      </Form.Item>
-      <Form.Item label="Теги">
-        <div
-          style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}
+          <Space>
+            <Input
+                size="small"
+                placeholder="Новый тег"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onPressEnter={(e) => {
+                  e.preventDefault();
+                  addTag();
+                }}
+                style={{ width: 180 }}
+            />
+            <Button size="small" icon={<PlusOutlined />} onClick={addTag}>
+              Добавить
+            </Button>
+          </Space>
+        </Form.Item>
+        <Form.Item
+            label="Выдавать сертификат по завершении"
+            name="certificateEnabled"
+            valuePropName="checked"
+            initialValue={false}
         >
-          {tags.length === 0 ? (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Теги не добавлены
-            </Text>
-          ) : (
-            tags.map((t) => (
-              <Tag
-                key={t}
-                closable
-                onClose={() => setTags((p) => p.filter((x) => x !== t))}
-                color="green"
-              >
-                {t}
-              </Tag>
-            ))
-          )}
-        </div>
-        <Space>
-          <Input
-            size="small"
-            placeholder="Новый тег"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onPressEnter={(e) => {
-              e.preventDefault();
-              addTag();
-            }}
-            style={{ width: 180 }}
-          />
-          <Button size="small" icon={<PlusOutlined />} onClick={addTag}>
-            Добавить
+          <Switch />
+        </Form.Item>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <Button onClick={onCancel}>Отмена</Button>
+          <Button
+              type="primary"
+              htmlType="submit"
+              loading={loading}
+              style={{ background: "rgba(0,100,0,0.8)" }}
+          >
+            {submitLabel}
           </Button>
-        </Space>
-      </Form.Item>
-      <Form.Item
-        label="Выдавать сертификат по завершении"
-        name="certificateEnabled"
-        valuePropName="checked"
-        initialValue={false}
-      >
-        <Switch />
-      </Form.Item>
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-        <Button onClick={onCancel}>Отмена</Button>
-        <Button
-          type="primary"
-          htmlType="submit"
-          loading={loading}
-          style={{ background: "rgba(0,100,0,0.8)" }}
-        >
-          {submitLabel}
-        </Button>
-      </div>
-    </Form>
+        </div>
+      </Form>
   );
 };
 
@@ -2892,50 +2916,64 @@ const TeacherPage = () => {
   }, [filteredCourses, page]);
 
   const handleCreateCourse = async (
-    values: CourseFormValues,
-    tags: string[],
-    coverFile?: File | null,
+      values: CourseFormValues,
+      tags: string[],
+      coverFile?: File | null,
   ) => {
     setCreating(true);
-    const created = await courseApi.createCourse({
-      title: values.title,
-      description: values.description,
-      fullDescription: values.fullDescription,
-      price: values.price ?? 0,
-      level: values.level ?? "Beginner",
-      certificateEnabled: values.certificateEnabled ?? false,
-      categoryId: values.categoryId,
-      coverImageUrl: values.coverImageUrl,
-      tags: tags.map((name) => ({ name })),
-    });
-    if (created) {
-      let final = created;
-      if (coverFile) {
-        const fd = new FormData();
-        fd.append("file", coverFile);
-        const ah = authStorage.getAuthHeaders() as Record<string, string>;
-        const { "Content-Type": _, ...h } = ah;
-        const res = await fetch(`${API_URL}/Courses/${created.id}/cover`, {
+    try {
+      // 1. Если есть coverFile и нет coverImageUrl - загружаем через /api/images
+      let coverImageUrl = values.coverImageUrl;
+
+      if (coverFile && !coverImageUrl) {
+        const formData = new FormData();
+        formData.append("file", coverFile);
+
+        const headers = authStorage.getAuthHeaders() as Record<string, string>;
+        const { "Content-Type": _, ...cleanHeaders } = headers;
+
+        const res = await fetch(`${API_URL}/images`, {
           method: "POST",
-          headers: h,
-          body: fd,
+          headers: cleanHeaders,
+          body: formData,
         });
+
         if (res.ok) {
-          const d = await res.json();
-          final = { ...created, coverImageUrl: d.coverImageUrl };
+          const data = await res.json();
+          coverImageUrl = data.url;
         } else {
-          message.warning("Курс создан, но обложку загрузить не удалось");
+          message.warning("Не удалось загрузить обложку");
         }
       }
-      setAllCourses((p) => [final, ...p]);
-      message.success("Курс создан");
-      setCreateModalOpen(false);
-      createForm.resetFields();
-      setSelectedCourse(final);
-    } else {
-      message.error("Ошибка при создании");
+
+      // 2. Создаём курс с обложкой (если есть)
+      const created = await courseApi.createCourse({
+        title: values.title,
+        description: values.description,
+        fullDescription: values.fullDescription,
+        price: values.price ?? 0,
+        level: values.level ?? "Beginner",
+        certificateEnabled: values.certificateEnabled ?? false,
+        categoryId: values.categoryId,
+        coverImageUrl: coverImageUrl, // Используем загруженный URL
+        tags: tags.map((name) => ({ name })),
+      });
+
+      if (created) {
+        setAllCourses((p) => [created, ...p]);
+        message.success("Курс создан");
+        setCreateModalOpen(false);
+        createForm.resetFields();
+        setSelectedCourse(created);
+      } else {
+        message.error("Ошибка при создании курса");
+      }
+    } catch (error) {
+      console.error("Error creating course:", error);
+      message.error("Ошибка при создании курса");
+    } finally {
+      setCreating(false);
     }
-    setCreating(false);
   };
 
   if (!userData)

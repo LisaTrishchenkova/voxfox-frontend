@@ -235,7 +235,7 @@ const UserProfilePage = () => {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const ok = await userApi.uploadAvatar(file);
+    const ok = await userApi.handleAvatarChange(file);
     if (ok) {
       await fetchUser();
       const meData = await userApi.getMe();
